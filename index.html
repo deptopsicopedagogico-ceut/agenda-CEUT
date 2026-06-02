@@ -1,73 +1,2392 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es-MX">
 <head>
     <meta charset="UTF-8">
-    <title>Agenda CEUT Sincronizada</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agenda Psicopedagógica CEUT</title>
+    <!-- Favicon de la pestaña del navegador -->
+    <link class="no-print" rel="icon" type="image/png" href="https://drive.google.com/thumbnail?id=1ao9olFJOvSPvgmeyLJhkD1P0Pmq_R3T2&sz=w128">
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Google Fonts - Outfit & Plus Jakarta Sans -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght=300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght=300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        clinical: {
+                            50: '#f0f3ff',
+                            100: '#e0e7ff',
+                            600: '#2B3E9E', // Azul CEUT Principal
+                            700: '#1E2D80', // Azul CEUT Oscuro
+                            800: '#141E59', // Azul CEUT Profundo
+                            900: '#0B1133', // Azul Medianoche CEUT
+                            950: '#05081c', // Azul CEUT Ultra Oscuro
+                        },
+                        brandGold: {
+                            50: '#fefdf0',
+                            100: '#fdf9cf',
+                            500: '#EBB102', // Oro CEUT Principal
+                            600: '#C79601', // Oro CEUT de acento
+                            700: '#A37B00',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                        outfit: ['Outfit', 'sans-serif']
+                    }
+                }
+            }
+        };
+    </script>
     <style>
-        body { font-family: sans-serif; padding: 20px; background: #f0f2f5; }
-        .card { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .cita { border-left: 5px solid #007bff; padding: 10px; margin-bottom: 10px; background: #f9f9f9; display: flex; justify-content: space-between; }
-        .admin { background: #fff3cd; padding: 10px; display: none; }
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #05081c;
+            background-image: radial-gradient(circle at 50% 0%, #141e59 0%, #05081c 75%);
+        }
+        .font-outfit {
+            font-family: 'Outfit', sans-serif;
+        }
+        /* Barra de desplazamiento premium institucional */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #05081c;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #EBB102;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #C79601;
+        }
+        /* Panel lateral deslizante */
+        .drawer-transition {
+            transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(16px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes pulseGold {
+            0%, 100% {
+                box-shadow: 0 0 15px rgba(235, 177, 2, 0.35);
+                border-color: rgba(235, 177, 2, 0.6);
+            }
+            50% {
+                box-shadow: 0 0 32px rgba(235, 177, 2, 0.7);
+                border-color: rgba(235, 177, 2, 1);
+            }
+        }
+
+        @keyframes pulseAlarm {
+            0%, 100% {
+                box-shadow: 0 0 20px rgba(235, 177, 2, 0.4);
+                border-color: rgba(235, 177, 2, 0.7);
+            }
+            50% {
+                box-shadow: 0 0 40px rgba(235, 177, 2, 0.9);
+                border-color: rgba(235, 177, 2, 1);
+                background-color: rgba(11, 17, 51, 0.95);
+            }
+        }
+
+        .animate-fade-up {
+            animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+
+        .animate-pulse-gold {
+            animation: pulseGold 3s infinite ease-in-out;
+        }
+
+        .animate-pulse-alarm {
+            animation: pulseAlarm 1.5s infinite ease-in-out;
+        }
+
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(1) sepia(1) saturate(5) hue-rotate(5deg);
+            cursor: pointer;
+        }
+
+        /* Estilo de Impresión de Reporte Académico */
+        @media print {
+            body {
+                background: #ffffff !important;
+                color: #000000 !important;
+                font-family: 'Plus Jakarta Sans', sans-serif !important;
+            }
+            #app, #toast, #alarm-modal, #ai-modal, #drawer-panel, #drawer-overlay, #block-day-modal, #report-modal, #change-pin-modal, .no-print, header, nav, button, .sidebar-ctrl {
+                display: none !important;
+            }
+            #academic-report-print-area {
+                display: block !important;
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                background: #ffffff !important;
+                color: #000000 !important;
+                padding: 40px 50px !important;
+                margin: 0 !important;
+                box-sizing: border-box;
+            }
+            table {
+                page-break-inside: auto;
+                border-collapse: collapse !important;
+                width: 100% !important;
+            }
+            tr {
+                page-break-inside: avoid;
+                page-break-after: auto;
+            }
+            thead {
+                display: table-header-group;
+            }
+        }
     </style>
+    
+    <!-- SCRIPT CLÁSICO SÍNCRONO -->
+    <script>
+        // ---------------------------------------------------------
+        // ESTADO GLOBAL DE LA APLICACIÓN
+        // ---------------------------------------------------------
+        window.appState = {
+            currentUser: null, 
+            currentDate: new Date(),
+            miniCalendarMonth: new Date(), 
+            activeStatsPeriod: 'dia', 
+            viewMode: 'day', // Por defecto la agenda por Día
+            searchQuery: '',
+            filterType: 'all', // 'Psicológica', 'Vocacional', 'Académica', 'Seguimiento'
+            users: JSON.parse(localStorage.getItem('ceut_users')) || {
+                'carlos': {
+                    name: 'Mtro. Carlos Aguilar Sánchez',
+                    role: 'Responsable Psicopedagógico', 
+                    pin: '1015' 
+                },
+                'miroslava': {
+                    name: 'Lic. Miroslava Abril Hoyos Rojas', 
+                    role: 'Coordinadora', 
+                    pin: '1015', 
+                    isReadOnly: false, 
+                    isRestricted: true 
+                },
+                'abril': { 
+                    name: 'Pasantes Depto. Psicopedagógico',
+                    role: 'Pasante Psicopedagógico', 
+                    pin: '1015',
+                    isReadOnly: false, 
+                    isIntern: true,
+                    isRestricted: true 
+                }
+            },
+            agendaData: JSON.parse(localStorage.getItem('ceut_agenda_data')) || {}, 
+            scheduleConfig: {
+                startHour: 8,
+                endHour: 21, 
+                interval: 60, 
+                breaks: [] 
+            },
+            alarmTimeout: null,
+            lastCheckedAlarmTime: null,
+            geminiApiKey: localStorage.getItem('ceut_gemini_key') || '' 
+        };
+
+        window.saveState = function() {
+            localStorage.setItem('ceut_users', JSON.stringify(window.appState.users));
+            localStorage.setItem('ceut_agenda_data', JSON.stringify(window.appState.agendaData));
+            localStorage.setItem('ceut_gemini_key', window.appState.geminiApiKey);
+        };
+
+        // Generador de Folios Únicos para los reportes correspondientes
+        window.generateFolioCode = function(apt) {
+            if (!apt) return "CEUT-PP-00000";
+            const levelCode = apt.level === 'Preparatoria' ? 'PREP' : 'LIC';
+            const year = apt.date ? apt.date.split('-')[0] : new Date().getFullYear();
+            const numericHash = apt.id.replace(/[^0-9]/g, '');
+            const uniqueSeq = numericHash ? numericHash.slice(-5) : Math.floor(10000 + Math.random() * 90000);
+            return `CEUT-PP-${levelCode}-${year}-${uniqueSeq}`;
+        };
+
+        // Función de Validación de Permisos para Cancelar Citas o Eliminar Bloqueos
+        window.canUserCancelOrDelete = function() {
+            // Solo Carlos Aguilar Sánchez (carlos) tiene autorización
+            return window.appState.currentUser === 'carlos';
+        };
+
+        // Logotipo institucional alternativo y vectorial
+        window.showFallbackLogo = function(imgElement, sizeType) {
+            const container = imgElement.parentElement;
+            if (!container) return;
+
+            const svgLarge = `
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" class="w-full h-full text-brandGold-500 drop-shadow-[0_0_12px_rgba(235,177,2,0.4)]">
+                    <circle cx="50" cy="50" r="46" fill="#0B1133" stroke="#EBB102" stroke-width="2.5" />
+                    <circle cx="50" cy="50" r="41" fill="none" stroke="#EBB102" stroke-width="0.75" stroke-dasharray="3,2" />
+                    <path d="M50,18 L70,30 L70,58 C70,68 50,76 50,76 C50,76 30,68 30,58 L30,30 Z" fill="#141E59" stroke="#EBB102" stroke-width="2" />
+                    <text x="50" y="48" font-family="'Outfit', sans-serif" font-weight="900" font-size="12" fill="#EBB102" text-anchor="middle" letter-spacing="1">CEUT</text>
+                    <path d="M42,54 L50,60 L58,54" fill="none" stroke="#EBB102" stroke-width="1.5" />
+                    <circle cx="50" cy="65" r="2" fill="#EBB102" />
+                </svg>
+            `;
+
+            const svgSmall = `
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" class="w-full h-full text-brandGold-500">
+                    <circle cx="50" cy="50" r="45" fill="#0B1133" stroke="#EBB102" stroke-width="2" />
+                    <path d="M50,22 L66,32 L66,56 C66,65 50,72 50,72 C50,72 34,65 34,56 L34,32 Z" fill="#141E59" stroke="#EBB102" stroke-width="1.5" />
+                    <text x="50" y="52" font-family="'Outfit', sans-serif" font-weight="900" font-size="15" fill="#EBB102" text-anchor="middle">C</text>
+                </svg>
+            `;
+
+            const svgPrint = `
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" class="w-20 h-20 text-[#1E2D80] mb-2">
+                    <circle cx="50" cy="50" r="45" fill="none" stroke="#1E2D80" stroke-width="3" />
+                    <path d="M50,22 L68,32 L68,58 C68,68 50,76 50,76 C50,76 32,68 32,58 L32,32 Z" fill="none" stroke="#1E2D80" stroke-width="2" />
+                    <text x="50" y="52" font-family="sans-serif" font-weight="bold" font-size="15" fill="#1E2D80" text-anchor="middle">CEUT</text>
+                </svg>
+            `;
+
+            if (sizeType === 'large') {
+                container.innerHTML = svgLarge;
+            } else if (sizeType === 'small') {
+                container.innerHTML = svgSmall;
+            } else if (sizeType === 'print') {
+                container.innerHTML = svgPrint;
+            }
+        };
+
+        window.showToast = function(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const icon = document.getElementById('toast-icon');
+            const msg = document.getElementById('toast-message');
+            if (!toast) return;
+            
+            if (type === 'success') {
+                icon.innerHTML = '<i data-lucide="check-circle" class="w-5 h-5 text-emerald-400"></i>';
+                toast.firstElementChild.className = 'bg-clinical-950 text-white px-5 py-3 rounded-2xl shadow-[0_0_30px_rgba(16,185,129,0.15)] flex items-center gap-3 border border-emerald-500/30';
+            } else if (type === 'error') {
+                icon.innerHTML = '<i data-lucide="alert-circle" class="w-5 h-5 text-rose-400"></i>';
+                toast.firstElementChild.className = 'bg-clinical-950 text-white px-5 py-3 rounded-2xl shadow-[0_0_30px_rgba(244,63,94,0.15)] flex items-center gap-3 border border-rose-500/30';
+            } else if (type === 'info') {
+                icon.innerHTML = '<i data-lucide="info" class="w-5 h-5 text-brandGold-500"></i>';
+                toast.firstElementChild.className = 'bg-clinical-950 text-white px-5 py-3 rounded-2xl shadow-[0_0_30px_rgba(235,177,2,0.15)] flex items-center gap-3 border border-brandGold-500/30';
+            }
+
+            msg.textContent = message;
+            if (typeof lucide !== 'undefined' && lucide.createIcons) {
+                lucide.createIcons();
+            }
+            
+            toast.classList.remove('translate-y-[-100px]', 'opacity-0', 'pointer-events-none');
+            toast.classList.add('translate-y-0', 'opacity-100');
+            
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-[-100px]', 'opacity-0', 'pointer-events-none');
+            }, 3500);
+        };
+
+        // Reloj digital exclusivo para el Login
+        window.startLoginClock = function() {
+            const clockEl = document.getElementById('login-header-clock');
+            if (!clockEl) return;
+            const now = new Date();
+            let hours24 = now.getHours();
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            const ampm = hours24 >= 12 ? 'PM' : 'AM';
+            let hours12 = hours24 % 12;
+            hours12 = hours12 ? hours12 : 12;
+            clockEl.textContent = `${String(hours12).padStart(2, '0')}:${minutes}:${seconds} ${ampm}`;
+        };
+
+        window.renderLogin = function() {
+            const app = document.getElementById('app');
+            if (!app) return;
+            app.innerHTML = `
+                <div class="flex-1 flex flex-col items-center justify-center p-4 relative z-10 min-h-screen animate-fade-up">
+                    <div class="absolute top-4 right-4 bg-clinical-900/60 backdrop-blur-md border border-clinical-800 px-4 py-2 rounded-2xl shadow-md">
+                        <span id="login-header-clock" class="font-mono text-xs font-bold text-brandGold-500 tracking-wider">08:00:00 AM</span>
+                    </div>
+                    <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-brandGold-500/5 rounded-full blur-3xl -z-10"></div>
+                    <div class="bg-clinical-900 border border-clinical-800 rounded-[2.5rem] shadow-2xl w-full max-w-4xl p-8 md:p-12 relative overflow-hidden flex flex-col md:flex-row gap-8 items-center">
+                        <div class="w-full md:w-1/2 flex flex-col items-center text-center border-b md:border-b-0 md:border-r border-clinical-800/80 pb-6 md:pb-0 md:pr-8">
+                            <div class="w-48 h-48 mx-auto flex items-center justify-center relative group bg-clinical-950 rounded-full p-2 border-2 border-brandGold-500/20 shadow-xl">
+                                <div class="absolute inset-0 rounded-full bg-brandGold-500/5 blur-2xl animate-pulse"></div>
+                                <img src="https://drive.google.com/thumbnail?id=1ao9olFJOvSPvgmeyLJhkD1P0Pmq_R3T2&sz=w500" 
+                                     onerror="window.showFallbackLogo(this, 'large')" 
+                                     class="w-full h-full object-contain filter drop-shadow-[0_2px_4px_rgba(235,177,2,0.4)] relative z-10 transform transition-transform group-hover:scale-105 duration-300" 
+                                     alt="Logo Institucional CEUT">
+                            </div>
+                            <h2 class="font-outfit font-black text-xl text-white tracking-tight mt-6 leading-tight">
+                                Centro Educativo Universitario de Tehuacán
+                            </h2>
+                            <p class="text-brandGold-500 text-xs font-bold uppercase tracking-widest mt-2">
+                                Identidad y Excelencia Académica
+                            </p>
+                        </div>
+                        <div class="w-full md:w-1/2 space-y-5">
+                            <div class="text-center md:text-left">
+                                <h1 class="font-outfit font-black text-2xl md:text-3xl text-white tracking-tight">
+                                    Agenda Psicopedagógica
+                                </h1>
+                                <p class="text-slate-400 text-xs font-semibold mt-1">
+                                    Elija su perfil e ingrese su PIN de acceso de 4 dígitos.
+                                </p>
+                            </div>
+                            <form onsubmit="window.handleLogin(event)" class="space-y-4">
+                                <div class="space-y-2">
+                                    <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider">Selecciona tu Perfil</label>
+                                    <select id="login-user" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-brandGold-500/50 appearance-none cursor-pointer">
+                                        <option value="carlos">Mtro. Carlos Aguilar Sánchez</option>
+                                        <option value="miroslava">Lic. Miroslava Abril Hoyos Rojas</option>
+                                        <option value="abril">Pasantes Depto. Psicopedagógico</option>
+                                    </select>
+                                </div>
+                                <div class="space-y-2 relative">
+                                    <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider">PIN de Acceso</label>
+                                    <div class="relative">
+                                        <input type="password" id="login-pin" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-3 pl-4 pr-12 text-center text-white tracking-[0.5em] font-bold focus:outline-none focus:ring-2 focus:ring-brandGold-500/50 placeholder:tracking-normal" placeholder="••••" maxlength="4" required>
+                                        <button type="button" onclick="window.togglePinVisibility('login-pin')" class="absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-500 hover:text-brandGold-500 transition-colors">
+                                            <i data-lucide="eye" class="w-5 h-5"></i>
+                                        </button>
+                                    </div>
+                                    <p class="text-[10px] text-brandGold-500/80 font-bold mt-1">ℹ️ PIN Predeterminado: 1015</p>
+                                </div>
+                                <button type="submit" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-brandGold-500 to-brandGold-600 hover:from-brandGold-600 hover:to-brandGold-700 text-clinical-950 font-black text-sm uppercase tracking-wider transition-all shadow-md">
+                                    Iniciar Sesión Segura
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            `;
+            if (typeof lucide !== 'undefined' && lucide.createIcons) {
+                lucide.createIcons();
+            }
+            window.startLoginClock();
+        };
+
+        // Actualización de reloj cada segundo de forma automática en el Login
+        setInterval(() => { if (window.startLoginClock) window.startLoginClock(); }, 1000);
+
+        window.handleLogin = function(e) {
+            e.preventDefault();
+            const userKey = document.getElementById('login-user').value;
+            const pinEntered = document.getElementById('login-pin').value;
+            
+            if (window.appState && window.appState.users && window.appState.users[userKey]) {
+                if (window.appState.users[userKey].pin === pinEntered) {
+                    window.appState.currentUser = userKey;
+                    window.showToast(`Bienvenido/a, ${window.appState.users[userKey].name}`, 'success');
+                    
+                    const app = document.getElementById('app');
+                    if (app) app.style.opacity = '0';
+                    setTimeout(() => {
+                        window.renderMainApp();
+                        if (app) app.style.opacity = '1';
+                    }, 350);
+                } else {
+                    window.showToast('PIN incorrecto. Acceso denegado.', 'error');
+                    const pinInput = document.getElementById('login-pin');
+                    if (pinInput) {
+                        pinInput.value = '';
+                        pinInput.focus();
+                    }
+                }
+            } else {
+                window.showToast('Error cargando perfiles de usuario.', 'error');
+            }
+        };
+
+        window.togglePinVisibility = function(inputId) {
+            const input = document.getElementById(inputId);
+            if (!input) return;
+            const iconButton = input.nextElementSibling;
+            if (!iconButton) return;
+            const icon = iconButton.querySelector('i');
+            if (!icon) return;
+            
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.setAttribute('data-lucide', 'eye-off');
+            } else {
+                input.type = 'password';
+                icon.setAttribute('data-lucide', 'eye');
+            }
+            if (typeof lucide !== 'undefined' && lucide.createIcons) {
+                lucide.createIcons();
+            }
+        };
+
+        window.logout = function() {
+            if (window.appState) {
+                window.appState.currentUser = null;
+            }
+            const app = document.getElementById('app');
+            if (app) app.style.opacity = '0';
+            setTimeout(() => {
+                window.renderLogin();
+                if (app) app.style.opacity = '1';
+                window.showToast('Sesión cerrada correctamente', 'info');
+            }, 350);
+        };
+    </script>
 </head>
-<body>
+<body class="text-slate-100 min-h-screen relative overflow-x-hidden">
 
-<div class="card">
-    <h2>Agenda CEUT</h2>
-    <label>Seleccionar Perfil:</label>
-    <select id="userRole" onchange="actualizarSesion()">
-        <option value="pasante">Pasante</option>
-        <option value="miroslava">Lic. Miroslava</option>
-        <option value="carlos">Mtro. Carlos Aguilar Sánchez</option>
-    </select>
-
-    <div id="adminPanel" class="admin">
-        <button onclick="agregar('Hora Libre')">Añadir Hora Libre</button>
-        <button onclick="agregar('Curso Nuevo')">Crear Curso</button>
+    <!-- Contenedor Toast -->
+    <div id="toast" class="fixed top-5 right-5 z-50 transform translate-y-[-100px] opacity-0 transition-all duration-300 pointer-events-none">
+        <div class="bg-clinical-950 text-white px-5 py-3 rounded-2xl shadow-[0_0_30px_rgba(16,185,129,0.15)] flex items-center gap-3 border border-emerald-500/30">
+            <span id="toast-icon"></span>
+            <span id="toast-message" class="text-sm font-semibold"></span>
+        </div>
     </div>
 
-    <hr>
-    <h3>Citas en Tiempo Real:</h3>
-    <div id="lista"></div>
-</div>
+    <!-- CONTENEDOR PRINCIPAL -->
+    <div id="app" class="min-h-screen flex flex-col transition-opacity duration-350"></div>
 
-<script>
-    // El "canal" que conecta los tres perfiles
-    const channel = new BroadcastChannel('ceut_agenda_sync');
+    <!-- AREA DE IMPRESIÓN -->
+    <div id="academic-report-print-area" class="hidden"></div>
 
-    function actualizarSesion() {
-        const role = document.getElementById('userRole').value;
-        localStorage.setItem('perfil', role);
-        document.getElementById('adminPanel').style.display = (role === 'carlos') ? 'block' : 'none';
-        renderizar();
-    }
+    <!-- ALERTA CITA CON ANUNCIO DE VOZ -->
+    <div id="alarm-modal" class="fixed inset-0 z-50 overflow-y-auto bg-slate-950/90 backdrop-blur-md hidden items-center justify-center p-4">
+        <div class="max-w-md w-full rounded-3xl p-8 border-2 border-brandGold-500 bg-clinical-900 shadow-2xl relative overflow-hidden animate-pulse-alarm text-center">
+            <div class="absolute -top-10 -right-10 w-40 h-40 bg-brandGold-500/10 rounded-full blur-3xl"></div>
+            
+            <div class="flex flex-col items-center">
+                <div class="w-20 h-20 rounded-full bg-brandGold-500/10 border-2 border-brandGold-500 flex items-center justify-center text-brandGold-500 mb-6 shadow-[0_0_20px_rgba(235,177,2,0.3)]">
+                    <i data-lucide="bell-ring" class="w-10 h-10 animate-bounce"></i>
+                </div>
+                
+                <h3 class="text-2xl font-outfit font-black text-white uppercase tracking-tight" id="alarm-title-header">¡Próxima Consulta!</h3>
+                <p class="text-brandGold-500 text-xs font-bold tracking-widest uppercase mt-1">Alerta de Agenda Psicopedagógica</p>
+                <div class="h-1 w-20 bg-gradient-to-r from-clinical-600 to-brandGold-500 rounded-full my-4"></div>
+                
+                <div class="bg-clinical-950/80 border border-clinical-800/60 rounded-2xl p-5 w-full mb-6 text-left space-y-2.5">
+                    <div class="flex justify-between items-center text-xs">
+                        <span class="text-slate-400 font-bold uppercase">Hora de Inicio</span>
+                        <span class="text-brandGold-500 font-black" id="alarm-time">00:00 AM</span>
+                    </div>
+                    <div class="border-t border-clinical-800/60 pt-2.5">
+                        <span class="text-[10px] text-slate-500 font-bold uppercase block mb-0.5">Nombre / Actividad</span>
+                        <span class="text-white font-bold font-outfit text-base block leading-tight" id="alarm-name">Nombre del Alumno</span>
+                    </div>
+                    <div class="flex justify-between items-center text-xs border-t border-clinical-800/60 pt-2.5">
+                        <span class="text-slate-400 font-bold">Detalles / Periodo</span>
+                        <span class="text-slate-300 font-medium" id="alarm-details">Preparatoria • Grado: 3 • Grupo: A</span>
+                    </div>
+                </div>
 
-    function agregar(tipo) {
-        let citas = JSON.parse(localStorage.getItem('citas') || '[]');
-        citas.push({ id: Date.now(), tipo: tipo, autor: localStorage.getItem('perfil') });
-        localStorage.setItem('citas', JSON.stringify(citas));
-        
-        // Avisar a los otros perfiles
-        channel.postMessage('actualizar');
-        renderizar();
-    }
+                <p class="text-slate-300 text-xs mb-6 font-semibold flex items-center gap-1.5 justify-center">
+                    <i data-lucide="alert-triangle" class="w-4 h-4 text-brandGold-500"></i>
+                    <span>La consulta programada inicia exactamente en <strong>3 minutos</strong>.</span>
+                </p>
 
-    function renderizar() {
-        const citas = JSON.parse(localStorage.getItem('citas') || '[]');
-        const lista = document.getElementById('lista');
-        lista.innerHTML = citas.map(c => `
-            <div class="cita">
-                ${c.tipo} <small><em>(${c.autor})</em></small>
+                <div class="flex flex-col gap-2 w-full">
+                    <button onclick="dismissAlarm()" class="w-full bg-gradient-to-r from-brandGold-500 to-brandGold-600 hover:from-brandGold-600 hover:to-brandGold-700 text-clinical-950 font-black py-3.5 px-6 rounded-2xl shadow-lg transition-all uppercase tracking-wider text-xs">
+                        Entendido, Preparar Sesión
+                    </button>
+                    <!-- BOTÓN DE TEXT TO SPEECH MANUAL PARA REPETIR EL ANUNCIO -->
+                    <button onclick="window.speakCurrentAlarmText()" class="w-full bg-clinical-950 hover:bg-clinical-850 text-brandGold-500 py-2.5 px-6 rounded-2xl border border-brandGold-500/30 hover:border-brandGold-500/60 text-[10px] font-bold uppercase tracking-widest transition-colors flex items-center justify-center gap-1.5">
+                        <i data-lucide="volume-2" class="w-4 h-4 text-brandGold-500"></i>
+                        <span>Escuchar Anuncio de Voz</span>
+                    </button>
+                </div>
             </div>
-        `).join('');
-    }
+        </div>
+    </div>
 
-    // Escuchar cambios de los otros perfiles
-    channel.onmessage = renderizar;
+    <!-- ASISTENTE DE IA DE GEMINI -->
+    <div id="ai-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden items-center justify-center p-4">
+        <div class="bg-clinical-900 border-2 border-brandGold-500 rounded-3xl w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col shadow-2xl animate-fade-up">
+            <div class="bg-clinical-950 p-6 border-b border-clinical-800/85 flex justify-between items-center shrink-0">
+                <div class="flex items-center gap-2">
+                    <div class="p-1.5 rounded-lg bg-brandGold-500/10 border border-brandGold-500/30">
+                        <i data-lucide="sparkles" class="w-5 h-5 text-brandGold-500 animate-pulse"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-outfit font-black text-white text-base tracking-wide" id="ai-modal-title">Asistente Psicopedagógico IA</h4>
+                        <p class="text-[10px] text-brandGold-500 font-bold uppercase tracking-widest">Desarrollado con Gemini 2.5 Flash</p>
+                    </div>
+                </div>
+                <button onclick="closeAiModal()" class="p-1.5 hover:bg-clinical-800 rounded-lg text-slate-400 hover:text-white transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="p-6 overflow-y-auto flex-1 space-y-4 text-sm leading-relaxed text-slate-300" id="ai-modal-body"></div>
+            <div class="p-6 bg-clinical-950 border-t border-clinical-800/85 flex flex-col sm:flex-row gap-3 items-center justify-between shrink-0">
+                <span class="text-xs text-slate-400 font-medium">¿Deseas aplicar estos datos a las observaciones actuales?</span>
+                <div class="flex gap-2 w-full sm:w-auto">
+                    <button type="button" onclick="copyAiOutput()" class="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl bg-clinical-900 hover:bg-clinical-850 text-slate-300 hover:text-white font-bold text-[9px] uppercase tracking-wider transition-all border border-clinical-800">
+                        <i data-lucide="copy" class="w-4 h-4 text-brandGold-500"></i>
+                        <span>Copiar</span>
+                    </button>
+                    <button type="button" onclick="applyAiToObservations()" class="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 py-2.5 px-5 rounded-xl bg-gradient-to-r from-brandGold-500 to-brandGold-600 hover:from-brandGold-600 hover:to-brandGold-700 text-clinical-950 font-black text-xs uppercase tracking-wider transition-all shadow-md">
+                        <i data-lucide="check" class="w-4 h-4"></i>
+                        <span>Aplicar Observaciones</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-    // Inicio
-    document.getElementById('userRole').value = localStorage.getItem('perfil') || 'pasante';
-    actualizarSesion();
-</script>
+    <!-- CAMBIAR PIN -->
+    <div id="change-pin-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden items-center justify-center p-4">
+        <div class="bg-clinical-900 border-2 border-brandGold-500 rounded-3xl w-full max-w-sm shadow-2xl animate-fade-up flex flex-col overflow-hidden">
+            <div class="bg-clinical-950 p-6 border-b border-clinical-800/80 flex justify-between items-center shrink-0">
+                <div class="flex items-center gap-2">
+                    <div class="p-1.5 rounded-lg bg-brandGold-500/10 border border-brandGold-500/30">
+                        <i data-lucide="lock" class="w-5 h-5 text-brandGold-500"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-outfit font-black text-white text-base tracking-wide flex flex-col">
+                            <span class="text-white text-base font-black">Cambiar PIN</span>
+                            <span class="text-[10px] text-brandGold-500 font-bold uppercase tracking-widest">Seguridad</span>
+                        </h4>
+                    </div>
+                </div>
+                <button onclick="closeChangePinModal()" class="p-1.5 hover:bg-clinical-800 rounded-lg text-slate-400 hover:text-white transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            
+            <form onsubmit="submitChangePin(event)" class="p-6 space-y-4">
+                <div>
+                    <label for="pin-current" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">PIN Actual</label>
+                    <input type="password" id="pin-current" maxlength="4" placeholder="••••" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-3 px-4 text-center text-white tracking-[0.5em] font-bold focus:outline-none focus:ring-2 focus:ring-brandGold-500/50" required>
+                </div>
+                <div>
+                    <label for="pin-new" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Nuevo PIN (4 dígitos)</label>
+                    <input type="password" id="pin-new" maxlength="4" placeholder="••••" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-3 px-4 text-center text-white tracking-[0.5em] font-bold focus:outline-none focus:ring-2 focus:ring-brandGold-500/50" required>
+                </div>
+                <button type="submit" class="w-full py-3 rounded-xl bg-gradient-to-r from-brandGold-500 to-brandGold-600 hover:from-brandGold-600 hover:to-brandGold-700 text-clinical-950 font-bold text-xs uppercase tracking-wider transition-all">
+                    Actualizar PIN de Acceso
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL BLOQUEAR DÍA / HORA -->
+    <div id="block-day-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden items-center justify-center p-4">
+        <div class="bg-clinical-900 border-2 border-brandGold-500 rounded-3xl w-full max-w-md shadow-2xl animate-fade-up overflow-hidden">
+            <div class="bg-clinical-950 p-6 border-b border-clinical-800/80 flex justify-between items-center">
+                <h4 class="font-outfit font-black text-white text-base tracking-wide flex items-center gap-2">
+                    <i data-lucide="ban" class="w-5 h-5 text-brandGold-500"></i>
+                    <span>Bloquear Horario</span>
+                </h4>
+                <button onclick="closeBlockDayModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <form onsubmit="submitBlockDay(event)" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Fecha</label>
+                    <input type="date" id="block-date" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-3 px-4 text-sm text-white" required>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Hora Inicio</label>
+                        <select id="block-start-hour" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-3 px-4 text-sm text-white"></select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Hora Fin</label>
+                        <select id="block-end-hour" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-3 px-4 text-sm text-white"></select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Motivo / Razón del Bloqueo</label>
+                    <select id="block-reason" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-3 px-4 text-sm text-white">
+                        <option value="Hora Libre">Hora Libre</option>
+                        <option value="Curso / Taller">Curso / Taller</option>
+                        <option value="Junta General">Junta General</option>
+                        <option value="Comisión Institucional">Comisión Institucional</option>
+                    </select>
+                </div>
+                <button type="submit" class="w-full py-3 rounded-xl bg-gradient-to-r from-brandGold-500 to-brandGold-600 hover:from-brandGold-600 hover:to-brandGold-700 text-clinical-950 font-bold text-xs uppercase tracking-wider transition-all">
+                    Establecer Bloqueo de Horario
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- REPORTE DE IMPRESIÓN MODAL -->
+    <div id="report-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden items-center justify-center p-4">
+        <div class="bg-clinical-900 border-2 border-brandGold-500 rounded-3xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl animate-fade-up">
+            <div class="bg-clinical-950 p-6 border-b border-clinical-800/80 flex justify-between items-center shrink-0">
+                <h4 class="font-outfit font-black text-white text-base tracking-wide flex items-center gap-2">
+                    <i data-lucide="file-text" class="w-5 h-5 text-brandGold-500"></i>
+                    <span>Vista Previa del Reporte Académico</span>
+                </h4>
+                <button onclick="closeReportModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div id="report-modal-body" class="p-8 overflow-y-auto bg-white text-slate-900 flex-1"></div>
+            <div class="bg-clinical-950 p-6 border-t border-clinical-800/80 flex justify-end gap-3 shrink-0">
+                <button onclick="closeReportModal()" class="py-2.5 px-5 rounded-xl bg-clinical-900 hover:bg-clinical-850 text-slate-300 font-bold text-xs uppercase tracking-wider">
+                    Cancelar
+                </button>
+                <button onclick="window.printReport()" class="py-2.5 px-6 rounded-xl bg-gradient-to-r from-brandGold-500 to-brandGold-600 hover:from-brandGold-600 text-clinical-950 font-black text-xs uppercase tracking-wider flex items-center gap-1.5">
+                    <i data-lucide="printer" class="w-4 h-4"></i> Imprimir Reporte Oficial
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- DRAWER / PANEL LATERAL DE CITAS -->
+    <div id="drawer-overlay" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-40 hidden transition-opacity" onclick="closeDrawer()"></div>
+    <div id="drawer-panel" class="fixed top-0 right-0 h-full w-full max-w-lg bg-clinical-900 border-l border-clinical-800 shadow-2xl z-50 transform translate-x-full drawer-transition flex flex-col overflow-hidden">
+        <div class="bg-clinical-950 p-6 border-b border-clinical-800 flex justify-between items-center shrink-0">
+            <h4 class="font-outfit font-black text-white text-base tracking-wide flex items-center gap-2" id="drawer-title">
+                Nueva Consulta
+            </h4>
+            <button onclick="closeDrawer()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+        </div>
+        <form onsubmit="submitAppointmentForm(event)" class="flex-1 overflow-y-auto p-6 space-y-4">
+            <input type="hidden" id="form-apt-id">
+            
+            <div>
+                <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Nombre Completo del Alumno</label>
+                <input type="text" id="apt-student" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-4 text-sm text-white placeholder:text-slate-600" placeholder="Nombre completo" required>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Fecha</label>
+                    <input type="date" id="apt-date" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-4 text-sm text-white" required>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Hora</label>
+                    <select id="apt-hour" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-4 text-sm text-white" required></select>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Nivel Educativo</label>
+                    <select id="apt-level" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-4 text-sm text-white cursor-pointer animate-pulse-gold" onchange="window.updateFormFieldsByLevel()">
+                        <option value="Preparatoria">Preparatoria</option>
+                        <option value="Licenciatura">Licenciatura</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Carrera / Área</label>
+                    <select id="apt-career" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-4 text-sm text-white"></select>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Grado / Semestre</label>
+                    <select id="apt-grade" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-4 text-sm text-white cursor-pointer" onchange="window.updateGroupOptionsBySelectedGrade()"></select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Grupo</label>
+                    <select id="apt-group" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-4 text-sm text-white cursor-pointer"></select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Turno</label>
+                    <select id="apt-shift" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-4 text-sm text-white">
+                        <option value="Matutino">Matutino</option>
+                        <option value="Vespertino">Vespertino</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Tipo de Atención</label>
+                    <select id="apt-type" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-4 text-sm text-white">
+                        <option value="Psicológica">Psicológica</option>
+                        <option value="Vocacional">Vocacional</option>
+                        <option value="Académica">Académica</option>
+                        <option value="Seguimiento">Seguimiento</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Estatus</label>
+                    <select id="apt-status" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-4 text-sm text-white"></select>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3 bg-clinical-950/50 p-4 rounded-xl border border-clinical-800/80">
+                <input type="checkbox" id="apt-alarm" class="w-4 h-4 rounded text-brandGold-500 focus:ring-brandGold-500/50 bg-clinical-950 border-clinical-800 cursor-pointer">
+                <label for="apt-alarm" class="text-xs font-bold text-slate-300 cursor-pointer flex flex-col">
+                    <span>Activar Alarma de Seguridad (3 min antes)</span>
+                    <span class="text-[10px] text-brandGold-500/80 font-medium">Lanzará una notificación y aviso por voz asistido.</span>
+                </label>
+            </div>
+
+            <div>
+                <div class="flex justify-between items-center mb-1">
+                    <label class="block text-xs font-bold text-slate-300 uppercase">Observaciones y Diagnóstico</label>
+                    <button type="button" onclick="window.consultGeminiAssistant()" class="flex items-center gap-1 text-[10px] bg-brandGold-500/10 hover:bg-brandGold-500/20 border border-brandGold-500/30 rounded-lg py-1 px-2.5 text-brandGold-500 font-bold transition-all">
+                        <i data-lucide="sparkles" class="w-3.5 h-3.5 animate-pulse"></i>
+                        <span>Generar Observaciones con IA</span>
+                    </button>
+                </div>
+                <textarea id="apt-obs" rows="4" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-4 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-brandGold-500/50" placeholder="Anotaciones de la consulta, diagnósticos preliminares, acuerdos y plan de acción..."></textarea>
+            </div>
+
+            <div class="pt-4 border-t border-clinical-800 flex justify-between gap-3" id="drawer-actions"></div>
+        </form>
+    </div>
+
+    <!-- COMPLEMENTOS DE SCRIPT: Lógica Central de la Aplicación -->
+    <script>
+        // Listado oficial de carreras CEUT
+        const ceutCareers = {
+            "Preparatoria": ["Preparatoria General"],
+            "Licenciatura": [
+                "Administración de Empresas",
+                "Comunicación y Periodismo",
+                "Contaduría",
+                "Derecho",
+                "Pedagogía",
+                "Psicología",
+                "Informática",
+                "Diseño Gráfico"
+            ]
+        };
+
+        // Mapeo detallado de nomenclaturas de grupos según la imagen oficial image_3ab109.png
+        const prepaNomenclatures = {
+            "1° Semestre": ["A"],
+            "2° Semestre": ["A", "B", "C", "D", "E"],
+            "3° Semestre": ["COM"],
+            "4° Semestre": ["DS", "HSA", "TUR", "COM"],
+            "5° Semestre": ["HSA"],
+            "6° Semestre": ["DS", "HSA", "TUR", "IEO", "COM"]
+        };
+
+        // Almacén Temporal para salida de Gemini
+        let lastAiOutput = "";
+
+        // Inicializador de las Listas Desplegables de Horas
+        function populateHourDropdowns() {
+            const aptHourSelect = document.getElementById('apt-hour');
+            const blockStartSelect = document.getElementById('block-start-hour');
+            const blockEndSelect = document.getElementById('block-end-hour');
+            
+            if (aptHourSelect) aptHourSelect.innerHTML = '';
+            if (blockStartSelect) blockStartSelect.innerHTML = '';
+            if (blockEndSelect) blockEndSelect.innerHTML = '';
+
+            for (let h = window.appState.scheduleConfig.startHour; h <= window.appState.scheduleConfig.endHour; h++) {
+                const hourFormatted = String(h).padStart(2, '0') + ':00';
+                const label = h >= 12 ? (h === 12 ? '12:00 PM' : `${h - 12}:00 PM`) : `${h}:00 AM`;
+                
+                const opt1 = new Option(label, hourFormatted);
+                const opt2 = new Option(label, hourFormatted);
+                const opt3 = new Option(label, hourFormatted);
+                
+                if (aptHourSelect) aptHourSelect.add(opt1);
+                if (blockStartSelect) blockStartSelect.add(opt2);
+                if (blockEndSelect) blockEndSelect.add(opt3);
+            }
+        }
+
+        // Función de Normalización Inteligente de Semestre
+        function normalizeSemestreValue(val) {
+            if (!val) return "1° Semestre";
+            const cleanStr = val.toString().trim();
+            if (cleanStr.includes("Semestre")) return cleanStr;
+            const matchNumber = cleanStr.match(/\d+/);
+            if (matchNumber) {
+                return `${matchNumber[0]}° Semestre`;
+            }
+            return cleanStr;
+        }
+
+        window.updateFormFieldsByLevel = function() {
+            const level = document.getElementById('apt-level').value;
+            const careerSelect = document.getElementById('apt-career');
+            const shiftSelect = document.getElementById('apt-shift');
+            const gradeSelect = document.getElementById('apt-grade');
+
+            if (!careerSelect || !shiftSelect || !gradeSelect) return;
+
+            // 1. Actualizar carreras
+            careerSelect.innerHTML = '';
+            const careerList = ceutCareers[level] || [];
+            careerList.forEach(c => {
+                careerSelect.add(new Option(c, c));
+            });
+
+            // 2. Reglas de Preparatoria (image_3ab109.png & image_3b0aa5.jpg)
+            if (level === "Preparatoria") {
+                // Turno Matutino Obligatorio
+                shiftSelect.value = "Matutino";
+                for (let i = 0; i < shiftSelect.options.length; i++) {
+                    if (shiftSelect.options[i].value === "Vespertino") {
+                        shiftSelect.options[i].disabled = true;
+                    }
+                }
+
+                // Poblar los semestres del 1° al 6°
+                gradeSelect.innerHTML = '';
+                Object.keys(prepaNomenclatures).forEach(g => {
+                    gradeSelect.add(new Option(g, g));
+                });
+            } else {
+                // Licenciatura permite turnos libres
+                for (let i = 0; i < shiftSelect.options.length; i++) {
+                    shiftSelect.options[i].disabled = false;
+                }
+
+                // Poblar semestres estándar del 1° al 10°
+                gradeSelect.innerHTML = '';
+                for (let s = 1; s <= 10; s++) {
+                    const value = `${s}° Semestre`;
+                    gradeSelect.add(new Option(value, value));
+                }
+            }
+
+            // Asegurar que hay una opción seleccionada antes de renderizar grupos
+            if (gradeSelect.options.length > 0) {
+                gradeSelect.selectedIndex = 0;
+            }
+
+            // Forzar actualización inmediata de los grupos correspondientes
+            window.updateGroupOptionsBySelectedGrade();
+        };
+
+        window.updateGroupOptionsBySelectedGrade = function() {
+            const level = document.getElementById('apt-level').value;
+            const gradeSelect = document.getElementById('apt-grade');
+            const groupSelect = document.getElementById('apt-group');
+
+            if (!groupSelect || !gradeSelect) return;
+            groupSelect.innerHTML = '';
+
+            const gradeSelected = normalizeSemestreValue(gradeSelect.value);
+
+            if (level === "Preparatoria") {
+                const groups = prepaNomenclatures[gradeSelected] || ["A"];
+                groups.forEach(g => {
+                    groupSelect.add(new Option(g, g));
+                });
+            } else {
+                // Licenciatura usa grupos generales
+                const defaultLicGroups = ["A", "B", "C"];
+                defaultLicGroups.forEach(g => {
+                    groupSelect.add(new Option(g, g));
+                });
+            }
+        };
+
+        // Formateador de Fechas Amigable en Español
+        function getFriendlyDateString(date) {
+            return date.toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        }
+
+        function getShortDateString(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        // CONTROLADORES DE FECHAS
+        window.navDate = function(days) {
+            window.appState.currentDate.setDate(window.appState.currentDate.getDate() + days);
+            window.renderMainApp();
+        };
+
+        window.navToday = function() {
+            window.appState.currentDate = new Date();
+            window.renderMainApp();
+        };
+
+        window.changeViewMode = function(view) {
+            window.appState.viewMode = view;
+            window.renderMainApp();
+        };
+
+        window.setSearchFilter = function(e) {
+            window.appState.searchQuery = e.target.value.toLowerCase();
+            window.renderMainApp();
+        };
+
+        window.setFilterType = function(type) {
+            window.appState.filterType = type;
+            window.renderMainApp();
+        };
+
+        window.openCreateDrawer = function(dateStr, hourStr) {
+            const isRestrictedUser = window.appState.users[window.appState.currentUser]?.isReadOnly;
+            if (isRestrictedUser) {
+                window.showToast("Tu perfil es de Solo Lectura. No puedes agendar.", "error");
+                return;
+            }
+
+            document.getElementById('drawer-title').textContent = "Nueva Consulta";
+            document.getElementById('form-apt-id').value = '';
+            document.getElementById('apt-student').value = '';
+            document.getElementById('apt-date').value = dateStr || getShortDateString(window.appState.currentDate);
+            
+            populateHourDropdowns();
+            if (hourStr) {
+                document.getElementById('apt-hour').value = hourStr;
+            }
+            
+            // Forzar carga de Licenciatura por defecto para iniciar de forma estandarizada
+            document.getElementById('apt-level').value = 'Licenciatura';
+            window.updateFormFieldsByLevel();
+            
+            document.getElementById('apt-grade').value = '1° Semestre';
+            window.updateGroupOptionsBySelectedGrade();
+            document.getElementById('apt-group').value = 'A';
+            document.getElementById('apt-shift').value = 'Matutino';
+            document.getElementById('apt-type').value = 'Psicológica';
+            
+            // Configurar Estatus y filtrar "Cancelada" si no es Carlos
+            const statusSelect = document.getElementById('apt-status');
+            const isCarlos = (window.appState.currentUser === 'carlos');
+            statusSelect.innerHTML = `
+                <option value="Pendiente">Pendiente</option>
+                <option value="Realizada">Realizada</option>
+                <option value="Reagendada">Reagendada</option>
+                ${isCarlos ? `<option value="Cancelada">Cancelada</option>` : ''}
+            `;
+            statusSelect.value = 'Pendiente';
+
+            document.getElementById('apt-alarm').checked = true;
+            document.getElementById('apt-obs').value = '';
+
+            const actionsDiv = document.getElementById('drawer-actions');
+            actionsDiv.innerHTML = `
+                <button type="button" onclick="closeDrawer()" class="flex-1 py-3 rounded-xl bg-clinical-950 hover:bg-clinical-850 text-slate-300 font-bold text-xs uppercase tracking-wider border border-clinical-800">
+                    Cancelar
+                </button>
+                <button type="submit" class="flex-1 py-3 rounded-xl bg-gradient-to-r from-brandGold-500 to-brandGold-600 hover:from-brandGold-600 hover:to-brandGold-700 text-clinical-950 font-black text-xs uppercase tracking-wider shadow-md">
+                    Guardar Consulta
+                </button>
+            `;
+
+            const overlay = document.getElementById('drawer-overlay');
+            const panel = document.getElementById('drawer-panel');
+            overlay.classList.remove('hidden');
+            setTimeout(() => overlay.classList.add('opacity-100'), 10);
+            panel.classList.remove('translate-x-full');
+            
+            if (typeof lucide !== 'undefined' && lucide.createIcons) {
+                lucide.createIcons();
+            }
+        };
+
+        window.openEditDrawer = function(aptId) {
+            const apt = window.appState.agendaData[aptId];
+            if (!apt) return;
+
+            document.getElementById('drawer-title').textContent = "Detalles / Editar Consulta";
+            document.getElementById('form-apt-id').value = aptId;
+            document.getElementById('apt-student').value = apt.student;
+            document.getElementById('apt-date').value = apt.date;
+            
+            populateHourDropdowns();
+            document.getElementById('apt-hour').value = apt.hour;
+            document.getElementById('apt-level').value = apt.level;
+            
+            // Re-renderizar selects dependientes de nivel
+            window.updateFormFieldsByLevel();
+            
+            document.getElementById('apt-career').value = apt.career;
+            
+            // Sincronizar y normalizar grados e inicializar grupos
+            const normalizedGrade = normalizeSemestreValue(apt.grade || '1° Semestre');
+            document.getElementById('apt-grade').value = normalizedGrade;
+            window.updateGroupOptionsBySelectedGrade();
+            
+            document.getElementById('apt-group').value = apt.group || 'A';
+            document.getElementById('apt-shift').value = apt.shift || 'Matutino';
+            document.getElementById('apt-type').value = apt.type;
+            
+            // Configurar Estatus y filtrar "Cancelada" si no es Carlos
+            const statusSelect = document.getElementById('apt-status');
+            const isCarlos = (window.appState.currentUser === 'carlos');
+            statusSelect.innerHTML = `
+                <option value="Pendiente">Pendiente</option>
+                <option value="Realizada">Realizada</option>
+                <option value="Reagendada">Reagendada</option>
+                ${isCarlos ? `<option value="Cancelada">Cancelada</option>` : ''}
+            `;
+            // Forzar estatus guardado. Si estaba en Cancelada y entra un no-Carlos, preservarla pero no permitir modificarla a cancelada de nuevo si la cambian.
+            if (apt.status === 'Cancelada' && !isCarlos) {
+                statusSelect.innerHTML += `<option value="Cancelada" selected>Cancelada</option>`;
+            }
+            statusSelect.value = apt.status;
+
+            document.getElementById('apt-alarm').checked = apt.alarm;
+            document.getElementById('apt-obs').value = apt.obs || '';
+
+            const isReadOnly = window.appState.users[window.appState.currentUser]?.isReadOnly;
+
+            const actionsDiv = document.getElementById('drawer-actions');
+            if (isReadOnly) {
+                actionsDiv.innerHTML = `
+                    <button type="button" onclick="closeDrawer()" class="w-full py-3 rounded-xl bg-clinical-950 hover:bg-clinical-850 text-slate-300 font-bold text-xs uppercase tracking-wider border border-clinical-800">
+                        Volver
+                    </button>
+                `;
+            } else {
+                // Validación para mostrar u ocultar botón de Eliminar (Solo Carlos)
+                const canCancel = window.canUserCancelOrDelete();
+                let deleteBtnHtml = canCancel ? `
+                    <button type="button" onclick="deleteAppointment('${aptId}')" class="py-3 px-4 rounded-xl bg-rose-950 hover:bg-rose-900 text-rose-300 border border-rose-800 font-bold text-xs uppercase tracking-wider transition-colors">
+                        Eliminar
+                    </button>
+                ` : '';
+
+                actionsDiv.innerHTML = `
+                    ${deleteBtnHtml}
+                    <button type="button" onclick="openReportModal('${aptId}')" class="py-3 px-4 rounded-xl bg-clinical-950 hover:bg-clinical-850 text-brandGold-500 border border-brandGold-500/30 font-bold text-xs uppercase tracking-wider transition-colors">
+                        Reporte
+                    </button>
+                    <button type="submit" class="flex-1 py-3 rounded-xl bg-gradient-to-r from-brandGold-500 to-brandGold-600 hover:from-brandGold-600 hover:to-brandGold-700 text-clinical-950 font-black text-xs uppercase tracking-wider shadow-md">
+                        Guardar Cambios
+                    </button>
+                `;
+            }
+
+            const overlay = document.getElementById('drawer-overlay');
+            const panel = document.getElementById('drawer-panel');
+            overlay.classList.remove('hidden');
+            setTimeout(() => overlay.classList.add('opacity-100'), 10);
+            panel.classList.remove('translate-x-full');
+            
+            if (typeof lucide !== 'undefined' && lucide.createIcons) {
+                lucide.createIcons();
+            }
+        };
+
+        window.closeDrawer = function() {
+            const overlay = document.getElementById('drawer-overlay');
+            const panel = document.getElementById('drawer-panel');
+            overlay.classList.remove('opacity-100');
+            setTimeout(() => overlay.classList.add('hidden'), 300);
+            panel.classList.add('translate-x-full');
+        };
+
+        window.submitAppointmentForm = function(e) {
+            e.preventDefault();
+            const isReadOnly = window.appState.users[window.appState.currentUser]?.isReadOnly;
+            if (isReadOnly) return;
+
+            const aptId = document.getElementById('form-apt-id').value || 'apt_' + Date.now();
+            const student = document.getElementById('apt-student').value.trim();
+            const date = document.getElementById('apt-date').value;
+            const hour = document.getElementById('apt-hour').value;
+            const level = document.getElementById('apt-level').value;
+            const career = document.getElementById('apt-career').value;
+            const grade = document.getElementById('apt-grade').value;
+            const group = document.getElementById('apt-group').value;
+            const shift = document.getElementById('apt-shift').value;
+            const type = document.getElementById('apt-type').value;
+            const status = document.getElementById('apt-status').value;
+            const alarm = document.getElementById('apt-alarm').checked;
+            const obs = document.getElementById('apt-obs').value.trim();
+
+            if (!student) {
+                window.showToast("El nombre del alumno es obligatorio.", "error");
+                return;
+            }
+
+            // Validación de seguridad para estatus Cancelada en guardado
+            if (status === 'Cancelada' && !window.canUserCancelOrDelete()) {
+                window.showToast("No tienes privilegios para cancelar consultas.", "error");
+                return;
+            }
+
+            window.appState.agendaData[aptId] = {
+                id: aptId,
+                student,
+                date,
+                hour,
+                level,
+                career,
+                grade,
+                group,
+                shift,
+                type,
+                status,
+                alarm,
+                obs,
+                createdBy: window.appState.currentUser,
+                updatedAt: new Date().toISOString()
+            };
+
+            window.saveState();
+            window.showToast("Consulta guardada exitosamente.", "success");
+            window.closeDrawer();
+            window.renderMainApp();
+        };
+
+        window.deleteAppointment = function(aptId) {
+            if (!window.canUserCancelOrDelete()) {
+                window.showToast("No tienes privilegios para eliminar consultas.", "error");
+                return;
+            }
+            delete window.appState.agendaData[aptId];
+            window.saveState();
+            window.showToast("Consulta eliminada correctamente.", "info");
+            window.closeDrawer();
+            window.renderMainApp();
+        };
+
+        // Cambio de estatus inmediato sin entrar al Drawer
+        window.quickChangeStatus = function(event, aptId) {
+            event.stopPropagation(); // Evita abrir el modal de detalles
+            const newStatus = event.target.value;
+            
+            // Validación de permisos para estatus Cancelada
+            if (newStatus === 'Cancelada' && !window.canUserCancelOrDelete()) {
+                window.showToast("No tienes privilegios para cancelar consultas.", "error");
+                window.renderMainApp();
+                return;
+            }
+
+            if (window.appState.agendaData[aptId]) {
+                window.appState.agendaData[aptId].status = newStatus;
+                window.saveState();
+                window.showToast(`Estatus actualizado a: ${newStatus}`, "success");
+                window.renderMainApp();
+            }
+        };
+
+        // Cancelación de bloqueos de horario instantáneos sin confirmaciones
+        window.deleteBlock = function(event, blockId) {
+            if (event) event.stopPropagation();
+            if (!window.canUserCancelOrDelete()) {
+                window.showToast("No tienes privilegios para cancelar o desbloquear horarios.", "error");
+                return;
+            }
+
+            if (window.appState.agendaData[blockId]) {
+                delete window.appState.agendaData[blockId];
+                window.saveState();
+                window.showToast("Bloqueo de horario cancelado correctamente.", "info");
+                window.renderMainApp();
+            } else {
+                window.showToast("No se encontró el bloqueo a eliminar.", "error");
+            }
+        };
+
+        window.quickBlockHour = function(dateStr, hourStr, reasonType) {
+            const isRestrictedUser = window.appState.users[window.appState.currentUser]?.isReadOnly;
+            if (isRestrictedUser) {
+                window.showToast("Tu perfil es de Solo Lectura. No puedes realizar bloqueos.", "error");
+                return;
+            }
+
+            const blockId = 'block_' + Date.now();
+            window.appState.agendaData[blockId] = {
+                id: blockId,
+                isBlock: true,
+                date: dateStr,
+                startHour: hourStr,
+                endHour: String(parseInt(hourStr.split(':')[0]) + 1).padStart(2, '0') + ':00',
+                reason: reasonType,
+                createdBy: window.appState.currentUser
+            };
+
+            window.saveState();
+            window.showToast(`Bloqueado como ${reasonType} correctamente.`, "success");
+            window.renderMainApp();
+        };
+
+        // GESTIÓN DE BLOQUEOS DE FECHAS / HORAS (A TRAVÉS DEL MODAL COMPLETO)
+        window.openBlockDayModal = function() {
+            populateHourDropdowns();
+            document.getElementById('block-date').value = getShortDateString(window.appState.currentDate);
+            document.getElementById('block-start-hour').value = '08:00';
+            document.getElementById('block-end-hour').value = '21:00';
+            document.getElementById('block-reason').value = 'Hora Libre';
+            document.getElementById('block-day-modal').classList.remove('hidden');
+            document.getElementById('block-day-modal').classList.add('flex');
+        };
+
+        window.closeBlockDayModal = function() {
+            document.getElementById('block-day-modal').classList.add('hidden');
+            document.getElementById('block-day-modal').classList.remove('flex');
+        };
+
+        window.submitBlockDay = function(e) {
+            e.preventDefault();
+            const date = document.getElementById('block-date').value;
+            const startHour = document.getElementById('block-start-hour').value;
+            const endHour = document.getElementById('block-end-hour').value;
+            const reason = document.getElementById('block-reason').value;
+
+            const blockId = 'block_' + Date.now();
+            window.appState.agendaData[blockId] = {
+                id: blockId,
+                isBlock: true,
+                date,
+                startHour,
+                endHour,
+                reason,
+                createdBy: window.appState.currentUser
+            };
+
+            window.saveState();
+            window.showToast("Bloqueo de horario establecido.", "success");
+            window.closeBlockDayModal();
+            window.renderMainApp();
+        };
+
+        window.openChangePinModal = function() {
+            document.getElementById('pin-current').value = '';
+            document.getElementById('pin-new').value = '';
+            document.getElementById('change-pin-modal').classList.remove('hidden');
+            document.getElementById('change-pin-modal').classList.add('flex');
+        };
+
+        window.closeChangePinModal = function() {
+            document.getElementById('change-pin-modal').classList.add('hidden');
+            document.getElementById('change-pin-modal').classList.remove('flex');
+        };
+
+        window.submitChangePin = function(e) {
+            e.preventDefault();
+            const currentPin = document.getElementById('pin-current').value;
+            const newPin = document.getElementById('pin-new').value;
+
+            const currUser = window.appState.currentUser;
+            if (window.appState.users[currUser].pin === currentPin) {
+                if (newPin.length !== 4 || isNaN(newPin)) {
+                    window.showToast("El nuevo PIN debe ser exactamente de 4 dígitos numéricos.", "error");
+                    return;
+                }
+                window.appState.users[currUser].pin = newPin;
+                window.saveState();
+                window.showToast("PIN actualizado correctamente.", "success");
+                window.closeChangePinModal();
+            } else {
+                window.showToast("El PIN actual es incorrecto.", "error");
+            }
+        };
+
+        // SISTEMA DE MONITOREO DE ALARMAS Y TEXT TO SPEECH
+        function checkRealtimeAlarms() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const hhmm = `${hours}:${minutes}`;
+
+            if (window.appState.lastCheckedAlarmTime === hhmm) return;
+            window.appState.lastCheckedAlarmTime = hhmm;
+
+            const dateStr = getShortDateString(now);
+            const appointments = Object.values(window.appState.agendaData).filter(item => !item.isBlock && item.date === dateStr);
+
+            for (let apt of appointments) {
+                if (!apt.alarm) continue;
+                
+                const [aptH, aptM] = apt.hour.split(':').map(Number);
+                const aptMinutesTotal = aptH * 60 + aptM;
+                const currentMinutesTotal = now.getHours() * 60 + now.getMinutes();
+
+                if (aptMinutesTotal - currentMinutesTotal === 3) {
+                    triggerVoiceAlarm(apt);
+                    break;
+                }
+            }
+        }
+
+        setInterval(checkRealtimeAlarms, 20000);
+
+        function triggerVoiceAlarm(apt) {
+            document.getElementById('alarm-time').textContent = apt.hour;
+            document.getElementById('alarm-name').textContent = apt.student;
+            document.getElementById('alarm-details').textContent = `${apt.level} • ${apt.career} • ${normalizeSemestreValue(apt.grade || 'N/A')}-${apt.group || 'N/A'}`;
+            
+            const modal = document.getElementById('alarm-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+
+            window.speakCurrentAlarmText(apt);
+        }
+
+        window.speakCurrentAlarmText = function(explicitApt = null) {
+            let student = explicitApt ? explicitApt.student : document.getElementById('alarm-name').textContent;
+            let time = explicitApt ? explicitApt.hour : document.getElementById('alarm-time').textContent;
+            let career = explicitApt ? explicitApt.career : document.getElementById('alarm-details').textContent;
+
+            const message = `Atención, la consulta psicopedagógica programada para las ${time} del alumno ${student} de ${career} dará inicio en tres minutos. Por favor, asista a su cubículo de atención para preparar la sesión.`;
+            
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(message);
+                utterance.lang = 'es-MX';
+                utterance.rate = 0.95;
+                window.speechSynthesis.speak(utterance);
+            }
+        };
+
+        window.dismissAlarm = function() {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+            }
+            const modal = document.getElementById('alarm-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            window.showToast("Alarma atendida", "info");
+        };
+
+        window.announceNextAppointment = function() {
+            const now = new Date();
+            const dateStr = getShortDateString(now);
+            const currentMinutes = now.getHours() * 60 + now.getMinutes();
+            
+            // Filtrar citas de hoy que estén pendientes o reagendadas
+            const todayApts = Object.values(window.appState.agendaData)
+                .filter(a => !a.isBlock && a.date === dateStr && (a.status === 'Pendiente' || a.status === 'Reagendada'));
+            
+            // Ordenarlas por hora cronológica
+            todayApts.sort((a, b) => {
+                const [ha, ma] = a.hour.split(':').map(Number);
+                const [hb, mb] = b.hour.split(':').map(Number);
+                return (ha * 60 + ma) - (hb * 60 + mb);
+            });
+            
+            // Encontrar la primera cita que ocurra en el futuro próximo hoy
+            const nextApt = todayApts.find(a => {
+                const [h, m] = a.hour.split(':').map(Number);
+                return (h * 60 + m) > currentMinutes;
+            }) || todayApts[0]; // fallback a la primera del día si ya pasaron todas
+
+            if (nextApt) {
+                const [h, m] = nextApt.hour.split(':').map(Number);
+                const labelHour = h >= 12 ? (h === 12 ? '12 PM' : `${h - 12} PM`) : `${h} AM`;
+                const statusTerm = nextApt.status === 'Reagendada' ? 'reagendada' : 'programada';
+                
+                const speakText = `Su siguiente cita psicopedagógica ${statusTerm} es a las ${labelHour}, con el alumno ${nextApt.student} de la carrera de ${nextApt.career}.`;
+                
+                if ('speechSynthesis' in window) {
+                    window.speechSynthesis.cancel();
+                    const utterance = new SpeechSynthesisUtterance(speakText);
+                    utterance.lang = 'es-MX';
+                    utterance.rate = 0.95;
+                    window.speechSynthesis.speak(utterance);
+                    window.showToast(`Anunciando por voz: Cita de las ${nextApt.hour}`, "info");
+                } else {
+                    window.showToast("La síntesis de voz no está soportada en este navegador.", "error");
+                }
+            } else {
+                const noAptsMsg = "No tiene más citas psicopedagógicas pendientes agendadas para el día de hoy.";
+                if ('speechSynthesis' in window) {
+                    window.speechSynthesis.cancel();
+                    const utterance = new SpeechSynthesisUtterance(noAptsMsg);
+                    utterance.lang = 'es-MX';
+                    window.speechSynthesis.speak(utterance);
+                }
+                window.showToast("No hay más citas para hoy", "info");
+            }
+        };
+
+        window.consultGeminiAssistant = async function() {
+            const student = document.getElementById('apt-student').value.trim();
+            const level = document.getElementById('apt-level').value;
+            const career = document.getElementById('apt-career').value;
+            const type = document.getElementById('apt-type').value;
+            const observations = document.getElementById('apt-obs').value.trim();
+
+            if (!student) {
+                window.showToast("Complete primero el nombre del alumno para generar contexto útil.", "info");
+                return;
+            }
+
+            const prompt = `Actúa como un experto en psicopedagogía universitaria del Centro Educativo Universitario de Tehuacán. Genera sugerencias y un borrador detallado de observaciones clínicas, metas terapéuticas o de consejería académica y un plan de acción para el siguiente perfil de alumno:
+            - Nombre del Alumno: ${student}
+            - Nivel Educativo: ${level}
+            - Programa de estudios/Carrera: ${career}
+            - Tipo de consulta solicitada: ${type}
+            - Anotaciones iniciales o comentarios registrados previamente por el terapeuta: "${observations || 'Sin observaciones iniciales registradas'}"
+            
+            Por favor, genera un análisis formal, empático, profesional y estructurado con los siguientes apartados:
+            1. Objetivos específicos para esta consulta.
+            2. Recomendaciones de intervención inmediata para el personal psicopedagógico.
+            3. Notas o sugerencias detalladas para aplicar en el aula por los docentes.
+            Utiliza formato limpio, profesional and directo.`;
+
+            document.getElementById('ai-modal-body').innerHTML = `
+                <div class="flex flex-col items-center justify-center py-12 gap-4">
+                    <div class="relative w-16 h-16">
+                        <div class="absolute inset-0 rounded-full border-4 border-brandGold-500/20 border-t-brandGold-500 animate-spin"></div>
+                    </div>
+                    <p class="text-sm text-slate-400 font-bold tracking-wider animate-pulse">Analizando contexto psicopedagógico de ${student}...</p>
+                </div>
+            `;
+            
+            const modal = document.getElementById('ai-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+
+            const apiKey = window.appState.geminiApiKey || "";
+
+            if (!apiKey) {
+                document.getElementById('ai-modal-body').innerHTML = `
+                    <div class="space-y-4">
+                        <div class="p-4 bg-brandGold-500/10 border border-brandGold-500/30 rounded-2xl text-brandGold-500 text-xs font-semibold leading-relaxed">
+                            No se ha detectado una API Key de Gemini configurada. Introduzca su API Key de Google AI Studio abajo para habilitar diagnósticos y notas automatizadas premium de forma instantánea.
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Clave de la API de Gemini (Google AI Studio)</label>
+                            <input type="password" id="gemini-setup-key" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-4 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-brandGold-500/50" placeholder="AIzaSy...">
+                        </div>
+                        <button type="button" onclick="saveGeminiApiKeyFromModal()" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-brandGold-500 to-brandGold-600 hover:from-brandGold-600 text-clinical-950 font-black text-xs uppercase tracking-wider">
+                            Guardar Key y Generar Notas
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+
+            try {
+                const responseText = await callGeminiWithBackoff(prompt, apiKey);
+                lastAiOutput = responseText;
+                document.getElementById('ai-modal-body').innerHTML = formatMarkdownToHtml(responseText);
+            } catch (err) {
+                document.getElementById('ai-modal-body').innerHTML = `
+                    <div class="p-4 bg-rose-500/10 border border-rose-500/30 rounded-2xl text-rose-300 text-xs font-medium space-y-2">
+                        <p class="font-bold">Error al procesar la solicitud con la IA de Gemini:</p>
+                        <p class="font-mono text-[11px]">${err.message}</p>
+                        <p class="text-[10px] text-slate-400">Verifique su API Key de Google AI Studio o que no tenga restricciones de red actuales.</p>
+                    </div>
+                `;
+            }
+        };
+
+        window.saveGeminiApiKeyFromModal = function() {
+            const val = document.getElementById('gemini-setup-key').value.trim();
+            if (val) {
+                window.appState.geminiApiKey = val;
+                window.saveState();
+                window.showToast("API Key guardada correctamente.", "success");
+                window.consultGeminiAssistant();
+            } else {
+                window.showToast("Por favor, ingrese un valor de API Key válido.", "error");
+            }
+        };
+
+        async function callGeminiWithBackoff(prompt, apiKey) {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }],
+                systemInstruction: {
+                    parts: [{ text: "Eres un psicólogo psicopedagogo clínico y consultor vocacional de nivel educativo universitario del Centro Educativo Universitario de Tehuacán. Tus notas son objetivas, terapéuticamente precisas, con enfoque cognitivo-conductual y humanista educativo." }]
+                }
+            };
+
+            let delay = 1000;
+            const maxRetries = 5;
+
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (response.ok) {
+                        const json = await response.json();
+                        return json.candidates?.[0]?.content?.parts?.[0]?.text || "No se obtuvo respuesta de la IA.";
+                    }
+
+                    if (response.status !== 429 && response.status < 500) {
+                        throw new Error(`HTTP Error ${response.status}: ${response.statusText}`);
+                    }
+                } catch (e) {
+                    if (i === maxRetries - 1) throw e;
+                }
+                await new Promise(resolve => setTimeout(resolve, delay));
+                delay *= 2;
+            }
+            throw new Error("No se pudo establecer comunicación con el servidor de IA.");
+        }
+
+        function formatMarkdownToHtml(md) {
+            return md
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                .replace(/### (.*?)\n/g, '<h5 class="text-white font-bold text-sm mt-3 mb-1 uppercase tracking-wider text-brandGold-500">$1</h5>')
+                .replace(/## (.*?)\n/g, '<h4 class="text-white font-black text-base mt-4 mb-2 uppercase border-b border-clinical-800/80 pb-1">$1</h4>')
+                .replace(/# (.*?)\n/g, '<h3 class="text-white font-outfit font-black text-lg mt-5 mb-3">$1</h3>')
+                .replace(/^- (.*?)\n/gm, '<li class="ml-4 list-disc text-slate-300">$1</li>')
+                .replace(/\n\n/g, '<p class="mb-3"></p>')
+                .replace(/\n/g, '<br>');
+        }
+
+        window.closeAiModal = function() {
+            document.getElementById('ai-modal').classList.add('hidden');
+            document.getElementById('ai-modal').classList.remove('flex');
+        };
+
+        window.copyAiOutput = function() {
+            if (!lastAiOutput) return;
+            const temp = document.createElement('textarea');
+            temp.value = lastAiOutput;
+            document.body.appendChild(temp);
+            temp.select();
+            document.execCommand('copy');
+            document.body.removeChild(temp);
+            window.showToast("Respuesta de la IA copiada al portapapeles.", "success");
+        };
+
+        window.applyAiToObservations = function() {
+            const obsTextarea = document.getElementById('apt-obs');
+            if (obsTextarea) {
+                const cleanText = lastAiOutput.replace(/[\*#]/g, '');
+                obsTextarea.value = (obsTextarea.value + "\n\n" + cleanText).trim();
+                window.showToast("Sugerencias aplicadas a la caja de observaciones.", "success");
+                window.closeAiModal();
+            }
+        };
+
+        window.openReportModal = function(aptId) {
+            const apt = window.appState.agendaData[aptId];
+            if (!apt) return;
+
+            const printArea = document.getElementById('report-modal-body');
+            const now = new Date();
+            const dateStrFormatted = now.toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' });
+            
+            const uniqueFolio = window.generateFolioCode(apt);
+
+            printArea.innerHTML = `
+                <div class="p-10 border-4 border-double border-[#1E2D80]/20 max-w-4xl mx-auto bg-white text-slate-800 relative shadow-md">
+                    <!-- Marca de Agua de Logotipo -->
+                    <div class="absolute inset-0 flex items-center justify-center opacity-[0.04] pointer-events-none select-none">
+                        <img src="https://drive.google.com/thumbnail?id=1ao9olFJOvSPvgmeyLJhkD1P0Pmq_R3T2&sz=w500" class="w-96 h-96 object-contain">
+                    </div>
+
+                    <!-- Encabezado Membretado Oficial -->
+                    <div class="flex justify-between items-center border-b-2 border-[#1E2D80] pb-6 mb-8 relative z-10">
+                        <div class="flex items-center gap-4">
+                            <div class="w-20 h-20 flex items-center justify-center" id="print-logo-box">
+                                <img src="https://drive.google.com/thumbnail?id=1ao9olFJOvSPvgmeyLJhkD1P0Pmq_R3T2&sz=w500" 
+                                     onerror="window.showFallbackLogo(this, 'print')" 
+                                     class="w-full h-full object-contain">
+                            </div>
+                            <div>
+                                <h1 class="font-bold text-[#1E2D80] text-lg uppercase tracking-tight leading-none mb-1">Centro Educativo Universitario de Tehuacán</h1>
+                                <p class="text-xs text-slate-600 font-bold uppercase tracking-widest">Departamento de Atención Psicopedagógica</p>
+                                <p class="text-[10px] text-slate-400 font-semibold uppercase">"Excelencia, Identidad y Compromiso Académico"</p>
+                            </div>
+                        </div>
+                        <div class="text-right flex flex-col items-end">
+                            <span class="inline-block bg-[#1E2D80]/10 border border-[#1E2D80]/30 rounded-lg px-3.5 py-1 text-[#1E2D80] text-xs font-black uppercase tracking-wider mb-1">
+                                Reporte Oficial
+                            </span>
+                            <span class="text-[9px] font-black text-brandGold-700 bg-brandGold-100 border border-brandGold-500/30 px-2 py-0.5 rounded-md mb-2">
+                                FOLIO: ${uniqueFolio}
+                            </span>
+                            <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Fecha de Emisión</p>
+                            <p class="text-xs font-black text-slate-800 font-mono">${dateStrFormatted}</p>
+                        </div>
+                    </div>
+
+                    <!-- Datos Generales del Alumno -->
+                    <div class="mb-6 relative z-10">
+                        <div class="bg-[#1E2D80]/5 border-l-4 border-[#1E2D80] p-4 rounded-r-xl">
+                            <h2 class="text-xs font-black text-[#1E2D80] uppercase tracking-wider mb-2.5">Ficha de Identificación del Alumno</h2>
+                            <div class="grid grid-cols-2 gap-y-2 gap-x-4 text-xs">
+                                <div>
+                                    <span class="text-slate-500 font-semibold">Nombre Completo:</span>
+                                    <strong class="text-slate-900 font-bold block text-sm">${apt.student}</strong>
+                                </div>
+                                <div>
+                                    <span class="text-slate-500 font-semibold">Programa de Estudios / Carrera:</span>
+                                    <strong class="text-slate-900 block font-bold">${apt.career} (${apt.level})</strong>
+                                </div>
+                                <div class="grid grid-cols-3 gap-1 pt-1.5 border-t border-slate-200">
+                                    <div>
+                                        <span class="text-slate-500 block text-[10px]">Grado/Semestre:</span>
+                                        <strong class="text-slate-900">${normalizeSemestreValue(apt.grade)}</strong>
+                                    </div>
+                                    <div>
+                                        <span class="text-slate-500 block text-[10px]">Grupo:</span>
+                                        <strong class="text-slate-900">${apt.group || 'N/A'}</strong>
+                                    </div>
+                                    <div>
+                                        <span class="text-slate-500 block text-[10px]">Turno:</span>
+                                        <strong class="text-slate-900">${apt.shift || 'N/A'}</strong>
+                                    </div>
+                                </div>
+                                <div class="pt-1.5 border-t border-slate-200 flex flex-col items-start gap-1">
+                                    <span class="text-slate-500 font-semibold text-[10px]">Tipo de Consulta y Estatus:</span>
+                                    <div class="flex gap-1.5">
+                                        <span class="inline-block bg-[#EBB102]/20 border border-[#C79601]/40 text-[#A37B00] rounded px-2 py-0.5 text-[10px] font-black uppercase">${apt.type}</span>
+                                        <span class="inline-block bg-slate-100 border border-slate-300 text-slate-700 rounded px-2 py-0.5 text-[10px] font-black uppercase">${apt.status}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Detalles del Expediente -->
+                    <div class="mb-8 relative z-10">
+                        <h3 class="text-xs font-black text-[#1E2D80] uppercase tracking-wider border-b border-slate-300 pb-1 mb-3">Valoración Psicopedagógica y Observaciones</h3>
+                        <p class="text-xs text-slate-700 leading-relaxed whitespace-pre-line bg-slate-50 p-4 rounded-xl border border-slate-200/60 font-medium">
+                            ${apt.obs || 'No se han ingresado observaciones o detalles del diagnóstico psicopedagógico en esta sesión.'}
+                        </p>
+                    </div>
+
+                    <!-- Firmas de Autorización -->
+                    <div class="mt-16 grid grid-cols-2 gap-12 text-center relative z-10">
+                        <div class="flex flex-col items-center">
+                            <div class="w-40 border-b border-slate-400 mb-2"></div>
+                            <span class="text-xs font-black text-slate-800">${window.appState.users[window.appState.currentUser]?.name}</span>
+                            <span class="text-[10px] text-slate-500 font-bold uppercase">${window.appState.users[window.appState.currentUser]?.role}</span>
+                            <span class="text-[9px] text-slate-400 uppercase tracking-widest mt-0.5">CEUT</span>
+                        </div>
+                        <div class="flex flex-col items-center">
+                            <div class="w-40 border-b border-slate-400 mb-2"></div>
+                            <span class="text-xs font-black text-slate-800">Sello de Control Escolar</span>
+                            <span class="text-[10px] text-slate-500 font-bold uppercase">Depto. Psicopedagógico</span>
+                            <span class="text-[9px] text-slate-400 uppercase tracking-widest mt-0.5">Validación CEUT</span>
+                        </div>
+                    </div>
+
+                    <!-- Pie de Página -->
+                    <div class="mt-16 pt-6 border-t border-slate-200 text-center text-[9px] text-slate-400 font-medium relative z-10 leading-normal">
+                        Centro Educativo Universitario de Tehuacán S.C. | Av. de la Juventud No. 1200, Tehuacán, Puebla. <br>
+                        Tel: 238-383-3000 | Correo: psicopedagogia@ceut.edu.mx | Documento con fines estrictamente académicos e institucionales.
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('report-modal').classList.remove('hidden');
+            document.getElementById('report-modal').classList.add('flex');
+            if (typeof lucide !== 'undefined' && lucide.createIcons) {
+                lucide.createIcons();
+            }
+        };
+
+        window.closeReportModal = function() {
+            document.getElementById('report-modal').classList.add('hidden');
+            document.getElementById('report-modal').classList.remove('flex');
+        };
+
+        window.printReport = function() {
+            const reportContent = document.getElementById('report-modal-body').innerHTML;
+            document.getElementById('academic-report-print-area').innerHTML = reportContent;
+            window.print();
+        };
+    </script>
+
+    <!-- COMPLEMENTOS DE SCRIPT: Lógica de Vistas (Day, Week, Month, List) -->
+    <script>
+        // RENDERIZADO COMPLETO DEL PANEL PRINCIPAL
+        window.renderMainApp = function() {
+            const app = document.getElementById('app');
+            if (!app) return;
+
+            const currentUserObj = window.appState.users[window.appState.currentUser];
+            if (!currentUserObj) {
+                window.renderLogin();
+                return;
+            }
+
+            // Datos estadísticos dinámicos
+            const allItems = Object.values(window.appState.agendaData);
+            const totalApts = allItems.filter(i => !i.isBlock).length;
+            const completedApts = allItems.filter(i => !i.isBlock && i.status === 'Realizada').length;
+            const pendingApts = allItems.filter(i => !i.isBlock && (i.status === 'Pendiente' || i.status === 'Reagendada')).length;
+
+            app.innerHTML = `
+                <!-- Encabezado de la Aplicación -->
+                <header class="bg-clinical-950/90 backdrop-blur-md border-b border-clinical-800/80 sticky top-0 z-30 px-6 py-4 flex flex-col md:flex-row gap-4 justify-between items-center">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 flex items-center justify-center p-1.5 bg-clinical-900 border border-brandGold-500/30 rounded-xl">
+                            <img src="https://drive.google.com/thumbnail?id=1ao9olFJOvSPvgmeyLJhkD1P0Pmq_R3T2&sz=w128" 
+                                 onerror="window.showFallbackLogo(this, 'small')" 
+                                 class="w-full h-full object-contain filter drop-shadow-[0_1px_2px_rgba(235,177,2,0.4)]">
+                        </div>
+                        <div>
+                            <h2 class="font-outfit font-black text-white text-lg tracking-tight flex items-center gap-2">
+                                <span>Agenda Psicopedagógica</span>
+                                <span class="bg-brandGold-500/10 border border-brandGold-500/30 text-brandGold-500 text-[9px] font-black uppercase py-0.5 px-2 rounded-md">CEUT</span>
+                            </h2>
+                            <p class="text-xs text-slate-400 font-semibold">Identidad y Excelencia Académica • Tehuacán</p>
+                        </div>
+                    </div>
+
+                    <!-- Buscador Avanzado -->
+                    <div class="w-full md:w-80 relative">
+                        <input type="text" oninput="window.setSearchFilter(event)" value="${window.appState.searchQuery}" class="w-full bg-clinical-900 border border-clinical-800 rounded-xl py-2 pl-9 pr-4 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-brandGold-500/50" placeholder="Buscar por alumno o carrera...">
+                        <i data-lucide="search" class="w-4 h-4 text-slate-600 absolute left-3 top-1/2 transform -translate-y-1/2"></i>
+                    </div>
+
+                    <div class="flex items-center gap-4">
+                        <div class="text-right">
+                            <p class="text-xs font-black text-white leading-none">${currentUserObj.name}</p>
+                            <p class="text-[10px] text-brandGold-500 font-bold uppercase tracking-wider mt-0.5">${currentUserObj.role}</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="window.openChangePinModal()" class="p-2.5 bg-clinical-900 border border-clinical-800 rounded-xl text-slate-400 hover:text-white transition-colors" title="Cambiar PIN de seguridad">
+                                <i data-lucide="key-round" class="w-4 h-4 text-brandGold-500"></i>
+                            </button>
+                            <button onclick="window.logout()" class="p-2.5 bg-clinical-900 border border-clinical-800 hover:border-rose-900 hover:bg-rose-950/20 rounded-xl text-slate-400 hover:text-rose-400 transition-colors" title="Cerrar sesión segura">
+                                <i data-lucide="log-out" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+                </header>
+
+                <div class="flex-1 flex flex-col lg:flex-row p-6 gap-6 relative z-10 max-w-7xl w-full mx-auto">
+                    <!-- BARRA LATERAL (Mini Calendario, Estadísticas y Accesos Rápidos) -->
+                    <aside class="w-full lg:w-72 shrink-0 space-y-6">
+                        <!-- Botones de Acción de Bloqueo y Registro -->
+                        <div class="flex flex-col gap-2">
+                            <div class="grid grid-cols-2 gap-2">
+                                <button onclick="window.openCreateDrawer()" class="py-3 bg-gradient-to-r from-brandGold-500 to-brandGold-600 hover:from-brandGold-600 hover:to-brandGold-700 text-clinical-950 font-black rounded-2xl text-xs uppercase tracking-wider transition-all shadow-lg shadow-brandGold-500/10 flex items-center justify-center gap-1.5">
+                                    <i data-lucide="calendar-plus" class="w-4 h-4"></i>
+                                    <span>Agendar</span>
+                                </button>
+                                <button onclick="window.openBlockDayModal()" class="py-3 bg-clinical-950 hover:bg-clinical-850 border border-clinical-800 rounded-2xl text-slate-300 hover:text-white font-bold text-[10px] uppercase tracking-wider transition-all flex items-center justify-center gap-1.5">
+                                    <i data-lucide="ban" class="w-4 h-4 text-brandGold-500"></i>
+                                    <span>Bloquear</span>
+                                </button>
+                            </div>
+                            
+                            <!-- RECORDATORIO DE VOZ DE LA SIGUIENTE CITA -->
+                            <button onclick="window.announceNextAppointment()" class="w-full py-3.5 bg-gradient-to-r from-clinical-700 to-clinical-600 hover:from-clinical-600 hover:to-clinical-500 border border-clinical-600/40 text-brandGold-500 hover:text-white font-black rounded-2xl text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-md">
+                                <i data-lucide="volume-2" class="w-4 h-4 animate-bounce"></i>
+                                <span>Recordar Siguiente Cita (Voz)</span>
+                            </button>
+                        </div>
+
+                        <!-- Mini Calendario de Navegación -->
+                        <div class="bg-clinical-900/80 border border-clinical-800/60 rounded-[2rem] p-5 shadow-xl">
+                            ${renderMiniCalendar()}
+                        </div>
+
+                        <!-- Filtros Rápidos por Categoría -->
+                        <div class="bg-clinical-900/80 border border-clinical-800/60 rounded-[2rem] p-5 shadow-xl space-y-3">
+                            <h3 class="text-xs font-black text-brandGold-500 uppercase tracking-widest border-b border-clinical-800 pb-2 flex items-center gap-2">
+                                <i data-lucide="filter" class="w-3.5 h-3.5"></i>
+                                <span>Atención</span>
+                            </h3>
+                            <div class="space-y-1.5">
+                                ${['all', 'Psicológica', 'Vocacional', 'Académica', 'Seguimiento'].map(t => {
+                                    const active = window.appState.filterType === t;
+                                    return `
+                                        <button onclick="window.setFilterType('${t}')" class="w-full text-left py-2 px-3.5 rounded-xl text-xs font-bold transition-all flex justify-between items-center ${active ? 'bg-brandGold-500 text-clinical-950 font-black shadow-md' : 'bg-clinical-950/40 text-slate-300 hover:bg-clinical-950/80'}">
+                                            <span>${t === 'all' ? 'Ver Todas' : t}</span>
+                                            <span class="text-[10px] px-1.5 py-0.5 rounded-md ${active ? 'bg-clinical-950/20 text-clinical-950' : 'bg-clinical-800 text-slate-400'}">
+                                                ${t === 'all' ? totalApts : allItems.filter(i => !i.isBlock && i.type === t).length}
+                                            </span>
+                                        </button>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </div>
+
+                        <!-- Indicadores / Estadísticas rápidas -->
+                        <div class="bg-clinical-900/80 border border-clinical-800/60 rounded-[2rem] p-5 shadow-xl space-y-3">
+                            <h3 class="text-xs font-black text-brandGold-500 uppercase tracking-widest border-b border-clinical-800 pb-2 flex items-center gap-2">
+                                <i data-lucide="bar-chart-3" class="w-3.5 h-3.5"></i>
+                                <span>Métricas</span>
+                            </h3>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div class="bg-clinical-950/60 rounded-2xl p-3 border border-clinical-800/80">
+                                    <span class="text-[10px] text-emerald-400 font-bold uppercase block mb-1">Citas Realizadas</span>
+                                    <span class="font-outfit font-black text-2xl text-white">${completedApts}</span>
+                                </div>
+                                <div class="bg-clinical-950/60 rounded-2xl p-3 border border-clinical-800/80">
+                                    <span class="text-[10px] text-amber-500 font-bold uppercase block mb-1">Pend/Reagendadas</span>
+                                    <span class="font-outfit font-black text-2xl text-white">${pendingApts}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </aside>
+
+                    <!-- CONTENEDOR CENTRAL DE LA AGENDA (Módulo Principal) -->
+                    <main class="flex-1 flex flex-col space-y-4">
+                        <!-- Barra de Control de Navegación y Vistas -->
+                        <div class="bg-clinical-900/80 border border-clinical-800/60 rounded-[2rem] p-4 flex flex-col md:flex-row gap-4 items-center justify-between shadow-xl">
+                            <div class="flex items-center gap-3">
+                                <button onclick="window.navDate(-1)" class="p-2 bg-clinical-950 border border-clinical-800 hover:border-brandGold-500/40 rounded-xl text-slate-300 hover:text-white transition-colors">
+                                    <i data-lucide="chevron-left" class="w-4 h-4"></i>
+                                </button>
+                                <button onclick="window.navToday()" class="py-2 px-4 bg-clinical-950 border border-clinical-800 hover:border-brandGold-500/40 rounded-xl text-xs font-bold text-slate-300 hover:text-white transition-all">
+                                    Hoy
+                                </button>
+                                <button onclick="window.navDate(1)" class="p-2 bg-clinical-950 border border-clinical-800 hover:border-brandGold-500/40 rounded-xl text-slate-300 hover:text-white transition-colors">
+                                    <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                                </button>
+                                <span class="font-outfit font-black text-base text-white tracking-tight ml-2 border-l border-clinical-800 pl-4">
+                                    ${getFriendlyDateString(window.appState.currentDate)}
+                                </span>
+                            </div>
+
+                            <!-- Interruptores de Vistas -->
+                            <div class="bg-clinical-950 rounded-xl p-1 border border-clinical-800 flex gap-1">
+                                ${[
+                                    { view: 'day', label: 'Día', icon: 'clock' },
+                                    { view: 'week', label: 'Semana', icon: 'calendar-days' },
+                                    { view: 'month', label: 'Mes', icon: 'calendar' },
+                                    { view: 'list', label: 'Lista', icon: 'list-todo' }
+                                ].map(v => {
+                                    const isSelected = window.appState.viewMode === v.view;
+                                    return `
+                                        <button onclick="window.changeViewMode('${v.view}')" class="py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${isSelected ? 'bg-brandGold-500 text-clinical-950 font-black' : 'text-slate-400 hover:text-white'}">
+                                            <i data-lucide="${v.icon}" class="w-3.5 h-3.5"></i>
+                                            <span>${v.label}</span>
+                                        </button>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </div>
+
+                        <!-- VISTA DINÁMICA SELECCIONADA -->
+                        <div class="bg-clinical-900/80 border border-clinical-800/60 rounded-[2rem] p-6 shadow-xl flex-1 overflow-x-auto min-h-[500px]">
+                            ${renderAgendaView()}
+                        </div>
+                    </main>
+                </div>
+            `;
+            if (typeof lucide !== 'undefined' && lucide.createIcons) {
+                lucide.createIcons();
+            }
+        };
+
+        // RENDERIZADO DEL MINI CALENDARIO EN LA BARRA LATERAL
+        function renderMiniCalendar() {
+            const date = new Date(window.appState.miniCalendarMonth);
+            const currentMonth = date.getMonth();
+            const currentYear = date.getFullYear();
+
+            // Cabecera del mini calendario
+            const monthName = date.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' });
+
+            const firstDayOfMonth = new Date(currentYear, currentMonth, 1).getDay();
+            const totalDaysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+            let calendarDaysHtml = '';
+            
+            // Espacios para días en blanco del mes anterior
+            const blanks = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1; // Adaptado para que empiece en lunes
+            for (let i = 0; i < blanks; i++) {
+                calendarDaysHtml += `<div></div>`;
+            }
+
+            for (let day = 1; day <= totalDaysInMonth; day++) {
+                const dayDate = new Date(currentYear, currentMonth, day);
+                const isToday = getShortDateString(dayDate) === getShortDateString(new Date());
+                const isSelected = getShortDateString(dayDate) === getShortDateString(window.appState.currentDate);
+
+                let bgClass = 'hover:bg-clinical-800 text-slate-300';
+                if (isToday) bgClass = 'bg-clinical-950 border border-brandGold-500 text-brandGold-500 font-bold';
+                if (isSelected) bgClass = 'bg-brandGold-500 text-clinical-950 font-black';
+
+                calendarDaysHtml += `
+                    <button onclick="window.selectMiniCalendarDate(${currentYear}, ${currentMonth}, ${day})" class="w-7 h-7 text-[10px] rounded-lg transition-all flex items-center justify-center font-semibold ${bgClass}">
+                        ${day}
+                    </button>
+                `;
+            }
+
+            return `
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs font-black text-white uppercase tracking-wider">${monthName}</span>
+                        <div class="flex gap-1">
+                            <button onclick="window.navMiniCalendar(-1)" class="p-1 hover:bg-clinical-950 rounded text-slate-400 hover:text-white"><i data-lucide="chevron-left" class="w-3.5 h-3.5"></i></button>
+                            <button onclick="window.navMiniCalendar(1)" class="p-1 hover:bg-clinical-950 rounded text-slate-400 hover:text-white"><i data-lucide="chevron-right" class="w-3.5 h-3.5"></i></button>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-7 gap-1 text-center text-[9px] font-bold text-slate-500 uppercase tracking-widest">
+                        <span>Lu</span><span>Ma</span><span>Mi</span><span>Ju</span><span>Vi</span><span>Sá</span><span>Do</span>
+                    </div>
+                    <div class="grid grid-cols-7 gap-1">
+                        ${calendarDaysHtml}
+                    </div>
+                </div>
+            `;
+        }
+
+        window.selectMiniCalendarDate = function(y, m, d) {
+            window.appState.currentDate = new Date(y, m, d);
+            window.renderMainApp();
+        };
+
+        window.navMiniCalendar = function(direction) {
+            window.appState.miniCalendarMonth.setMonth(window.appState.miniCalendarMonth.getMonth() + direction);
+            window.renderMainApp();
+        };
+
+        // FILTRADO DINÁMICO DE CITAS Y ACCIONES
+        function getFilteredAppointments() {
+            const search = window.appState.searchQuery;
+            const filter = window.appState.filterType;
+
+            return Object.values(window.appState.agendaData).filter(apt => {
+                if (apt.isBlock) return true; // Mantener bloqueos para visualización en cuadrículas
+
+                const matchesSearch = apt.student.toLowerCase().includes(search) || apt.career.toLowerCase().includes(search);
+                const matchesType = filter === 'all' || apt.type === filter;
+
+                return matchesSearch && matchesType;
+            });
+        }
+
+        // CONTROLADOR DE RENDERIZADO DE VISTAS (DÍA, SEMANA, MES, LISTA)
+        function renderAgendaView() {
+            const appointments = getFilteredAppointments();
+            
+            switch (window.appState.viewMode) {
+                case 'day':
+                    return renderDayView(appointments);
+                case 'week':
+                    return renderWeekView(appointments);
+                case 'month':
+                    return renderMonthView(appointments);
+                case 'list':
+                    return renderListView(appointments);
+                default:
+                    return renderDayView(appointments);
+            }
+        }
+
+        // 1. VISTA DE DÍA
+        function renderDayView(apts) {
+            const dateStr = getShortDateString(window.appState.currentDate);
+            const dayApts = apts.filter(a => a.date === dateStr);
+            const isCarlos = (window.appState.currentUser === 'carlos');
+
+            let slotsHtml = '';
+            for (let h = window.appState.scheduleConfig.startHour; h <= window.appState.scheduleConfig.endHour; h++) {
+                const hourFormatted = String(h).padStart(2, '0') + ':00';
+                
+                const blockItem = dayApts.find(a => a.isBlock && hourFormatted >= a.startHour && hourFormatted < a.endHour);
+                const currentApt = dayApts.find(a => !a.isBlock && a.hour === hourFormatted);
+
+                let cellContent = '';
+                if (blockItem) {
+                    let unlockButtonHtml = isCarlos ? `
+                        <button onclick="window.deleteBlock(event, '${blockItem.id}')" class="px-3 py-1 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 hover:text-white rounded-lg transition-colors text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
+                            <i data-lucide="trash" class="w-3.5 h-3.5"></i>
+                            <span>Desbloquear / Cancelar</span>
+                        </button>
+                    ` : '';
+
+                    cellContent = `
+                        <div class="bg-rose-950/40 border border-rose-500/20 text-rose-300 p-3 rounded-2xl flex items-center justify-between text-xs font-semibold animate-fade-up">
+                            <div class="flex items-center gap-2">
+                                <i data-lucide="ban" class="w-4 h-4 text-rose-400 shrink-0"></i>
+                                <span>Bloqueado: <strong>${blockItem.reason}</strong></span>
+                            </div>
+                            ${unlockButtonHtml}
+                        </div>
+                    `;
+                } else if (currentApt) {
+                    const typeColor = getTypeColorBadge(currentApt.type);
+                    cellContent = `
+                        <div onclick="window.openEditDrawer('${currentApt.id}')" class="bg-clinical-950 border border-clinical-800/80 p-3.5 rounded-2xl hover:border-brandGold-500/50 cursor-pointer transition-all group shadow-md animate-fade-up">
+                            <div class="flex justify-between items-center w-full">
+                                <div>
+                                    <span class="text-xs font-black text-white group-hover:text-brandGold-500 transition-colors block">${currentApt.student}</span>
+                                    <span class="text-[10px] text-slate-400 font-semibold block">${currentApt.career} • ${currentApt.level} • ${normalizeSemestreValue(currentApt.grade)}-${currentApt.group || 'N/A'} (${currentApt.shift})</span>
+                                </div>
+                                <div class="flex items-center gap-3" onclick="event.stopPropagation()">
+                                    <!-- Selector interactivo de Estatus en tiempo real -->
+                                    <select onchange="window.quickChangeStatus(event, '${currentApt.id}')" class="bg-clinical-900 border border-clinical-800 text-[10px] rounded-lg px-2 py-1 text-slate-300 font-bold focus:ring-1 focus:ring-brandGold-500">
+                                        <option value="Pendiente" ${currentApt.status === 'Pendiente' ? 'selected' : ''}>Pendiente</option>
+                                        <option value="Realizada" ${currentApt.status === 'Realizada' ? 'selected' : ''}>Realizada</option>
+                                        <option value="Reagendada" ${currentApt.status === 'Reagendada' ? 'selected' : ''}>Reagendada</option>
+                                        ${isCarlos ? `<option value="Cancelada" ${currentApt.status === 'Cancelada' ? 'selected' : ''}>Cancelada</option>` : ''}
+                                    </select>
+                                    <span class="text-[9px] px-2.5 py-1 rounded-lg font-black uppercase tracking-wider ${typeColor}">
+                                        ${currentApt.type}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    cellContent = `
+                        <div class="flex flex-col sm:flex-row gap-2 items-center w-full animate-fade-up">
+                            <button onclick="window.openCreateDrawer('${dateStr}', '${hourFormatted}')" class="flex-1 text-left py-4 px-4 bg-clinical-950/20 hover:bg-clinical-950/60 border border-dashed border-clinical-800/60 rounded-2xl text-[10px] text-slate-600 hover:text-brandGold-500/80 transition-all font-bold uppercase tracking-wider flex items-center gap-2">
+                                <i data-lucide="plus-circle" class="w-4 h-4"></i> Asignar Cita Psicopedagógica
+                            </button>
+                            <div class="flex gap-1">
+                                <button onclick="window.quickBlockHour('${dateStr}', '${hourFormatted}', 'Hora Libre')" class="py-2.5 px-3 bg-clinical-950 hover:bg-clinical-850 text-slate-400 hover:text-emerald-400 rounded-xl text-[9px] border border-clinical-800 transition-colors uppercase font-black tracking-widest">
+                                    + Hora Libre
+                                </button>
+                                <button onclick="window.quickBlockHour('${dateStr}', '${hourFormatted}', 'Curso / Taller')" class="py-2.5 px-3 bg-clinical-950 hover:bg-clinical-850 text-slate-400 hover:text-indigo-400 rounded-xl text-[9px] border border-clinical-800 transition-colors uppercase font-black tracking-widest">
+                                    + Curso
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                slotsHtml += `
+                    <div class="grid grid-cols-12 gap-4 items-center border-b border-clinical-800/50 py-3.5">
+                        <div class="col-span-2 font-mono text-xs font-bold text-slate-400 tracking-wider">
+                            ${h >= 12 ? (h === 12 ? '12:00 PM' : `${h - 12}:00 PM`) : `${h}:00 AM`}
+                        </div>
+                        <div class="col-span-10">
+                            ${cellContent}
+                        </div>
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="space-y-4 max-w-4xl mx-auto">
+                    <h3 class="text-xs font-black text-brandGold-500 uppercase tracking-widest border-b border-clinical-800 pb-3">Consultas del Día</h3>
+                    <div class="divide-y divide-clinical-800/40">
+                        ${slotsHtml}
+                    </div>
+                </div>
+            `;
+        }
+
+        // 2. VISTA DE SEMANA (Lunes a Sábado)
+        function renderWeekView(apts) {
+            const startOfWeek = new Date(window.appState.currentDate);
+            const currentDay = startOfWeek.getDay();
+            const diff = startOfWeek.getDate() - currentDay + (currentDay === 0 ? -6 : 1); // Ajustar para Lunes
+            startOfWeek.setDate(diff);
+
+            const daysOfThisWeek = [];
+            for (let i = 0; i < 6; i++) { // Lunes a Sábado
+                const day = new Date(startOfWeek);
+                day.setDate(startOfWeek.getDate() + i);
+                daysOfThisWeek.push(day);
+            }
+
+            let weekHeaderHtml = '<div class="w-20 shrink-0"></div>';
+            daysOfThisWeek.forEach(day => {
+                const isSelected = getShortDateString(day) === getShortDateString(window.appState.currentDate);
+                const dayName = day.toLocaleDateString('es-MX', { weekday: 'short' });
+                const dayNum = day.getDate();
+                
+                weekHeaderHtml += `
+                    <div class="flex-1 min-w-[120px] text-center pb-2 border-b-2 ${isSelected ? 'border-brandGold-500' : 'border-clinical-800'}">
+                        <p class="text-[10px] font-black uppercase text-slate-500 tracking-widest">${dayName}</p>
+                        <p class="text-sm font-black mt-0.5 ${isSelected ? 'text-brandGold-500' : 'text-white'}">${dayNum}</p>
+                    </div>
+                `;
+            });
+
+            const isCarlos = (window.appState.currentUser === 'carlos');
+            let gridRowsHtml = '';
+            for (let h = window.appState.scheduleConfig.startHour; h <= window.appState.scheduleConfig.endHour; h++) {
+                const hourStr = String(h).padStart(2, '0') + ':00';
+                const label = h >= 12 ? (h === 12 ? '12 PM' : `${h - 12} PM`) : `${h} AM`;
+
+                let colsHtml = `
+                    <div class="w-20 font-mono text-[10px] font-bold text-slate-505 shrink-0 flex items-center justify-center">
+                        ${label}
+                    </div>
+                `;
+
+                daysOfThisWeek.forEach(day => {
+                    const dateStr = getShortDateString(day);
+                    const dayApts = apts.filter(a => a.date === dateStr);
+                    const blockItem = dayApts.find(a => a.isBlock && hourStr >= a.startHour && hourStr < a.endHour);
+                    const currentApt = dayApts.find(a => !a.isBlock && a.hour === hourStr);
+
+                    let cellInner = '';
+                    if (blockItem) {
+                        let cancelBlockButtonHtml = isCarlos ? `
+                            <button onclick="window.deleteBlock(event, '${blockItem.id}')" class="text-rose-400 hover:text-white transition-colors self-end" title="Cancelar Bloqueo">
+                                <i data-lucide="x" class="w-3 h-3"></i>
+                            </button>
+                        ` : '';
+
+                        cellInner = `
+                            <div class="bg-rose-950/30 border border-rose-500/10 text-rose-300/80 p-2 rounded-xl text-[9px] h-full flex flex-col justify-between" title="Bloqueado: ${blockItem.reason}">
+                                <span class="font-semibold truncate">${blockItem.reason}</span>
+                                ${cancelBlockButtonHtml}
+                            </div>
+                        `;
+                    } else if (currentApt) {
+                        const typeBadgeColor = getTypeColorBadge(currentApt.type);
+                        cellInner = `
+                            <div onclick="window.openEditDrawer('${currentApt.id}')" class="bg-clinical-950 hover:bg-clinical-850 border border-clinical-800/80 hover:border-brandGold-500/40 p-2 rounded-xl text-left cursor-pointer transition-all h-full flex flex-col justify-between group shadow-sm">
+                                <span class="text-[9px] font-black text-white group-hover:text-brandGold-500 transition-colors truncate block leading-tight">${currentApt.student}</span>
+                                <div class="flex items-center justify-between w-full mt-1 gap-1" onclick="event.stopPropagation()">
+                                    <select onchange="window.quickChangeStatus(event, '${currentApt.id}')" class="bg-clinical-900 border border-clinical-800 text-[8px] rounded px-1 py-0.5 text-slate-300 font-bold max-w-[65px] truncate">
+                                        <option value="Pendiente" ${currentApt.status === 'Pendiente' ? 'selected' : ''}>Pend</option>
+                                        <option value="Realizada" ${currentApt.status === 'Realizada' ? 'selected' : ''}>Real</option>
+                                        <option value="Reagendada" ${currentApt.status === 'Reagendada' ? 'selected' : ''}>Reag</option>
+                                        ${isCarlos ? `<option value="Cancelada" ${currentApt.status === 'Cancelada' ? 'selected' : ''}>Canc</option>` : ''}
+                                    </select>
+                                    <span class="text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md self-start ${typeBadgeColor}">
+                                        ${currentApt.type.substring(0,4)}.
+                                    </span>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        cellInner = `
+                            <button onclick="window.openCreateDrawer('${dateStr}', '${hourStr}')" class="w-full h-full rounded-xl border border-dashed border-clinical-800/20 hover:border-brandGold-500/20 transition-colors flex items-center justify-center text-slate-800 hover:text-brandGold-500">
+                                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                            </button>
+                        `;
+                    }
+
+                    colsHtml += `
+                        <div class="flex-1 min-w-[120px] p-1 border-r border-b border-clinical-800/30 h-14">
+                            ${cellInner}
+                        </div>
+                    `;
+                });
+
+                gridRowsHtml += `
+                    <div class="flex border-b border-clinical-800/20">
+                        ${colsHtml}
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="min-w-[800px]">
+                    <div class="flex mb-3">
+                        ${weekHeaderHtml}
+                    </div>
+                    <div class="divide-y divide-clinical-800/20">
+                        ${gridRowsHtml}
+                    </div>
+                </div>
+            `;
+        }
+
+        // 3. VISTA DE MES
+        function renderMonthView(apts) {
+            const date = new Date(window.appState.currentDate);
+            const year = date.getFullYear();
+            const month = date.getMonth();
+
+            const firstDayOfMonth = new Date(year, month, 1).getDay();
+            const totalDaysInMonth = new Date(year, month + 1, 0).getDate();
+
+            let blanks = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1;
+
+            let daysHtml = '';
+            for (let i = 0; i < blanks; i++) {
+                daysHtml += `<div class="bg-clinical-950/10 border border-clinical-800/20 min-h-[100px] p-2"></div>`;
+            }
+
+            for (let day = 1; day <= totalDaysInMonth; day++) {
+                const dayDate = new Date(year, month, day);
+                const dayDateStr = getShortDateString(dayDate);
+                const isToday = dayDateStr === getShortDateString(new Date());
+
+                const dayApts = apts.filter(a => !a.isBlock && a.date === dayDateStr);
+
+                let listAptsHtml = '';
+                dayApts.slice(0, 3).forEach(a => {
+                    listAptsHtml += `
+                        <div onclick="event.stopPropagation(); window.openEditDrawer('${a.id}')" class="bg-clinical-950 border border-clinical-800 hover:border-brandGold-500/40 px-1.5 py-0.5 rounded text-[8px] text-white cursor-pointer transition-all truncate block">
+                            ${a.student}
+                        </div>
+                    `;
+                });
+
+                if (dayApts.length > 3) {
+                    listAptsHtml += `
+                        <span class="text-[8px] text-brandGold-500/80 font-black block text-center mt-1">+${dayApts.length - 3} consultas más</span>
+                    `;
+                }
+
+                daysHtml += `
+                    <div onclick="window.openCreateDrawer('${dayDateStr}')" class="bg-clinical-950/30 border border-clinical-800/40 hover:border-brandGold-500/20 min-h-[100px] p-2 transition-all cursor-pointer flex flex-col justify-between group">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-[10px] font-black ${isToday ? 'bg-brandGold-500 text-clinical-950 rounded-md w-5 h-5 flex items-center justify-center font-bold shadow-md' : 'text-slate-400 group-hover:text-white'}">
+                                ${day}
+                            </span>
+                            <span class="text-[8px] text-slate-500 font-bold uppercase tracking-wider group-hover:opacity-100 opacity-0 transition-opacity">Añadir</span>
+                        </div>
+                        <div class="space-y-1 overflow-hidden flex-1">
+                            ${listAptsHtml}
+                        </div>
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="space-y-3 min-w-[700px]">
+                    <div class="grid grid-cols-7 gap-1 text-center text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-clinical-800 pb-2">
+                        <span>Lunes</span><span>Martes</span><span>Miércoles</span><span>Jueves</span><span>Viernes</span><span>Sábado</span><span>Domingo</span>
+                    </div>
+                    <div class="grid grid-cols-7 gap-1">
+                        ${daysHtml}
+                    </div>
+                </div>
+            `;
+        }
+
+        // 4. VISTA DE LISTA COMPLETA
+        function renderListView(apts) {
+            const listApts = apts.filter(a => !a.isBlock);
+            if (listApts.length === 0) {
+                return `
+                    <div class="text-center py-16 space-y-3">
+                        <div class="w-12 h-12 rounded-full bg-clinical-950 border border-clinical-850 flex items-center justify-center mx-auto text-slate-600">
+                            <i data-lucide="info" class="w-6 h-6"></i>
+                        </div>
+                        <p class="text-slate-400 text-xs font-bold uppercase tracking-wider">No se encontraron consultas registradas.</p>
+                        <button onclick="window.openCreateDrawer()" class="py-2.5 px-5 bg-brandGold-500 text-clinical-950 font-black text-xs uppercase tracking-wider rounded-xl hover:bg-brandGold-600 shadow-md">Agendar Primera Consulta</button>
+                    </div>
+                `;
+            }
+
+            let rowsHtml = '';
+            listApts.forEach(a => {
+                const badgeColor = getTypeColorBadge(a.type);
+                const statusColor = getStatusColorBadge(a.status);
+
+                rowsHtml += `
+                    <tr onclick="window.openEditDrawer('${a.id}')" class="border-b border-clinical-800/40 hover:bg-clinical-950/30 cursor-pointer transition-colors text-xs font-medium">
+                        <td class="py-4 px-4 text-white font-bold font-outfit text-sm">${a.student}</td>
+                        <td class="py-4 px-4 text-slate-400 font-mono">${a.date} (${a.hour})</td>
+                        <td class="py-4 px-4 text-slate-300">${a.career} (${a.level})</td>
+                        <td class="py-4 px-4">
+                            <span class="inline-block px-2.5 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider ${badgeColor}">${a.type}</span>
+                        </td>
+                        <td class="py-4 px-4">
+                            <span class="inline-block px-2.5 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider ${statusColor}">${a.status}</span>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            return `
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="border-b border-clinical-800 text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                                <th class="py-3 px-4">Alumno</th>
+                                <th class="py-3 px-4">Fecha y Hora</th>
+                                <th class="py-3 px-4">Carrera e Instrucción</th>
+                                <th class="py-3 px-4">Categoría</th>
+                                <th class="py-3 px-4">Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-clinical-800/20">
+                            ${rowsHtml}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        // CONTROLADORES DE COLORES DE ETIQUETAS
+        function getTypeColorBadge(type) {
+            switch (type) {
+                case 'Psicológica':
+                    return 'bg-indigo-950/80 text-indigo-300 border border-indigo-800/40';
+                case 'Vocacional':
+                    return 'bg-emerald-950/80 text-emerald-300 border border-emerald-800/40';
+                case 'Académica':
+                    return 'bg-amber-950/80 text-amber-300 border border-amber-800/40';
+                case 'Seguimiento':
+                    return 'bg-purple-950/80 text-purple-300 border border-purple-800/40';
+                default:
+                    return 'bg-clinical-950 text-slate-400 border border-clinical-800';
+            }
+        }
+
+        function getStatusColorBadge(status) {
+            switch (status) {
+                case 'Pendiente':
+                    return 'bg-amber-950/80 text-amber-400 border border-amber-800/40';
+                case 'Realizada':
+                    return 'bg-emerald-950/80 text-emerald-400 border border-emerald-800/40';
+                case 'Reagendada':
+                    return 'bg-sky-950/80 text-sky-400 border border-sky-500/40';
+                case 'Cancelada':
+                    return 'bg-rose-950/80 text-rose-400 border border-rose-800/40';
+                default:
+                    return 'bg-clinical-950 text-slate-400 border border-clinical-800';
+            }
+        }
+
+        // INICIALIZADOR EN VENTANA CARGADA
+        window.onload = function() {
+            // Inicializar datos de demostración con las nomenclaturas oficiales de image_3ab109.png
+            if (Object.keys(window.appState.agendaData).length === 0) {
+                const todayStr = getShortDateString(new Date());
+                const tomorrow = new Date();
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                const tomorrowStr = getShortDateString(tomorrow);
+
+                window.appState.agendaData = {
+                    'demo_1': {
+                        id: 'demo_1',
+                        student: 'Mariana Flores Galicia',
+                        date: todayStr,
+                        hour: '10:00',
+                        level: 'Licenciatura',
+                        career: 'Psicología',
+                        grade: '4° Semestre',
+                        group: 'B',
+                        shift: 'Matutino',
+                        type: 'Psicológica',
+                        status: 'Pendiente',
+                        alarm: true,
+                        obs: 'Presenta sintomatología de estrés agudo por sobrecarga académica. Se recomiendan ejercicios de regulación emocional.',
+                        createdBy: 'carlos'
+                    },
+                    'demo_2': {
+                        id: 'demo_2',
+                        student: 'Alejandro Domínguez Romero',
+                        date: todayStr,
+                        hour: '12:00',
+                        level: 'Licenciatura',
+                        career: 'Informática',
+                        grade: '2° Semestre',
+                        group: 'A',
+                        shift: 'Matutino',
+                        type: 'Vocacional',
+                        status: 'Realizada',
+                        alarm: false,
+                        obs: 'El alumno expresa dudas con respecto al perfil de egreso laboral. Se aplicó test de inventario vocacional.',
+                        createdBy: 'miroslava'
+                    },
+                    'demo_3': {
+                        id: 'demo_3',
+                        student: 'Sofía Martínez Herrera',
+                        date: tomorrowStr,
+                        hour: '09:00',
+                        level: 'Preparatoria',
+                        career: 'Preparatoria General',
+                        grade: '4° Semestre',
+                        group: 'DS', // Extraído directamente de image_3ab109.png
+                        shift: 'Matutino',
+                        type: 'Académica',
+                        status: 'Reagendada',
+                        alarm: true,
+                        obs: 'Bajo rendimiento general en el área físico-matemática. Se propone plan de asesoría.',
+                        createdBy: 'abril'
+                    }
+                };
+                window.saveState();
+            }
+
+            window.renderLogin();
+        }
+    </script>
 </body>
 </html>
