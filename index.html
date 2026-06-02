@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Agenda CEUT Sincronizada</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background: #f0f2f5; }
+        .card { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .cita { border-left: 5px solid #007bff; padding: 10px; margin-bottom: 10px; background: #f9f9f9; display: flex; justify-content: space-between; }
+        .admin { background: #fff3cd; padding: 10px; display: none; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>Agenda CEUT</h2>
+    <label>Seleccionar Perfil:</label>
+    <select id="userRole" onchange="actualizarSesion()">
+        <option value="pasante">Pasante</option>
+        <option value="miroslava">Lic. Miroslava</option>
+        <option value="carlos">Mtro. Carlos Aguilar Sánchez</option>
+    </select>
+
+    <div id="adminPanel" class="admin">
+        <button onclick="agregar('Hora Libre')">Añadir Hora Libre</button>
+        <button onclick="agregar('Curso Nuevo')">Crear Curso</button>
+    </div>
+
+    <hr>
+    <h3>Citas en Tiempo Real:</h3>
+    <div id="lista"></div>
+</div>
+
+<script>
+    // El "canal" que conecta los tres perfiles
+    const channel = new BroadcastChannel('ceut_agenda_sync');
+
+    function actualizarSesion() {
+        const role = document.getElementById('userRole').value;
+        localStorage.setItem('perfil', role);
+        document.getElementById('adminPanel').style.display = (role === 'carlos') ? 'block' : 'none';
+        renderizar();
+    }
+
+    function agregar(tipo) {
+        let citas = JSON.parse(localStorage.getItem('citas') || '[]');
+        citas.push({ id: Date.now(), tipo: tipo, autor: localStorage.getItem('perfil') });
+        localStorage.setItem('citas', JSON.stringify(citas));
+        
+        // Avisar a los otros perfiles
+        channel.postMessage('actualizar');
+        renderizar();
+    }
+
+    function renderizar() {
+        const citas = JSON.parse(localStorage.getItem('citas') || '[]');
+        const lista = document.getElementById('lista');
+        lista.innerHTML = citas.map(c => `
+            <div class="cita">
+                ${c.tipo} <small><em>(${c.autor})</em></small>
+            </div>
+        `).join('');
+    }
+
+    // Escuchar cambios de los otros perfiles
+    channel.onmessage = renderizar;
+
+    // Inicio
+    document.getElementById('userRole').value = localStorage.getItem('perfil') || 'pasante';
+    actualizarSesion();
+</script>
+</body>
+</html>
