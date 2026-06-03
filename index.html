@@ -114,7 +114,7 @@
 </head>
 <body class="text-slate-100 min-h-screen relative overflow-x-hidden">
 
-    <!-- Toast global -->
+    <!-- Toast global para notificaciones instantáneas de red -->
     <div id="toast" class="fixed top-5 right-5 z-50 transform translate-y-[-100px] opacity-0 transition-all duration-300 pointer-events-none">
         <div class="bg-clinical-950 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-3 border">
             <span id="toast-icon"></span>
@@ -122,13 +122,13 @@
         </div>
     </div>
 
-    <!-- Contenedor general -->
+    <!-- Contenedor general de la App -->
     <div id="app" class="min-h-screen flex flex-col transition-opacity duration-350"></div>
 
-    <!-- Contenedor oculto de impresión -->
+    <!-- Contenedor oculto para la impresión física de hojas membretadas -->
     <div id="academic-report-print-area" class="hidden"></div>
 
-    <!-- Alerta voz activa -->
+    <!-- Alerta de voz activa (Uso exclusivo de Carlos) -->
     <div id="alarm-modal" class="fixed inset-0 z-50 overflow-y-auto bg-slate-950/90 backdrop-blur-md hidden items-center justify-center p-4">
         <div class="max-w-md w-full rounded-3xl p-8 border-2 border-brandGold-500 bg-clinical-900 shadow-2xl relative overflow-hidden animate-pulse-alarm text-center">
             <div class="absolute -top-10 -right-10 w-40 h-40 bg-brandGold-500/10 rounded-full blur-3xl"></div>
@@ -327,9 +327,7 @@
         </div>
     </div>
 
-    <!-- STREAMS_CHUNK: Inicializando variables y utilidades globales -->
     <script>
-        // Utilidades globales y resguardo del estado local seguro antes de inicializar Firebase
         const safeGetLocalJSON = (key, fallback) => {
             try {
                 const val = localStorage.getItem(key);
@@ -344,7 +342,7 @@
             currentDate: new Date(),
             miniCalendarMonth: new Date(), 
             activeStatsPeriod: 'dia', 
-            viewMode: 'day', // 'day', 'week', 'month', 'stats'
+            viewMode: 'day', // 'day' por defecto para visualización inmediata del cronograma
             searchQuery: '',
             filterType: 'all', 
             blockedDays: safeGetLocalJSON('ceut_blocked_days', {}), 
@@ -354,10 +352,12 @@
                 'miroslava': { name: 'Lic. Miroslava Abril Hoyos Rojas', role: 'Coordinadora', pin: '1015', isRestricted: true },
                 'abril': { name: 'Pasantes Depto. Psicopedagógico', role: 'Pasante Psicopedagógico', pin: '1015', isRestricted: true }
             }),
-            agendaData: safeGetLocalJSON('ceut_agenda_data', {}), 
+            agendaData: {}, // Se recuperará y sincronizará directamente de Firebase en tiempo real
             scheduleConfig: { startHour: 8, endHour: 21 },
             lastCheckedAlarmTime: null,
             isSynced: false,
+            appId: 'ceut-agenda-pp-global',
+            userId: null,
             confirmCallback: null
         };
 
@@ -366,7 +366,7 @@
                 try {
                     lucide.createIcons();
                 } catch (e) {
-                    console.warn("Fallo temporal de renderizado de Lucide icons", e);
+                    console.warn("Fallo temporal de renderizado de Lucide", e);
                 }
             }
         };
@@ -425,7 +425,7 @@
             setTimeout(() => {
                 toast.classList.remove('translate-y-0', 'opacity-100');
                 toast.classList.add('translate-y-[-100px]', 'opacity-0', 'pointer-events-none');
-            }, 3000);
+            }, 4000);
         };
 
         window.showConfirmModal = function(message, callback) {
@@ -470,7 +470,7 @@
             }
         };
 
-        // Reloj digital y monitoreo acústico restrictivo
+        // Reloj digital y monitoreo acústico de uso exclusivo para Carlos
         setInterval(() => {
             const now = new Date();
             const currentHour = String(now.getHours()).padStart(2, '0');
@@ -486,7 +486,7 @@
             if (mainClock) mainClock.textContent = clockStr;
             if (loginClock) loginClock.textContent = clockStr;
 
-            // Restricción de voz activa exclusiva para Carlos
+            // Alerta acústica y visual: uso exclusivo del Mtro. Carlos
             if (window.appState && window.appState.currentUser === 'carlos') {
                 const dateStr = window.appState.currentDate.toISOString().split('T')[0];
                 const activeAppointments = Object.values(window.appState.agendaData).filter(apt => apt.date === dateStr && apt.alarm);
@@ -516,7 +516,6 @@
         }, 1000);
     </script>
 
-    <!-- STREAMS_CHUNK: Configurando el renderizado de calendarios y planificadores -->
     <script>
         window.renderMiniCalendar = function() {
             const container = document.getElementById('mini-calendar-container');
@@ -626,7 +625,6 @@
             window.renderMainApp();
         };
 
-        // Genera las opciones dinámicamente de acuerdo a las nomenclaturas de image_a35c8e.png y Universidad
         window.handleLevelChange = function(levelVal, formPrefix) {
             const gradeSelect = document.getElementById(`${formPrefix}-grade`);
             const groupSelect = document.getElementById(`${formPrefix}-group`);
@@ -658,7 +656,6 @@
         };
     </script>
 
-    <!-- STREAMS_CHUNK: Definiendo las rejillas y el planificador semanal/mensual -->
     <script>
         window.renderHoursGridHtml = function(activeAppointments, isBlocked, dateStr) {
             let html = '';
@@ -671,7 +668,6 @@
                 const blockKey = `${dateStr}_${hour}`;
                 const isHourBlocked = window.appState.blockedHours[blockKey];
                 
-                // Filtro por categoría y por búsqueda (Si hay búsqueda, busca sobre el nombre de alumno)
                 const matchesFilter = (window.appState.filterType === 'all' || (aptForSlot && aptForSlot.type === window.appState.filterType)) &&
                                      (!window.appState.searchQuery || (aptForSlot && aptForSlot.student.toLowerCase().includes(window.appState.searchQuery.toLowerCase())));
 
@@ -704,7 +700,6 @@
                         const canEditOrDelete = isCarlos || isOwner;
                         const statuses = ['Pendiente', 'Realizada', 'Seguimiento', 'Reagendada', 'Cancelada', 'Sin Asistir'];
                         
-                        // Selector de estatus directo con color dinámico de borde
                         let selectBorderClass = 'border-clinical-800';
                         if (aptForSlot.status === 'Realizada') selectBorderClass = 'border-emerald-500/60 text-emerald-400';
                         else if (aptForSlot.status === 'Cancelada' || aptForSlot.status === 'Sin Asistir') selectBorderClass = 'border-rose-500/60 text-rose-400';
@@ -730,6 +725,7 @@
                                         <span class="text-[9px] font-black uppercase tracking-widest bg-clinical-900 border border-clinical-800 text-slate-400 px-2 py-0.5 rounded-full">${aptForSlot.type}</span>
                                         <span class="text-[10px] font-bold text-slate-500">${aptForSlot.level} • ${aptForSlot.career}</span>
                                         ${selectHtml}
+                                        <span class="text-[9px] text-slate-500 font-mono">Creador: ${aptForSlot.createdBy}</span>
                                     </div>
                                     <p class="text-xs text-slate-400 mt-1.5 line-clamp-2 italic">"${aptForSlot.obs || 'Sin observaciones iniciales.'}"</p>
                                 </div>
@@ -786,9 +782,9 @@
                     <div class="flex justify-between items-center pb-4 border-b border-clinical-800">
                         <div class="flex items-center gap-2">
                             <i data-lucide="calendar-days" class="w-5 h-5 text-brandGold-500"></i>
-                            <span class="text-sm font-bold text-white uppercase tracking-wider">Planificador Semanal</span>
+                            <span class="text-sm font-bold text-white uppercase tracking-wider">Planificador Semanal (Lunes a Sábado)</span>
                         </div>
-                        <span class="text-xs text-slate-400 font-bold uppercase">Distribución de Lunes a Sábado</span>
+                        <span class="text-xs text-slate-400 font-bold uppercase">Distribución de Consultas del Terapeuta Carlos</span>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="w-full border-collapse text-left min-w-[800px]">
@@ -976,13 +972,11 @@
         };
     </script>
 
-    <!-- STREAMS_CHUNK: Generando la arquitectura principal del Tablero y Barra Lateral -->
     <script>
         window.renderMainApp = function() {
             const app = document.getElementById('app');
             if (!app) return;
 
-            // Evita fallas de consola si Firebase gatilla sincronización antes del login
             if (!window.appState || !window.appState.currentUser) {
                 if (!document.getElementById('login-user')) {
                     window.renderLogin();
@@ -1024,6 +1018,11 @@
                         </div>
                         <h4 class="font-outfit font-bold text-white text-sm leading-snug mt-1">${userObj.name}</h4>
                         <p class="text-slate-400 text-xs">${userObj.role}</p>
+                        
+                        <div class="mt-2 pt-2 border-t border-clinical-800/80 text-[10px] text-slate-500 font-mono break-all leading-tight">
+                            ID Usuario:<br><span class="text-brandGold-500/80">${window.appState.userId || 'Autenticando...'}</span>
+                        </div>
+
                         <div class="mt-2 pt-2 border-t border-clinical-800/80 flex justify-between items-center">
                             ${isCarlos ? `
                                 <button onclick="document.getElementById('change-pin-modal').classList.remove('hidden'); document.getElementById('change-pin-modal').classList.add('flex');" class="text-[10px] font-bold text-brandGold-500/80 hover:text-brandGold-500 hover:underline flex items-center gap-1">
@@ -1093,10 +1092,18 @@
                             </div>
                         </div>
                         <div class="flex items-center gap-3.5">
-                            <div class="text-xs font-bold flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-clinical-900 border border-clinical-800">
-                                <span class="w-2 h-2 rounded-full ${window.appState.isSynced ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}"></span>
-                                <span class="${window.appState.isSynced ? 'text-emerald-400' : 'text-amber-400'}">${window.appState.isSynced ? 'En Línea' : 'Modo Local'}</span>
+                            
+                            <!-- Indicador de canal activo para comprobar visibilidad compartida -->
+                            <div class="text-[10px] font-mono font-bold flex flex-col items-end gap-1 px-3 py-1.5 rounded-xl bg-clinical-900 border border-clinical-800 leading-none">
+                                <div class="flex items-center gap-1.5">
+                                    <span class="w-2.5 h-2.5 rounded-full ${window.appState.isSynced ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}"></span>
+                                    <span class="${window.appState.isSynced ? 'text-emerald-400' : 'text-amber-400'}">
+                                        ${window.appState.isSynced ? '🟢 En Línea' : '🟡 Modo Local'}
+                                    </span>
+                                </div>
+                                <span class="text-[9px] text-slate-500">Canal: ${window.appState.appId}</span>
                             </div>
+
                             <div class="bg-clinical-900 border border-clinical-800 rounded-2xl p-1 flex items-center shadow-lg">
                                 <button onclick="window.changeDate(-1)" class="p-2 hover:bg-clinical-850 rounded-xl text-brandGold-500 transition-colors"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
                                 <button onclick="window.goToday()" class="px-3 py-1.5 hover:bg-clinical-850 rounded-xl text-xs font-bold text-white transition-colors">Hoy</button>
@@ -1293,7 +1300,6 @@
         };
     </script>
 
-    <!-- STREAMS_CHUNK: Configurando los modales de creación y edición de consultas -->
     <script>
         window.openNewAppointmentModal = function(presetHour = "08:00", presetDateStr = null) {
             const dateStr = presetDateStr || window.appState.currentDate.toISOString().split('T')[0];
@@ -1424,7 +1430,7 @@
 
             const collides = Object.values(window.appState.agendaData).some(apt => apt.date === date && apt.hour === hour);
             if (collides) {
-                window.showToast('El terapeuta Carlos ya cuenta con una cita en ese horario.', 'error');
+                window.showToast('El terapeuta ya cuenta con una cita programada en ese horario.', 'error');
                 return;
             }
 
@@ -1476,7 +1482,6 @@
         };
     </script>
 
-    <!-- STREAMS_CHUNK: Estructurando los detalles de consultas e integraciones con Gemini IA -->
     <script>
         window.viewAppointmentDetails = function(id) {
             const apt = window.appState.agendaData[id];
@@ -1643,7 +1648,7 @@
 
             const collides = Object.values(window.appState.agendaData).some(other => other.id !== id && other.date === date && other.hour === hour);
             if (collides) {
-                window.showToast('El terapeuta ya cuenta con otra cita en ese horario.', 'error');
+                window.showToast('El terapeuta ya cuenta con otra cita agendada en ese horario.', 'error');
                 return;
             }
 
@@ -1666,7 +1671,6 @@
         };
     </script>
 
-    <!-- STREAMS_CHUNK: Configurando la emisión e impresión de Reportes Membretados de Lujo -->
     <script>
         window.getLuxuryHeaderHtml = function(title, folioCode) {
             return `
@@ -1898,7 +1902,6 @@
         };
     </script>
 
-    <!-- STREAMS_CHUNK: Configurando los scripts auxiliares de Gemini IA y UI general -->
     <script>
         window.askGeminiForObservations = async function() {
             const obsText = document.getElementById('details-obs-input').value.trim();
@@ -1965,7 +1968,7 @@
             if (aiBody && detailsInput && aiBody.textContent) {
                 detailsInput.value = detailsInput.value + "\n\n-- Recomendaciones de IA --\n" + aiBody.textContent;
                 window.closeAiModal();
-                window.showToast("Sugerencias añadidass al expediente", "success");
+                window.showToast("Sugerencias añadidas al expediente", "success");
             }
         };
 
@@ -2148,7 +2151,6 @@
         };
     </script>
 
-    <!-- STREAMS_CHUNK: Programando el inicio de sesión y validación de perfiles -->
     <script>
         window.renderLogin = function() {
             const app = document.getElementById('app');
@@ -2273,14 +2275,13 @@
         };
     </script>
 
-    <!-- STREAMS_CHUNK: Inyectando el motor ESM de Firebase y el arranque síncrono ultra-rápido -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, deleteDoc, collection, query, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Parámetros globales de la plataforma con fallback consistente y robusto
         const appId = (typeof __app_id !== 'undefined' && __app_id) ? __app_id : 'ceut-agenda-pp-global';
+        window.appState.appId = appId;
         
         let firebaseConfig;
         try {
@@ -2290,7 +2291,6 @@
         }
 
         if (!firebaseConfig || !firebaseConfig.apiKey) {
-            // Configuración por defecto para asegurar la continuidad operativa local si no hay claves en el entorno
             firebaseConfig = {
                 apiKey: "dummy-key",
                 authDomain: "ceut-agenda-pp.firebaseapp.com",
@@ -2303,12 +2303,10 @@
 
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-        // Inicialización de Firebase
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        // Procedimiento de autenticación estrictamente ordenado (Garantiza RULE 3)
         async function startFirebaseSync() {
             try {
                 let userCredential = null;
@@ -2325,7 +2323,7 @@
 
                 if (userCredential && userCredential.user) {
                     window.appState.isSynced = true;
-                    // Enlazamos los oyentes de Firestore únicamente tras tener éxito en la autenticación
+                    window.appState.userId = userCredential.user.uid;
                     bindFirestoreRealtimeListeners();
                 } else {
                     window.appState.isSynced = false;
@@ -2333,24 +2331,25 @@
             } catch (error) {
                 console.error("Fallo general de autenticación Firebase. Operando de modo Local.", error);
                 window.appState.isSynced = false;
+                window.showToast("Incapaz de conectar con la nube. Sincronización inactiva: " + error.message, "error");
                 if (window.appState.currentUser) {
                     window.renderMainApp();
                 }
             }
         }
 
-        // Oyentes reactivos bidireccionales en tiempo real
         function bindFirestoreRealtimeListeners() {
             if (!auth.currentUser) return;
 
             // 1. Sincronización compartida de Consultas en tiempo real (Unificada para todo el equipo)
-            // Miroslava y los pasantes guardan en esta colección pública para compartir los espacios de Carlos
             const appointmentsQuery = query(collection(db, 'artifacts', appId, 'public', 'data', 'appointments'));
-            onSnapshot(appointmentsQuery, (snapshot) => {
+            onSnapshot(appointmentsQuery, async (snapshot) => {
                 const fetchedApts = {};
                 snapshot.forEach(doc => {
                     fetchedApts[doc.id] = doc.data();
                 });
+
+                // NO SE AGREGAN DEMOS - LA AGENDA SE MANTIENE COMPLETAMENTE LIMPIA PARA PRODUCCIÓN
                 window.appState.agendaData = fetchedApts;
                 localStorage.setItem('ceut_agenda_data', JSON.stringify(fetchedApts));
                 if (window.appState.currentUser) {
@@ -2359,6 +2358,7 @@
             }, (error) => {
                 console.error("Fallo de sincronización de citas:", error);
                 window.appState.isSynced = false;
+                window.showToast("Error de conexión (Sincronización Citas): " + error.message, "error");
             });
 
             // 2. Sincronización compartida de Horas Bloqueadas
@@ -2376,6 +2376,7 @@
             }, (error) => {
                 console.error("Fallo de sincronización de horas:", error);
                 window.appState.isSynced = false;
+                window.showToast("Error de conexión (Sincronización Horas): " + error.message, "error");
             });
 
             // 3. Sincronización compartida de Días Bloqueados
@@ -2393,6 +2394,7 @@
             }, (error) => {
                 console.error("Fallo de sincronización de días:", error);
                 window.appState.isSynced = false;
+                window.showToast("Error de conexión (Sincronización Días): " + error.message, "error");
             });
 
             // 4. Sincronización compartida de PINs de acceso para Carlos
@@ -2411,30 +2413,41 @@
             }, (error) => {
                 console.error("Fallo de sincronización de PINs:", error);
                 window.appState.isSynced = false;
+                window.showToast("Error de conexión (Sincronización Seguridad): " + error.message, "error");
             });
         }
 
-        // Funciones de escritura remota seguras y protegidas (Garantizan RULE 1)
         window.saveAptToFirestore = async function(aptId, aptData) {
-            if (!auth.currentUser) return;
+            if (!auth.currentUser) {
+                window.showToast("Imposible sincronizar: No se detecta autenticación activa.", "error");
+                return;
+            }
             try {
                 await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'appointments', aptId), aptData);
             } catch (error) {
                 console.error("Error al guardar en Firestore:", error);
+                window.showToast("Fallo al escribir cita en el servidor: " + error.message, "error");
             }
         };
 
         window.deleteAptFromFirestore = async function(aptId) {
-            if (!auth.currentUser) return;
+            if (!auth.currentUser) {
+                window.showToast("Imposible sincronizar: No se detecta autenticación activa.", "error");
+                return;
+            }
             try {
                 await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'appointments', aptId));
             } catch (error) {
                 console.error("Error al eliminar en Firestore:", error);
+                window.showToast("Fallo al eliminar cita en el servidor: " + error.message, "error");
             }
         };
 
         window.saveHourBlockToFirestore = async function(blockKey, blockState) {
-            if (!auth.currentUser) return;
+            if (!auth.currentUser) {
+                window.showToast("Imposible inhabilitar: Sin sesión en el servidor.", "error");
+                return;
+            }
             try {
                 if (blockState) {
                     await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'blocked_hours', blockKey), { blocked: true });
@@ -2443,11 +2456,15 @@
                 }
             } catch (error) {
                 console.error("Error al inhabilitar hora:", error);
+                window.showToast("Fallo al registrar bloqueo de hora: " + error.message, "error");
             }
         };
 
         window.saveDayBlockToFirestore = async function(dateStr, reason) {
-            if (!auth.currentUser) return;
+            if (!auth.currentUser) {
+                window.showToast("Imposible bloquear jornada: Sin sesión en el servidor.", "error");
+                return;
+            }
             try {
                 if (reason) {
                     await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'blocked_days', dateStr), { reason });
@@ -2456,30 +2473,30 @@
                 }
             } catch (error) {
                 console.error("Error al inhabilitar día:", error);
+                window.showToast("Fallo al registrar bloqueo de día: " + error.message, "error");
             }
         };
 
         window.savePinToFirestore = async function(userKey, newPin) {
-            if (!auth.currentUser) return;
+            if (!auth.currentUser) {
+                window.showToast("Imposible actualizar PIN: Sin sesión en el servidor.", "error");
+                return;
+            }
             try {
                 await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'pins', userKey), { pin: newPin });
             } catch (error) {
                 console.error("Error al guardar PIN:", error);
+                window.showToast("Fallo al propagar PIN de seguridad: " + error.message, "error");
             }
         };
 
-        // Inicializador de arranque instantáneo síncrono para el login inmediato en pantalla
         function runBootstrapping() {
-            // 1. Dibuja inmediatamente el acceso seguro (Evita la pantalla azul en blanco)
             window.renderLogin();
-            
-            // 2. Levanta las dependencias de sincronización de Firebase en segundo plano
             startFirebaseSync().catch(e => {
                 console.warn("Fallo de carga en segundo plano de base de datos:", e);
             });
         }
 
-        // Lanzamiento controlado
         if (document.readyState === 'loading') {
             window.addEventListener('DOMContentLoaded', runBootstrapping);
         } else {
