@@ -2288,202 +2288,206 @@
             console.error("Error al parsear configuración de Firebase:", e);
         }
 
-        // Validador robusto de credenciales de red
-        const isConfigValid = firebaseConfig && firebaseConfig.apiKey && firebaseConfig.apiKey !== "dummy-key" && !firebaseConfig.apiKey.includes("dummy");
+        // Dejamos la comprobación de Firebase completamente abierta para permitir sincronizar con emuladores o claves dummy
+        const hasConfig = firebaseConfig && firebaseConfig.apiKey;
 
-        if (isConfigValid) {
-            const app = initializeApp(firebaseConfig);
-            const db = getFirestore(app);
-            const auth = getAuth(app);
-            const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        if (hasConfig) {
+            let app, db, auth;
+            try {
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-            async function startFirebaseSync() {
-                try {
-                    let userCredential = null;
-                    if (initialAuthToken) {
-                        try {
-                            userCredential = await signInWithCustomToken(auth, initialAuthToken);
-                        } catch (tokenErr) {
-                            console.warn("Fallo de Custom Token, reintentando con sesión anónima:", tokenErr);
+                async function startFirebaseSync() {
+                    try {
+                        let userCredential = null;
+                        if (initialAuthToken) {
+                            try {
+                                userCredential = await signInWithCustomToken(auth, initialAuthToken);
+                            } catch (tokenErr) {
+                                console.warn("Fallo de Custom Token, reintentando con sesión anónima:", tokenErr);
+                                userCredential = await signInAnonymously(auth);
+                            }
+                        } else {
                             userCredential = await signInAnonymously(auth);
                         }
-                    } else {
-                        userCredential = await signInAnonymously(auth);
-                    }
 
-                    if (userCredential && userCredential.user) {
-                        window.appState.isSynced = true;
-                        window.appState.userId = userCredential.user.uid;
-                        bindFirestoreRealtimeListeners();
-                    } else {
+                        if (userCredential && userCredential.user) {
+                            window.appState.isSynced = true;
+                            window.appState.userId = userCredential.user.uid;
+                            bindFirestoreRealtimeListeners();
+                        } else {
+                            window.appState.isSynced = false;
+                        }
+                    } catch (error) {
+                        console.warn("Fallo de autenticación Firebase. Ejecutando de modo Local temporal.", error);
                         window.appState.isSynced = false;
                     }
-                } catch (error) {
-                    console.error("Fallo de autenticación Firebase. Ejecutando de modo Local.", error);
-                    window.appState.isSynced = false;
                 }
-            }
 
-            function bindFirestoreRealtimeListeners() {
-                if (!auth.currentUser) return;
+                function bindFirestoreRealtimeListeners() {
+                    if (!auth.currentUser) return;
 
-                // 1. Sincronización compartida de Consultas en tiempo real
-                const appointmentsQuery = query(collection(db, 'artifacts', appId, 'public', 'data', 'appointments'));
-                onSnapshot(appointmentsQuery, (snapshot) => {
-                    const fetchedApts = {};
-                    snapshot.forEach(doc => {
-                        fetchedApts[doc.id] = doc.data();
-                    });
-                    window.appState.agendaData = fetchedApts;
-                    localStorage.setItem('ceut_agenda_data', JSON.stringify(fetchedApts));
-                    if (window.appState.currentUser) {
-                        window.renderMainApp();
-                    }
-                }, (error) => {
-                    console.error("Fallo de sincronización de citas:", error);
-                    window.appState.isSynced = false;
-                });
-
-                // 2. Sincronización compartida de Horas Bloqueadas
-                const hoursQuery = query(collection(db, 'artifacts', appId, 'public', 'data', 'blocked_hours'));
-                onSnapshot(hoursQuery, (snapshot) => {
-                    const fetchedHours = {};
-                    snapshot.forEach(doc => {
-                        fetchedHours[doc.id] = true;
-                    });
-                    window.appState.blockedHours = fetchedHours;
-                    localStorage.setItem('ceut_blocked_hours', JSON.stringify(fetchedHours));
-                    if (window.appState.currentUser) {
-                        window.renderMainApp();
-                    }
-                }, (error) => {
-                    console.error("Fallo de sincronización de horas:", error);
-                    window.appState.isSynced = false;
-                });
-
-                // 3. Sincronización compartida de Días Bloqueados
-                const daysQuery = query(collection(db, 'artifacts', appId, 'public', 'data', 'blocked_days'));
-                onSnapshot(daysQuery, (snapshot) => {
-                    const fetchedDays = {};
-                    snapshot.forEach(doc => {
-                        fetchedDays[doc.id] = doc.data().reason || true;
-                    });
-                    window.appState.blockedDays = fetchedDays;
-                    localStorage.setItem('ceut_blocked_days', JSON.stringify(fetchedDays));
-                    if (window.appState.currentUser) {
-                        window.renderMainApp();
-                    }
-                }, (error) => {
-                    console.error("Fallo de sincronización de días:", error);
-                    window.appState.isSynced = false;
-                });
-
-                // 4. Sincronización compartida de PINs de acceso para Carlos
-                const pinsQuery = query(collection(db, 'artifacts', appId, 'public', 'data', 'pins'));
-                onSnapshot(pinsQuery, (snapshot) => {
-                    snapshot.forEach(doc => {
-                        const userKey = doc.id;
-                        if (window.appState.users[userKey]) {
-                            window.appState.users[userKey].pin = doc.data().pin;
+                    // 1. Sincronización compartida de Consultas en tiempo real
+                    const appointmentsQuery = query(collection(db, 'artifacts', appId, 'public', 'data', 'appointments'));
+                    onSnapshot(appointmentsQuery, (snapshot) => {
+                        const fetchedApts = {};
+                        snapshot.forEach(doc => {
+                            fetchedApts[doc.id] = doc.data();
+                        });
+                        window.appState.agendaData = fetchedApts;
+                        localStorage.setItem('ceut_agenda_data', JSON.stringify(fetchedApts));
+                        if (window.appState.currentUser) {
+                            window.renderMainApp();
                         }
+                    }, (error) => {
+                        console.warn("Fallo temporal de lectura en la nube:", error);
                     });
-                    localStorage.setItem('ceut_users', JSON.stringify(window.appState.users));
-                    if (window.appState.currentUser) {
-                        window.renderMainApp();
+
+                    // 2. Sincronización compartida de Horas Bloqueadas
+                    const hoursQuery = query(collection(db, 'artifacts', appId, 'public', 'data', 'blocked_hours'));
+                    onSnapshot(hoursQuery, (snapshot) => {
+                        const fetchedHours = {};
+                        snapshot.forEach(doc => {
+                            fetchedHours[doc.id] = true;
+                        });
+                        window.appState.blockedHours = fetchedHours;
+                        localStorage.setItem('ceut_blocked_hours', JSON.stringify(fetchedHours));
+                        if (window.appState.currentUser) {
+                            window.renderMainApp();
+                        }
+                    }, (error) => {
+                        console.warn("Fallo temporal de lectura de bloqueos de horas:", error);
+                    });
+
+                    // 3. Sincronización compartida de Días Bloqueados
+                    const daysQuery = query(collection(db, 'artifacts', appId, 'public', 'data', 'blocked_days'));
+                    onSnapshot(daysQuery, (snapshot) => {
+                        const fetchedDays = {};
+                        snapshot.forEach(doc => {
+                            fetchedDays[doc.id] = doc.data().reason || true;
+                        });
+                        window.appState.blockedDays = fetchedDays;
+                        localStorage.setItem('ceut_blocked_days', JSON.stringify(fetchedDays));
+                        if (window.appState.currentUser) {
+                            window.renderMainApp();
+                        }
+                    }, (error) => {
+                        console.warn("Fallo temporal de lectura de días bloqueados:", error);
+                    });
+
+                    // 4. Sincronización compartida de PINs de acceso para Carlos
+                    const pinsQuery = query(collection(db, 'artifacts', appId, 'public', 'data', 'pins'));
+                    onSnapshot(pinsQuery, (snapshot) => {
+                        snapshot.forEach(doc => {
+                            const userKey = doc.id;
+                            if (window.appState.users[userKey]) {
+                                window.appState.users[userKey].pin = doc.data().pin;
+                            }
+                        });
+                        localStorage.setItem('ceut_users', JSON.stringify(window.appState.users));
+                        if (window.appState.currentUser) {
+                            window.renderMainApp();
+                        }
+                    }, (error) => {
+                        console.warn("Fallo temporal de lectura de PINs:", error);
+                    });
+                }
+
+                window.saveAptToFirestore = async function(aptId, aptData) {
+                    window.appState.agendaData[aptId] = aptData;
+                    localStorage.setItem('ceut_agenda_data', JSON.stringify(window.appState.agendaData));
+
+                    if (!auth.currentUser) return;
+                    try {
+                        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'appointments', aptId), aptData);
+                    } catch (error) {
+                        console.warn("Error guardando en la nube:", error);
                     }
-                }, (error) => {
-                    console.error("Fallo de sincronización de PINs:", error);
-                    window.appState.isSynced = false;
-                });
-            }
+                };
 
-            window.saveAptToFirestore = async function(aptId, aptData) {
-                // Escritura optimista local primero
-                window.appState.agendaData[aptId] = aptData;
-                localStorage.setItem('ceut_agenda_data', JSON.stringify(window.appState.agendaData));
+                window.deleteAptFromFirestore = async function(aptId) {
+                    delete window.appState.agendaData[aptId];
+                    localStorage.setItem('ceut_agenda_data', JSON.stringify(window.appState.agendaData));
 
-                if (!auth.currentUser) return;
-                try {
-                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'appointments', aptId), aptData);
-                } catch (error) {
-                    console.error("Error al guardar en Firestore:", error);
-                }
-            };
+                    if (!auth.currentUser) return;
+                    try {
+                        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'appointments', aptId));
+                    } catch (error) {
+                        console.warn("Error eliminando en la nube:", error);
+                    }
+                };
 
-            window.deleteAptFromFirestore = async function(aptId) {
-                delete window.appState.agendaData[aptId];
-                localStorage.setItem('ceut_agenda_data', JSON.stringify(window.appState.agendaData));
-
-                if (!auth.currentUser) return;
-                try {
-                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'appointments', aptId));
-                } catch (error) {
-                    console.error("Error al eliminar en Firestore:", error);
-                }
-            };
-
-            window.saveHourBlockToFirestore = async function(blockKey, blockState) {
-                if (blockState) {
-                    window.appState.blockedHours[blockKey] = true;
-                } else {
-                    delete window.appState.blockedHours[blockKey];
-                }
-                localStorage.setItem('ceut_blocked_hours', JSON.stringify(window.appState.blockedHours));
-
-                if (!auth.currentUser) return;
-                try {
+                window.saveHourBlockToFirestore = async function(blockKey, blockState) {
                     if (blockState) {
-                        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'blocked_hours', blockKey), { blocked: true });
+                        window.appState.blockedHours[blockKey] = true;
                     } else {
-                        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'blocked_hours', blockKey));
+                        delete window.appState.blockedHours[blockKey];
                     }
-                } catch (error) {
-                    console.error("Error al inhabilitar hora:", error);
-                }
-            };
+                    localStorage.setItem('ceut_blocked_hours', JSON.stringify(window.appState.blockedHours));
 
-            window.saveDayBlockToFirestore = async function(dateStr, reason) {
-                if (reason) {
-                    window.appState.blockedDays[dateStr] = reason;
-                } else {
-                    delete window.appState.blockedDays[dateStr];
-                }
-                localStorage.setItem('ceut_blocked_days', JSON.stringify(window.appState.blockedDays));
+                    if (!auth.currentUser) return;
+                    try {
+                        if (blockState) {
+                            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'blocked_hours', blockKey), { blocked: true });
+                        } else {
+                            await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'blocked_hours', blockKey));
+                        }
+                    } catch (error) {
+                        console.warn("Error inhabilitando hora en la nube:", error);
+                    }
+                };
 
-                if (!auth.currentUser) return;
-                try {
+                window.saveDayBlockToFirestore = async function(dateStr, reason) {
                     if (reason) {
-                        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'blocked_days', dateStr), { reason });
+                        window.appState.blockedDays[dateStr] = reason;
                     } else {
-                        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'blocked_days', dateStr));
+                        delete window.appState.blockedDays[dateStr];
                     }
-                } catch (error) {
-                    console.error("Error al inhabilitar día:", error);
-                }
-            };
+                    localStorage.setItem('ceut_blocked_days', JSON.stringify(window.appState.blockedDays));
 
-            window.savePinToFirestore = async function(userKey, newPin) {
-                window.appState.users[userKey].pin = newPin;
-                localStorage.setItem('ceut_users', JSON.stringify(window.appState.users));
+                    if (!auth.currentUser) return;
+                    try {
+                        if (reason) {
+                            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'blocked_days', dateStr), { reason });
+                        } else {
+                            await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'blocked_days', dateStr));
+                        }
+                    } catch (error) {
+                        console.warn("Error inhabilitando día en la nube:", error);
+                    }
+                };
 
-                if (!auth.currentUser) return;
-                try {
-                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'pins', userKey), { pin: newPin });
-                } catch (error) {
-                    console.error("Error al guardar PIN:", error);
-                }
-            };
+                window.savePinToFirestore = async function(userKey, newPin) {
+                    window.appState.users[userKey].pin = newPin;
+                    localStorage.setItem('ceut_users', JSON.stringify(window.appState.users));
 
-            // Iniciar bootstrap con red
-            window.renderLogin();
-            startFirebaseSync().catch(e => {
-                console.warn("Fallo de sincronización inicial:", e);
-            });
+                    if (!auth.currentUser) return;
+                    try {
+                        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'pins', userKey), { pin: newPin });
+                    } catch (error) {
+                        console.warn("Error de PIN en la nube:", error);
+                    }
+                };
 
+                // Lanzamiento del Bootstrap
+                window.renderLogin();
+                startFirebaseSync().catch(e => {
+                    console.warn("Fallo de arranque de sincronización:", e);
+                });
+
+            } catch (err) {
+                console.warn("Error de inicialización de Firebase. Iniciando en Modo Local Inteligente.", err);
+                setupLocalMode();
+            }
         } else {
-            // DEGRADACIÓN A MODO LOCAL PREMIUM (Sin errores de consola)
+            setupLocalMode();
+        }
+
+        function setupLocalMode() {
             window.appState.isSynced = false;
-            window.appState.userId = "LOCAL_MODE";
+            window.appState.userId = "MODO_LOCAL";
 
             window.saveAptToFirestore = function(aptId, aptData) {
                 window.appState.agendaData[aptId] = aptData;
@@ -2518,9 +2522,7 @@
                 localStorage.setItem('ceut_users', JSON.stringify(window.appState.users));
             };
 
-            // Arrancar inmediato en local
             window.renderLogin();
-            console.info("CEUT: Sincronización inactiva por falta de claves en Iframe. Ejecutando de modo Local Premium.");
         }
     </script>
 </body>
