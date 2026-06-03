@@ -4,8 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Agenda Psicopedagógica CEUT</title>
-    <!-- Favicon de la pestaña del navegador -->
-    <link class="no-print" rel="icon" type="image/png" href="https://drive.google.com/thumbnail?id=1ao9olFJOvSPvgmeyLJhkD1P0Pmq_R3T2&sz=w128">
+    <link rel="icon" type="image/png" href="https://drive.google.com/thumbnail?id=1ao9olFJOvSPvgmeyLJhkD1P0Pmq_R3T2&sz=w128">
     
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -14,11 +13,6 @@
     <!-- Google Fonts - Outfit & Plus Jakarta Sans -->
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght=300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght=300;400;500;600;700&display=swap" rel="stylesheet">
     
-    <!-- Firebase SDK Compat para evitar bloqueos por Script Module -->
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-
     <script>
         tailwind.config = {
             theme: {
@@ -28,16 +22,16 @@
                             50: '#f0f3ff',
                             100: '#e0e7ff',
                             600: '#2B3E9E', // Azul CEUT Principal
-                            700: '#1E2D80', // Azul CEUT Oscuro
-                            800: '#141E59', // Azul CEUT Profundo
-                            900: '#0B1133', // Azul Medianoche CEUT
-                            950: '#05081c', // Azul CEUT Ultra Oscuro
+                            700: '#1E2D80', 
+                            800: '#141E59', 
+                            900: '#0B1133', 
+                            950: '#05081c', 
                         },
                         brandGold: {
                             50: '#fefdf0',
                             100: '#fdf9cf',
                             500: '#EBB102', // Oro CEUT Principal
-                            600: '#C79601', // Oro CEUT de acento
+                            600: '#C79601', 
                             700: '#A37B00',
                         }
                     },
@@ -49,6 +43,7 @@
             }
         };
     </script>
+    
     <style>
         body {
             font-family: 'Plus Jakarta Sans', sans-serif;
@@ -58,7 +53,6 @@
         .font-outfit {
             font-family: 'Outfit', sans-serif;
         }
-        /* Barra de desplazamiento premium institucional */
         ::-webkit-scrollbar {
             width: 6px;
             height: 6px;
@@ -73,49 +67,28 @@
         ::-webkit-scrollbar-thumb:hover {
             background: #C79601;
         }
-        
         @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(16px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(16px); }
+            to { opacity: 1; transform: translateY(0); }
         }
-        
         @keyframes pulseAlarm {
-            0%, 100% {
-                box-shadow: 0 0 20px rgba(235, 177, 2, 0.4);
-                border-color: rgba(235, 177, 2, 0.7);
-            }
-            50% {
-                box-shadow: 0 0 40px rgba(235, 177, 2, 0.9);
-                border-color: rgba(235, 177, 2, 1);
-                background-color: rgba(11, 17, 51, 0.95);
-            }
+            0%, 100% { box-shadow: 0 0 20px rgba(235, 177, 2, 0.4); border-color: rgba(235, 177, 2, 0.7); }
+            50% { box-shadow: 0 0 40px rgba(235, 177, 2, 0.9); border-color: rgba(235, 177, 2, 1); background-color: rgba(11, 17, 51, 0.95); }
         }
-
         .animate-fade-up {
             animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
         }
-
         .animate-pulse-alarm {
             animation: pulseAlarm 1.5s infinite ease-in-out;
         }
-
         input[type="date"]::-webkit-calendar-picker-indicator {
             filter: invert(1) sepia(1) saturate(5) hue-rotate(5deg);
             cursor: pointer;
         }
-
-        /* Estilos de impresión para la Hoja Membretada de Súper Lujo */
         @media print {
             body {
                 background: #ffffff !important;
                 color: #000000 !important;
-                font-family: 'Plus Jakarta Sans', sans-serif !important;
             }
             #app, #toast, #alarm-modal, #ai-modal, #confirm-modal, #block-day-modal, #change-pin-modal, #appointment-form-modal, #appointment-details-modal, #report-preview-modal, .no-print, header, nav, button, aside {
                 display: none !important;
@@ -132,38 +105,253 @@
                 margin: 0 !important;
                 box-sizing: border-box;
             }
-            /* Forzar fondos e imágenes en impresión */
             * {
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
             }
         }
     </style>
-    
-    <script>
+</head>
+<body class="text-slate-100 min-h-screen relative overflow-x-hidden">
+
+    <!-- Toast global -->
+    <div id="toast" class="fixed top-5 right-5 z-50 transform translate-y-[-100px] opacity-0 transition-all duration-300 pointer-events-none">
+        <div class="bg-clinical-950 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-3 border">
+            <span id="toast-icon"></span>
+            <span id="toast-message" class="text-sm font-semibold"></span>
+        </div>
+    </div>
+
+    <!-- Contenedor general -->
+    <div id="app" class="min-h-screen flex flex-col transition-opacity duration-350"></div>
+
+    <!-- Contenedor oculto de impresión -->
+    <div id="academic-report-print-area" class="hidden"></div>
+
+    <!-- Alerta voz activa -->
+    <div id="alarm-modal" class="fixed inset-0 z-50 overflow-y-auto bg-slate-950/90 backdrop-blur-md hidden items-center justify-center p-4">
+        <div class="max-w-md w-full rounded-3xl p-8 border-2 border-brandGold-500 bg-clinical-900 shadow-2xl relative overflow-hidden animate-pulse-alarm text-center">
+            <div class="absolute -top-10 -right-10 w-40 h-40 bg-brandGold-500/10 rounded-full blur-3xl"></div>
+            <div class="flex flex-col items-center">
+                <div class="w-20 h-20 rounded-full bg-brandGold-500/10 border-2 border-brandGold-500 flex items-center justify-center text-brandGold-500 mb-6 shadow-[0_0_20px_rgba(235,177,2,0.3)]">
+                    <i data-lucide="bell-ring" class="w-10 h-10 animate-bounce"></i>
+                </div>
+                <h3 class="text-2xl font-outfit font-black text-white uppercase tracking-tight">¡Próxima Consulta!</h3>
+                <p class="text-brandGold-500 text-xs font-bold tracking-widest uppercase mt-1">Alerta de Agenda Psicopedagógica</p>
+                <div class="h-1 w-20 bg-gradient-to-r from-clinical-600 to-brandGold-500 rounded-full my-4"></div>
+                <div class="bg-clinical-950/80 border border-clinical-800/60 rounded-2xl p-5 w-full mb-6 text-left space-y-2.5">
+                    <div class="flex justify-between items-center text-xs">
+                        <span class="text-slate-400 font-bold uppercase">Hora de Inicio</span>
+                        <span class="text-brandGold-500 font-black" id="alarm-time">00:00 AM</span>
+                    </div>
+                    <div class="border-t border-clinical-800/60 pt-2.5">
+                        <span class="text-[10px] text-slate-500 font-bold uppercase block mb-0.5">Nombre / Actividad</span>
+                        <span class="text-white font-bold font-outfit text-base block leading-tight" id="alarm-name">Nombre del Alumno</span>
+                    </div>
+                    <div class="flex justify-between items-center text-xs border-t border-clinical-800/60 pt-2.5">
+                        <span class="text-slate-400 font-bold">Detalles / Periodo</span>
+                        <span class="text-slate-300 font-medium" id="alarm-details">Preparatoria • Grado: 3 • Grupo: A</span>
+                    </div>
+                </div>
+                <p class="text-slate-300 text-xs mb-6 font-semibold flex items-center gap-1.5 justify-center">
+                    <i data-lucide="alert-triangle" class="w-4 h-4 text-brandGold-500"></i>
+                    <span>La consulta programada inicia exactamente en <strong>3 minutos</strong>.</span>
+                </p>
+                <div class="flex flex-col gap-2 w-full">
+                    <button onclick="window.dismissAlarm()" class="w-full bg-gradient-to-r from-brandGold-500 to-brandGold-600 hover:from-brandGold-600 hover:to-brandGold-700 text-clinical-950 font-black py-3.5 px-6 rounded-2xl shadow-lg transition-all uppercase tracking-wider text-xs">
+                        Entendido, Preparar Sesión
+                    </button>
+                    <button onclick="window.speakCurrentAlarmText(document.getElementById('alarm-name').textContent, document.getElementById('alarm-time').textContent)" class="w-full bg-clinical-950 hover:bg-clinical-850 text-brandGold-500 py-2.5 px-6 rounded-2xl border border-brandGold-500/30 hover:border-brandGold-500/60 text-[10px] font-bold uppercase tracking-widest transition-colors flex items-center justify-center gap-1.5">
+                        <i data-lucide="volume-2" class="w-4 h-4 text-brandGold-500"></i>
+                        <span>Escuchar Anuncio de Voz</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Asistente IA de Gemini -->
+    <div id="ai-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden items-center justify-center p-4">
+        <div class="bg-clinical-900 border-2 border-brandGold-500 rounded-3xl w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col shadow-2xl animate-fade-up">
+            <div class="bg-clinical-950 p-6 border-b border-clinical-800/85 flex justify-between items-center shrink-0">
+                <div class="flex items-center gap-2">
+                    <div class="p-1.5 rounded-lg bg-brandGold-500/10 border border-brandGold-500/30">
+                        <i data-lucide="sparkles" class="w-5 h-5 text-brandGold-500 animate-pulse"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-outfit font-black text-white text-base tracking-wide" id="ai-modal-title">Asistente Psicopedagógico IA</h4>
+                        <p class="text-[10px] text-brandGold-500 font-bold uppercase tracking-widest">Desarrollado con Gemini 2.5 Flash</p>
+                    </div>
+                </div>
+                <button onclick="window.closeAiModal()" class="p-1.5 hover:bg-clinical-800 rounded-lg text-slate-400 hover:text-white transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div id="ai-loading-container" class="hidden flex-col items-center justify-center p-12 space-y-4">
+                <div class="w-12 h-12 border-4 border-brandGold-500 border-t-transparent rounded-full animate-spin"></div>
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">Procesando observaciones con IA...</p>
+            </div>
+            <div class="p-6 overflow-y-auto flex-1 space-y-4 text-sm leading-relaxed text-slate-300" id="ai-modal-body"></div>
+            <div class="p-6 bg-clinical-950 border-t border-clinical-800/85 flex flex-col sm:flex-row gap-3 items-center justify-between shrink-0">
+                <span class="text-xs text-slate-400 font-medium">¿Deseas aplicar estos datos a las observaciones actuales?</span>
+                <div class="flex gap-2 w-full sm:w-auto">
+                    <button type="button" onclick="window.copyAiOutput()" class="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl bg-clinical-900 hover:bg-clinical-850 text-slate-300 hover:text-white font-bold text-[9px] uppercase tracking-wider transition-all border border-clinical-800">
+                        <i data-lucide="copy" class="w-4 h-4 text-brandGold-500"></i>
+                        <span>Copiar</span>
+                    </button>
+                    <button type="button" onclick="window.applyAiToObservations()" class="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 py-2.5 px-5 rounded-xl bg-gradient-to-r from-brandGold-500 to-brandGold-600 hover:from-brandGold-600 hover:to-brandGold-700 text-clinical-950 font-black text-xs uppercase tracking-wider transition-all shadow-md">
+                        <i data-lucide="check" class="w-4 h-4"></i>
+                        <span>Aplicar Observaciones</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cambiar PIN Carlos -->
+    <div id="change-pin-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden items-center justify-center p-4">
+        <div class="bg-clinical-900 border-2 border-brandGold-500 rounded-3xl w-full max-w-sm shadow-2xl animate-fade-up flex flex-col overflow-hidden">
+            <div class="bg-clinical-950 p-6 border-b border-clinical-800/80 flex justify-between items-center shrink-0">
+                <div class="flex items-center gap-2">
+                    <div class="p-1.5 rounded-lg bg-brandGold-500/10 border border-brandGold-500/30">
+                        <i data-lucide="lock" class="w-5 h-5 text-brandGold-500"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-outfit font-black text-white text-base tracking-wide flex flex-col">
+                            <span class="text-white text-base font-black">Cambiar PIN</span>
+                            <span class="text-[10px] text-brandGold-500 font-bold uppercase tracking-widest">Seguridad</span>
+                        </h4>
+                    </div>
+                </div>
+                <button onclick="window.closeChangePinModal()" class="p-1.5 hover:bg-clinical-800 rounded-lg text-slate-400 hover:text-white transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <form onsubmit="window.submitChangePin(event)" class="p-6 space-y-4">
+                <div>
+                    <label for="pin-current" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">PIN Actual</label>
+                    <input type="password" id="pin-current" maxlength="4" placeholder="••••" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-3 px-4 text-center text-white tracking-[0.5em] font-bold focus:outline-none focus:ring-2 focus:ring-brandGold-500/50" required>
+                </div>
+                <div>
+                    <label for="pin-new" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Nuevo PIN</label>
+                    <input type="password" id="pin-new" maxlength="4" placeholder="••••" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-3 px-4 text-center text-white tracking-[0.5em] font-bold focus:outline-none focus:ring-2 focus:ring-brandGold-500/50" required>
+                </div>
+                <button type="submit" class="w-full bg-brandGold-500 hover:bg-brandGold-600 text-clinical-950 font-black py-3 rounded-xl uppercase text-xs transition-colors mt-2">
+                    Guardar Nuevo PIN
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Bloqueo de Jornada Completa (Día) -->
+    <div id="block-day-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden items-center justify-center p-4">
+        <div class="bg-clinical-900 border-2 border-brandGold-500 rounded-3xl w-full max-w-sm shadow-2xl animate-fade-up flex flex-col overflow-hidden">
+            <div class="bg-clinical-950 p-6 border-b border-clinical-800/80 flex justify-between items-center shrink-0">
+                <div class="flex items-center gap-2">
+                    <div class="p-1.5 rounded-lg bg-brandGold-500/10 border border-brandGold-500/30">
+                        <i data-lucide="calendar-off" class="w-5 h-5 text-brandGold-500"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-outfit font-black text-white text-base tracking-wide flex flex-col">
+                            <span class="text-white text-base font-black">Bloqueo de Jornada</span>
+                            <span class="text-[10px] text-brandGold-500 font-bold uppercase tracking-widest">Inhabilitar Día</span>
+                        </h4>
+                    </div>
+                </div>
+                <button onclick="document.getElementById('block-day-modal').classList.add('hidden');" class="p-1.5 hover:bg-clinical-800 rounded-lg text-slate-400 hover:text-white transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <form onsubmit="window.saveBlockDay(event)" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Fecha Seleccionada</label>
+                    <input type="text" id="block-day-date-display" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-3 px-4 text-white text-sm font-bold focus:outline-none" readonly>
+                </div>
+                <div>
+                    <label for="block-day-reason" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Motivo del Bloqueo</label>
+                    <textarea id="block-day-reason" placeholder="Ej. Suspensión oficial de labores académicas..." class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-3.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-brandGold-500/50" rows="3" required></textarea>
+                </div>
+                <button type="submit" class="w-full bg-brandGold-500 hover:bg-brandGold-600 text-clinical-950 font-black py-3 rounded-xl uppercase text-xs transition-colors mt-2">
+                    Inhabilitar Fecha
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Confirmación corporativa sin alert/confirm -->
+    <div id="confirm-modal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-[100] hidden items-center justify-center p-4">
+        <div class="bg-clinical-900 border-2 border-brandGold-500 rounded-3xl w-full max-w-sm shadow-2xl p-6 text-center space-y-4 animate-fade-up">
+            <div class="w-16 h-16 rounded-full bg-brandGold-500/10 border border-brandGold-500 flex items-center justify-center mx-auto text-brandGold-500">
+                <i data-lucide="help-circle" class="w-8 h-8"></i>
+            </div>
+            <h4 class="font-outfit font-black text-white text-lg">¿Confirmar Acción?</h4>
+            <p id="confirm-message" class="text-xs text-slate-300 leading-relaxed"></p>
+            <div class="flex gap-2.5 pt-2">
+                <button onclick="window.closeConfirmModal(false)" class="flex-1 py-2.5 rounded-xl bg-clinical-950 hover:bg-clinical-850 text-slate-300 font-bold text-xs uppercase tracking-wider border border-clinical-800">
+                    Cancelar
+                </button>
+                <button onclick="window.closeConfirmModal(true)" class="flex-1 py-2.5 rounded-xl bg-brandGold-500 hover:bg-brandGold-600 text-clinical-950 font-black text-xs uppercase tracking-wider">
+                    Confirmar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Previsualización de Hojas Membretadas en Pantalla -->
+    <div id="report-preview-modal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[100] hidden items-center justify-center p-4 overflow-y-auto no-print">
+        <div class="bg-white text-slate-900 rounded-[2rem] w-full max-w-4xl min-h-[85vh] flex flex-col overflow-hidden shadow-2xl animate-fade-up">
+            <div class="bg-slate-900 p-4 flex justify-between items-center shrink-0 border-b border-slate-800">
+                <div class="flex items-center gap-2">
+                    <div class="p-1.5 rounded-lg bg-brandGold-500/10 border border-brandGold-500/30">
+                        <i data-lucide="printer" class="w-5 h-5 text-brandGold-500"></i>
+                    </div>
+                    <span class="font-outfit font-black text-white text-sm tracking-wide">Previsualización de Documento de Lujo</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="window.print()" class="px-4 py-2 bg-brandGold-500 hover:bg-brandGold-600 text-slate-900 rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-lg">
+                        <i data-lucide="file-down" class="w-4 h-4"></i> Guardar PDF / Imprimir
+                    </button>
+                    <button onclick="document.getElementById('report-preview-modal').classList.add('hidden'); document.getElementById('report-preview-modal').classList.remove('flex');" class="p-2 hover:bg-slate-850 rounded-xl text-slate-400 hover:text-white transition-colors">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="flex-1 overflow-y-auto p-8 bg-slate-100 flex justify-center">
+                <div class="bg-white w-[210mm] min-h-[297mm] shadow-2xl p-16 relative overflow-hidden border-[16px] border-double border-clinical-800 leading-relaxed text-slate-800 text-xs" id="report-preview-content"></div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, deleteDoc, collection, query, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Parámetros globales de la plataforma
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'ceut-agenda-pp';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+            apiKey: "",
+            authDomain: "ceut-agenda-pp.firebaseapp.com",
+            projectId: "ceut-agenda-pp",
+            storageBucket: "ceut-agenda-pp.appspot.com",
+            messagingSenderId: "12345678",
+            appId: "1:12345678:web:123456"
+        };
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        // Inicialización de Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        // Estado inicial de la aplicación
         const safeGetLocalJSON = (key, fallback) => {
             try {
                 const val = localStorage.getItem(key);
                 return val ? JSON.parse(val) : fallback;
             } catch (e) {
-                console.error("Error de formato local en la clave: " + key, e);
                 return fallback;
             }
-        };
-
-        // Formateador robusto de fecha en español
-        window.formatFullDateES = function(dateInput) {
-            if (!dateInput) return "";
-            const d = new Date(dateInput);
-            if (isNaN(d.getTime())) return String(dateInput);
-            
-            // Ajuste seguro de zona horaria local
-            const offset = d.getTimezoneOffset() * 60000;
-            const adjustedDate = new Date(d.getTime() + offset);
-            
-            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-            const formatted = adjustedDate.toLocaleDateString('es-MX', options);
-            return formatted.charAt(0).toUpperCase() + formatted.slice(1);
         };
 
         window.appState = {
@@ -177,43 +365,172 @@
             blockedDays: safeGetLocalJSON('ceut_blocked_days', {}), 
             blockedHours: safeGetLocalJSON('ceut_blocked_hours', {}), 
             users: safeGetLocalJSON('ceut_users', {
-                'carlos': {
-                    name: 'Mtro. Carlos Aguilar Sánchez',
-                    role: 'Responsable Psicopedagógico', 
-                    pin: '1015' 
-                },
-                'miroslava': {
-                    name: 'Lic. Miroslava Abril Hoyos Rojas', 
-                    role: 'Coordinadora', 
-                    pin: '1015', 
-                    isRestricted: true 
-                },
-                'abril': { 
-                    name: 'Pasantes Depto. Psicopedagógico',
-                    role: 'Pasante Psicopedagógico', 
-                    pin: '1015',
-                    isRestricted: true 
-                }
+                'carlos': { name: 'Mtro. Carlos Aguilar Sánchez', role: 'Responsable Psicopedagógico', pin: '1015' },
+                'miroslava': { name: 'Lic. Miroslava Abril Hoyos Rojas', role: 'Coordinadora', pin: '1015', isRestricted: true },
+                'abril': { name: 'Pasantes Depto. Psicopedagógico', role: 'Pasante Psicopedagógico', pin: '1015', isRestricted: true }
             }),
             agendaData: safeGetLocalJSON('ceut_agenda_data', {}), 
-            scheduleConfig: {
-                startHour: 8,
-                endHour: 21, 
-                interval: 60, 
-                breaks: [] 
-            },
+            scheduleConfig: { startHour: 8, endHour: 21 },
             lastCheckedAlarmTime: null,
             geminiApiKey: localStorage.getItem('ceut_gemini_key') || '',
-            isSynced: true,
+            isSynced: false,
             confirmCallback: null
         };
 
-        window.saveState = function() {
-            localStorage.setItem('ceut_users', JSON.stringify(window.appState.users));
-            localStorage.setItem('ceut_agenda_data', JSON.stringify(window.appState.agendaData));
-            localStorage.setItem('ceut_blocked_days', JSON.stringify(window.appState.blockedDays));
-            localStorage.setItem('ceut_blocked_hours', JSON.stringify(window.appState.blockedHours));
-            localStorage.setItem('ceut_gemini_key', window.appState.geminiApiKey);
+        async function startFirebaseSync() {
+            try {
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (error) {
+                console.warn("Fallo de autenticación Firebase. Operando en modo Local.", error);
+                window.appState.isSynced = false;
+                window.renderMainApp();
+                return;
+            }
+
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    window.appState.isSynced = true;
+                    bindFirestoreRealtimeListeners();
+                } else {
+                    window.appState.isSynced = false;
+                    window.renderMainApp();
+                }
+            });
+        }
+
+        function bindFirestoreRealtimeListeners() {
+            // Sincronización en tiempo real de Consultas
+            const appointmentsQuery = query(collection(db, 'artifacts', appId, 'public', 'data', 'appointments'));
+            onSnapshot(appointmentsQuery, (snapshot) => {
+                const fetchedApts = {};
+                snapshot.forEach(doc => {
+                    fetchedApts[doc.id] = doc.data();
+                });
+                window.appState.agendaData = fetchedApts;
+                localStorage.setItem('ceut_agenda_data', JSON.stringify(fetchedApts));
+                window.renderMainApp();
+            }, (error) => {
+                console.error("Fallo de sincronización de citas:", error);
+            });
+
+            // Sincronización de Horas Bloqueadas
+            const hoursQuery = query(collection(db, 'artifacts', appId, 'public', 'data', 'blocked_hours'));
+            onSnapshot(hoursQuery, (snapshot) => {
+                const fetchedHours = {};
+                snapshot.forEach(doc => {
+                    fetchedHours[doc.id] = true;
+                });
+                window.appState.blockedHours = fetchedHours;
+                localStorage.setItem('ceut_blocked_hours', JSON.stringify(fetchedHours));
+                window.renderMainApp();
+            }, (error) => {
+                console.error("Fallo de sincronización de horas:", error);
+            });
+
+            // Sincronización de Días Bloqueados
+            const daysQuery = query(collection(db, 'artifacts', appId, 'public', 'data', 'blocked_days'));
+            onSnapshot(daysQuery, (snapshot) => {
+                const fetchedDays = {};
+                snapshot.forEach(doc => {
+                    fetchedDays[doc.id] = doc.data().reason || true;
+                });
+                window.appState.blockedDays = fetchedDays;
+                localStorage.setItem('ceut_blocked_days', JSON.stringify(fetchedDays));
+                window.renderMainApp();
+            }, (error) => {
+                console.error("Fallo de sincronización de días:", error);
+            });
+
+            // Sincronización de PIN de Carlos
+            const pinsQuery = query(collection(db, 'artifacts', appId, 'public', 'data', 'pins'));
+            onSnapshot(pinsQuery, (snapshot) => {
+                snapshot.forEach(doc => {
+                    const userKey = doc.id;
+                    if (window.appState.users[userKey]) {
+                        window.appState.users[userKey].pin = doc.data().pin;
+                    }
+                });
+                localStorage.setItem('ceut_users', JSON.stringify(window.appState.users));
+            }, (error) => {
+                console.error("Fallo de sincronización de PINs:", error);
+            });
+        }
+
+        // Funciones de escritura remota
+        window.saveAptToFirestore = async function(aptId, aptData) {
+            if (!auth.currentUser) return;
+            try {
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'appointments', aptId), aptData);
+            } catch (error) {
+                console.error("Error al guardar en Firestore:", error);
+            }
+        };
+
+        window.deleteAptFromFirestore = async function(aptId) {
+            if (!auth.currentUser) return;
+            try {
+                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'appointments', aptId));
+            } catch (error) {
+                console.error("Error al eliminar en Firestore:", error);
+            }
+        };
+
+        window.saveHourBlockToFirestore = async function(blockKey, blockState) {
+            if (!auth.currentUser) return;
+            try {
+                if (blockState) {
+                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'blocked_hours', blockKey), { blocked: true });
+                } else {
+                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'blocked_hours', blockKey));
+                }
+            } catch (error) {
+                console.error("Error al inhabilitar hora:", error);
+            }
+        };
+
+        window.saveDayBlockToFirestore = async function(dateStr, reason) {
+            if (!auth.currentUser) return;
+            try {
+                if (reason) {
+                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'blocked_days', dateStr), { reason });
+                } else {
+                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'blocked_days', dateStr));
+                }
+            } catch (error) {
+                console.error("Error al inhabilitar día:", error);
+            }
+        };
+
+        window.savePinToFirestore = async function(userKey, newPin) {
+            if (!auth.currentUser) return;
+            try {
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'pins', userKey), { pin: newPin });
+            } catch (error) {
+                console.error("Error al guardar PIN:", error);
+            }
+        };
+
+        // Bootstrapping
+        window.addEventListener('DOMContentLoaded', () => {
+            startFirebaseSync();
+            window.renderLogin();
+        });
+    </script>
+
+    <script>
+        window.formatFullDateES = function(dateInput) {
+            if (!dateInput) return "";
+            const d = new Date(dateInput);
+            if (isNaN(d.getTime())) return String(dateInput);
+            const offset = d.getTimezoneOffset() * 60000;
+            const adjustedDate = new Date(d.getTime() + offset);
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            const formatted = adjustedDate.toLocaleDateString('es-MX', options);
+            return formatted.charAt(0).toUpperCase() + formatted.slice(1);
         };
 
         window.getHourSlots = function() {
@@ -234,12 +551,6 @@
             return `CEUT-PP-${levelCode}-${year}-${uniqueSeq}`;
         };
 
-        window.canUserCancelOrDelete = function(apt) {
-            if (window.appState.currentUser === 'carlos') return true;
-            if (apt && apt.createdBy === window.appState.currentUser) return true;
-            return false;
-        };
-
         window.showToast = function(message, type = 'success') {
             const toast = document.getElementById('toast');
             const icon = document.getElementById('toast-icon');
@@ -248,15 +559,14 @@
             
             if (type === 'success') {
                 icon.innerHTML = '<i data-lucide="check-circle" class="w-5 h-5 text-emerald-400"></i>';
-                toast.firstElementChild.className = 'bg-clinical-950 text-white px-5 py-3 rounded-2xl shadow-[0_0_30px_rgba(16,185,129,0.15)] flex items-center gap-3 border border-emerald-500/30';
+                toast.firstElementChild.className = 'bg-clinical-950 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-3 border border-emerald-500/30';
             } else if (type === 'error') {
                 icon.innerHTML = '<i data-lucide="alert-circle" class="w-5 h-5 text-rose-400"></i>';
-                toast.firstElementChild.className = 'bg-clinical-950 text-white px-5 py-3 rounded-2xl shadow-[0_0_30px_rgba(244,63,94,0.15)] flex items-center gap-3 border border-rose-500/30';
+                toast.firstElementChild.className = 'bg-clinical-950 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-3 border border-rose-500/30';
             } else {
                 icon.innerHTML = '<i data-lucide="info" class="w-5 h-5 text-brandGold-500"></i>';
-                toast.firstElementChild.className = 'bg-clinical-950 text-white px-5 py-3 rounded-2xl shadow-[0_0_30px_rgba(235,177,2,0.15)] flex items-center gap-3 border border-brandGold-500/30';
+                toast.firstElementChild.className = 'bg-clinical-950 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-3 border border-brandGold-500/30';
             }
-
             msg.textContent = message;
             if (typeof lucide !== 'undefined') lucide.createIcons();
             
@@ -266,18 +576,15 @@
             setTimeout(() => {
                 toast.classList.remove('translate-y-0', 'opacity-100');
                 toast.classList.add('translate-y-[-100px]', 'opacity-0', 'pointer-events-none');
-            }, 3500);
+            }, 3000);
         };
 
-        // Modal de confirmación personalizado para evitar alert/confirm nativos
         window.showConfirmModal = function(message, callback) {
             const modal = document.getElementById('confirm-modal');
             const msgEl = document.getElementById('confirm-message');
             if (!modal || !msgEl) return;
-
             msgEl.textContent = message;
             window.appState.confirmCallback = callback;
-
             modal.classList.remove('hidden');
             modal.classList.add('flex');
         };
@@ -294,68 +601,27 @@
             window.appState.confirmCallback = null;
         };
 
-        window.handleLevelChange = function(levelVal, formPrefix) {
-            const gradeSelect = document.getElementById(`${formPrefix}-grade`);
-            const groupSelect = document.getElementById(`${formPrefix}-group`);
-            if (!gradeSelect || !groupSelect) return;
-
-            let gradeOptions = '';
-            let groupOptions = '';
-
-            if (levelVal === 'Preparatoria') {
-                for (let i = 1; i <= 6; i++) {
-                    gradeOptions += `<option value="${i}° Semestre">${i}° Semestre</option>`;
-                }
-                const prepGroups = ['A', 'B', 'C', 'D', 'E', 'DS', 'HSA', 'TUR', 'IEO', 'COM'];
-                prepGroups.forEach(grp => {
-                    groupOptions += `<option value="${grp}">${grp}</option>`;
-                });
-            } else {
-                for (let i = 1; i <= 10; i++) {
-                    gradeOptions += `<option value="${i}° Cuatrimestre">${i}° Cuatrimestre</option>`;
-                }
-                const univGroups = ['A', 'B', 'C', 'D'];
-                univGroups.forEach(grp => {
-                    groupOptions += `<option value="${grp}">${grp}</option>`;
-                });
-            }
-
-            gradeSelect.innerHTML = gradeOptions;
-            groupSelect.innerHTML = groupOptions;
-        };
-
-        // Síntesis de alerta de voz femenina exclusiva para Carlos
         window.speakCurrentAlarmText = function(student, hour) {
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
-                
                 const utter = new SpeechSynthesisUtterance(`Atención Carlos. Recordatorio de consulta psicopedagógica para el alumno ${student}, programada a las ${hour}. Por favor, preparar la sala de consulta.`);
                 utter.lang = 'es-MX';
                 utter.pitch = 1.15; 
                 utter.rate = 0.95;
 
                 const voices = window.speechSynthesis.getVoices();
-                const femaleVoiceNames = ['paulina', 'sabina', 'monica', 'helena', 'hilda', 'sandra', 'maria', 'zira', 'google español', 'microsoft paulina', 'microsoft sabina', 'female', 'mujer', 'dalia', 'pilar', 'juana', 'carmen', 'elena'];
-                
+                const femaleVoiceNames = ['paulina', 'sabina', 'monica', 'helena', 'hilda', 'sandra', 'maria', 'google español', 'microsoft paulina', 'dalia', 'juana', 'mujer', 'female'];
                 let voiceSelected = voices.find(v => v.lang.toLowerCase().includes('es-mx') && femaleVoiceNames.some(fn => v.name.toLowerCase().includes(fn)));
-                if (!voiceSelected) {
-                    voiceSelected = voices.find(v => v.lang.toLowerCase().startsWith('es') && femaleVoiceNames.some(fn => v.name.toLowerCase().includes(fn)));
-                }
-                if (!voiceSelected) {
-                    voiceSelected = voices.find(v => v.lang.toLowerCase().includes('es-mx'));
-                }
-                if (!voiceSelected) {
-                    voiceSelected = voices.find(v => v.lang.toLowerCase().startsWith('es'));
-                }
+                if (!voiceSelected) voiceSelected = voices.find(v => v.lang.toLowerCase().startsWith('es') && femaleVoiceNames.some(fn => v.name.toLowerCase().includes(fn)));
+                if (!voiceSelected) voiceSelected = voices.find(v => v.lang.toLowerCase().includes('es-mx'));
+                if (!voiceSelected) voiceSelected = voices.find(v => v.lang.toLowerCase().startsWith('es'));
                 
-                if (voiceSelected) {
-                    utter.voice = voiceSelected;
-                }
+                if (voiceSelected) utter.voice = voiceSelected;
                 window.speechSynthesis.speak(utter);
             }
         };
 
-        // Reloj digital y monitoreo continuo de alarmas de 3 minutos
+        // Reloj digital y monitoreo acústico restrictivo
         setInterval(() => {
             const now = new Date();
             const currentHour = String(now.getHours()).padStart(2, '0');
@@ -371,25 +637,20 @@
             if (mainClock) mainClock.textContent = clockStr;
             if (loginClock) loginClock.textContent = clockStr;
 
-            // Alerta acústica y de voz exclusiva para Carlos
+            // Restricción de voz activa exclusiva para Carlos
             if (window.appState && window.appState.currentUser === 'carlos') {
                 const dateStr = window.appState.currentDate.toISOString().split('T')[0];
                 const activeAppointments = Object.values(window.appState.agendaData).filter(apt => apt.date === dateStr && apt.alarm);
-
                 const timeKey = `${currentHour}:${currentMinute}`;
                 
                 activeAppointments.forEach(apt => {
                     const [h, m] = apt.hour.split(':');
                     const targetTime = new Date();
                     targetTime.setHours(parseInt(h), parseInt(m) - 3, 0, 0); 
-
-                    const targetHourStr = String(targetTime.getHours()).padStart(2, '0');
-                    const targetMinStr = String(targetTime.getMinutes()).padStart(2, '0');
-                    const alarmTriggerTime = `${targetHourStr}:${targetMinStr}`;
+                    const alarmTriggerTime = `${String(targetTime.getHours()).padStart(2, '0')}:${String(targetTime.getMinutes()).padStart(2, '0')}`;
 
                     if (timeKey === alarmTriggerTime && window.appState.lastCheckedAlarmTime !== timeKey) {
                         window.appState.lastCheckedAlarmTime = timeKey;
-                        
                         document.getElementById('alarm-name').textContent = apt.student;
                         document.getElementById('alarm-time').textContent = apt.hour + " " + (parseInt(apt.hour) < 12 ? 'AM' : 'PM');
                         document.getElementById('alarm-details').textContent = `${apt.level} • Grado: ${apt.grade} • Grupo: ${apt.group}`;
@@ -417,7 +678,6 @@
 
             const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
             const weekdays = ["D", "L", "M", "M", "J", "V", "S"];
-            
             const firstDayIndex = tempMonth.getDay();
             const totalDays = new Date(year, monthIdx + 1, 0).getDate();
 
@@ -441,7 +701,6 @@
             for (let day = 1; day <= totalDays; day++) {
                 const dayDate = new Date(year, monthIdx, day);
                 const dayDateStr = dayDate.toISOString().split('T')[0];
-                
                 const hasApts = Object.values(window.appState.agendaData).some(apt => apt.date === dayDateStr);
                 const isBlocked = window.appState.blockedDays[dayDateStr];
 
@@ -499,7 +758,6 @@
             return weekDays;
         };
 
-        // Inhabilitación rápida de un solo click
         window.toggleHourBlock = function(dateStr, hour) {
             if (window.appState.currentUser !== 'carlos') {
                 window.showToast('Acción denegada: Solo el Mtro. Carlos puede inhabilitar horarios.', 'error');
@@ -508,15 +766,48 @@
             const blockKey = `${dateStr}_${hour}`;
             if (window.appState.blockedHours[blockKey]) {
                 delete window.appState.blockedHours[blockKey];
+                window.saveHourBlockToFirestore(blockKey, false);
                 window.showToast(`Horario de las ${hour} habilitado con éxito.`, 'success');
             } else {
                 window.appState.blockedHours[blockKey] = true;
+                window.saveHourBlockToFirestore(blockKey, true);
                 window.showToast(`Horario de las ${hour} inhabilitado al instante.`, 'info');
             }
-            window.saveState();
             window.renderMainApp();
         };
 
+        window.handleLevelChange = function(levelVal, formPrefix) {
+            const gradeSelect = document.getElementById(`${formPrefix}-grade`);
+            const groupSelect = document.getElementById(`${formPrefix}-group`);
+            if (!gradeSelect || !groupSelect) return;
+
+            let gradeOptions = '';
+            let groupOptions = '';
+
+            if (levelVal === 'Preparatoria') {
+                for (let i = 1; i <= 6; i++) {
+                    gradeOptions += `<option value="${i}° Semestre">${i}° Semestre</option>`;
+                }
+                const prepGroups = ['A', 'B', 'C', 'D', 'E', 'DS', 'HSA', 'TUR', 'IEO', 'COM'];
+                prepGroups.forEach(grp => {
+                    groupOptions += `<option value="${grp}">${grp}</option>`;
+                });
+            } else {
+                for (let i = 1; i <= 10; i++) {
+                    gradeOptions += `<option value="${i}° Cuatrimestre">${i}° Cuatrimestre</option>`;
+                }
+                const univGroups = ['A', 'B', 'C', 'D'];
+                univGroups.forEach(grp => {
+                    groupOptions += `<option value="${grp}">${grp}</option>`;
+                });
+            }
+
+            gradeSelect.innerHTML = gradeOptions;
+            groupSelect.innerHTML = groupOptions;
+        };
+    </script>
+
+    <script>
         window.renderHoursGridHtml = function(activeAppointments, isBlocked, dateStr) {
             let html = '';
             const slots = window.getHourSlots();
@@ -637,7 +928,6 @@
                         </div>
                         <span class="text-xs text-slate-400">Distribución de Lunes a Sábado</span>
                     </div>
-                    
                     <div class="overflow-x-auto">
                         <table class="w-full border-collapse text-left min-w-[800px]">
                             <thead>
@@ -738,7 +1028,6 @@
                             </div>
                         `;
                     }
-
                     html += `</td>`;
                 });
                 html += `</tr>`;
@@ -752,7 +1041,6 @@
             const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
             const year = window.appState.miniCalendarMonth.getFullYear();
             const monthIdx = window.appState.miniCalendarMonth.getMonth();
-
             const firstDayIndex = new Date(year, monthIdx, 1).getDay();
             const totalDays = new Date(year, monthIdx + 1, 0).getDate();
 
@@ -769,7 +1057,6 @@
                             <button onclick="window.navigateMiniCalendar(1)" class="p-1 hover:bg-clinical-850 rounded-lg text-slate-400 hover:text-brandGold-500 transition-colors"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
                         </div>
                     </div>
-
                     <div class="grid grid-cols-7 gap-2">
                         ${["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"].map(d => `<div class="text-slate-500 font-black text-center text-xs py-2">${d}</div>`).join('')}
             `;
@@ -826,366 +1113,29 @@
             return html;
         };
     </script>
-</head>
-<body class="text-slate-100 min-h-screen relative overflow-x-hidden">
-
-    <!-- Contenedor Toast -->
-    <div id="toast" class="fixed top-5 right-5 z-50 transform translate-y-[-100px] opacity-0 transition-all duration-300 pointer-events-none">
-        <div class="bg-clinical-950 text-white px-5 py-3 rounded-2xl shadow-[0_0_30px_rgba(16,185,129,0.15)] flex items-center gap-3 border border-emerald-500/30">
-            <span id="toast-icon"></span>
-            <span id="toast-message" class="text-sm font-semibold"></span>
-        </div>
-    </div>
-
-    <!-- CONTENEDOR PRINCIPAL -->
-    <div id="app" class="min-h-screen flex flex-col transition-opacity duration-350"></div>
-
-    <!-- AREA DE IMPRESIÓN -->
-    <div id="academic-report-print-area" class="hidden"></div>
-
-    <!-- ALERTA CITA CON ANUNCIO DE VOZ -->
-    <div id="alarm-modal" class="fixed inset-0 z-50 overflow-y-auto bg-slate-950/90 backdrop-blur-md hidden items-center justify-center p-4">
-        <div class="max-w-md w-full rounded-3xl p-8 border-2 border-brandGold-500 bg-clinical-900 shadow-2xl relative overflow-hidden animate-pulse-alarm text-center">
-            <div class="absolute -top-10 -right-10 w-40 h-40 bg-brandGold-500/10 rounded-full blur-3xl"></div>
-            
-            <div class="flex flex-col items-center">
-                <div class="w-20 h-20 rounded-full bg-brandGold-500/10 border-2 border-brandGold-500 flex items-center justify-center text-brandGold-500 mb-6 shadow-[0_0_20px_rgba(235,177,2,0.3)]">
-                    <i data-lucide="bell-ring" class="w-10 h-10 animate-bounce"></i>
-                </div>
-                
-                <h3 class="text-2xl font-outfit font-black text-white uppercase tracking-tight" id="alarm-title-header">¡Próxima Consulta!</h3>
-                <p class="text-brandGold-500 text-xs font-bold tracking-widest uppercase mt-1">Alerta de Agenda Psicopedagógica</p>
-                <div class="h-1 w-20 bg-gradient-to-r from-clinical-600 to-brandGold-500 rounded-full my-4"></div>
-                
-                <div class="bg-clinical-950/80 border border-clinical-800/60 rounded-2xl p-5 w-full mb-6 text-left space-y-2.5">
-                    <div class="flex justify-between items-center text-xs">
-                        <span class="text-slate-400 font-bold uppercase">Hora de Inicio</span>
-                        <span class="text-brandGold-500 font-black" id="alarm-time">00:00 AM</span>
-                    </div>
-                    <div class="border-t border-clinical-800/60 pt-2.5">
-                        <span class="text-[10px] text-slate-500 font-bold uppercase block mb-0.5">Nombre / Actividad</span>
-                        <span class="text-white font-bold font-outfit text-base block leading-tight" id="alarm-name">Nombre del Alumno</span>
-                    </div>
-                    <div class="flex justify-between items-center text-xs border-t border-clinical-800/60 pt-2.5">
-                        <span class="text-slate-400 font-bold">Detalles / Periodo</span>
-                        <span class="text-slate-300 font-medium" id="alarm-details">Preparatoria • Grado: 3 • Grupo: A</span>
-                    </div>
-                </div>
-
-                <p class="text-slate-300 text-xs mb-6 font-semibold flex items-center gap-1.5 justify-center">
-                    <i data-lucide="alert-triangle" class="w-4 h-4 text-brandGold-500"></i>
-                    <span>La consulta programada inicia exactamente en <strong>3 minutos</strong>.</span>
-                </p>
-
-                <div class="flex flex-col gap-2 w-full">
-                    <button onclick="dismissAlarm()" class="w-full bg-gradient-to-r from-brandGold-500 to-brandGold-600 hover:from-brandGold-600 hover:to-brandGold-700 text-clinical-950 font-black py-3.5 px-6 rounded-2xl shadow-lg transition-all uppercase tracking-wider text-xs">
-                        Entendido, Preparar Sesión
-                    </button>
-                    <button onclick="window.speakCurrentAlarmText(document.getElementById('alarm-name').textContent, document.getElementById('alarm-time').textContent)" class="w-full bg-clinical-950 hover:bg-clinical-850 text-brandGold-500 py-2.5 px-6 rounded-2xl border border-brandGold-500/30 hover:border-brandGold-500/60 text-[10px] font-bold uppercase tracking-widest transition-colors flex items-center justify-center gap-1.5">
-                        <i data-lucide="volume-2" class="w-4 h-4 text-brandGold-500"></i>
-                        <span>Escuchar Anuncio de Voz</span>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ASISTENTE DE IA DE GEMINI -->
-    <div id="ai-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden items-center justify-center p-4">
-        <div class="bg-clinical-900 border-2 border-brandGold-500 rounded-3xl w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col shadow-2xl animate-fade-up">
-            <div class="bg-clinical-950 p-6 border-b border-clinical-800/85 flex justify-between items-center shrink-0">
-                <div class="flex items-center gap-2">
-                    <div class="p-1.5 rounded-lg bg-brandGold-500/10 border border-brandGold-500/30">
-                        <i data-lucide="sparkles" class="w-5 h-5 text-brandGold-500 animate-pulse"></i>
-                    </div>
-                    <div>
-                        <h4 class="font-outfit font-black text-white text-base tracking-wide" id="ai-modal-title">Asistente Psicopedagógico IA</h4>
-                        <p class="text-[10px] text-brandGold-500 font-bold uppercase tracking-widest">Desarrollado con Gemini 2.5 Flash</p>
-                    </div>
-                </div>
-                <button onclick="closeAiModal()" class="p-1.5 hover:bg-clinical-800 rounded-lg text-slate-400 hover:text-white transition-colors">
-                    <i data-lucide="x" class="w-5 h-5"></i>
-                </button>
-            </div>
-            <div id="ai-loading-container" class="hidden flex-col items-center justify-center p-12 space-y-4">
-                <div class="w-12 h-12 border-4 border-brandGold-500 border-t-transparent rounded-full animate-spin"></div>
-                <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">Procesando observaciones con IA...</p>
-            </div>
-            <div class="p-6 overflow-y-auto flex-1 space-y-4 text-sm leading-relaxed text-slate-300" id="ai-modal-body"></div>
-            <div class="p-6 bg-clinical-950 border-t border-clinical-800/85 flex flex-col sm:flex-row gap-3 items-center justify-between shrink-0">
-                <span class="text-xs text-slate-400 font-medium">¿Deseas aplicar estos datos a las observaciones actuales?</span>
-                <div class="flex gap-2 w-full sm:w-auto">
-                    <button type="button" onclick="copyAiOutput()" class="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl bg-clinical-900 hover:bg-clinical-850 text-slate-300 hover:text-white font-bold text-[9px] uppercase tracking-wider transition-all border border-clinical-800">
-                        <i data-lucide="copy" class="w-4 h-4 text-brandGold-500"></i>
-                        <span>Copiar</span>
-                    </button>
-                    <button type="button" onclick="applyAiToObservations()" class="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 py-2.5 px-5 rounded-xl bg-gradient-to-r from-brandGold-500 to-brandGold-600 hover:from-brandGold-600 hover:to-brandGold-700 text-clinical-950 font-black text-xs uppercase tracking-wider transition-all shadow-md">
-                        <i data-lucide="check" class="w-4 h-4"></i>
-                        <span>Aplicar Observaciones</span>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- CAMBIAR PIN -->
-    <div id="change-pin-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden items-center justify-center p-4">
-        <div class="bg-clinical-900 border-2 border-brandGold-500 rounded-3xl w-full max-w-sm shadow-2xl animate-fade-up flex flex-col overflow-hidden">
-            <div class="bg-clinical-950 p-6 border-b border-clinical-800/80 flex justify-between items-center shrink-0">
-                <div class="flex items-center gap-2">
-                    <div class="p-1.5 rounded-lg bg-brandGold-500/10 border border-brandGold-500/30">
-                        <i data-lucide="lock" class="w-5 h-5 text-brandGold-500"></i>
-                    </div>
-                    <div>
-                        <h4 class="font-outfit font-black text-white text-base tracking-wide flex flex-col">
-                            <span class="text-white text-base font-black">Cambiar PIN</span>
-                            <span class="text-[10px] text-brandGold-500 font-bold uppercase tracking-widest">Seguridad</span>
-                        </h4>
-                    </div>
-                </div>
-                <button onclick="closeChangePinModal()" class="p-1.5 hover:bg-clinical-800 rounded-lg text-slate-400 hover:text-white transition-colors">
-                    <i data-lucide="x" class="w-5 h-5"></i>
-                </button>
-            </div>
-            
-            <form onsubmit="submitChangePin(event)" class="p-6 space-y-4">
-                <div>
-                    <label for="pin-current" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">PIN Actual</label>
-                    <input type="password" id="pin-current" maxlength="4" placeholder="••••" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-3 px-4 text-center text-white tracking-[0.5em] font-bold focus:outline-none focus:ring-2 focus:ring-brandGold-500/50" required>
-                </div>
-                <div>
-                    <label for="pin-new" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Nuevo PIN</label>
-                    <input type="password" id="pin-new" maxlength="4" placeholder="••••" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-3 px-4 text-center text-white tracking-[0.5em] font-bold focus:outline-none focus:ring-2 focus:ring-brandGold-500/50" required>
-                </div>
-                <button type="submit" class="w-full bg-brandGold-500 hover:bg-brandGold-600 text-clinical-950 font-black py-3 rounded-xl uppercase text-xs transition-colors mt-2">
-                    Guardar Nuevo PIN
-                </button>
-            </form>
-        </div>
-    </div>
-
-    <!-- MODAL DE BLOQUEO DE DÍA -->
-    <div id="block-day-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden items-center justify-center p-4">
-        <div class="bg-clinical-900 border-2 border-brandGold-500 rounded-3xl w-full max-w-sm shadow-2xl animate-fade-up flex flex-col overflow-hidden">
-            <div class="bg-clinical-950 p-6 border-b border-clinical-800/80 flex justify-between items-center shrink-0">
-                <div class="flex items-center gap-2">
-                    <div class="p-1.5 rounded-lg bg-brandGold-500/10 border border-brandGold-500/30">
-                        <i data-lucide="calendar-off" class="w-5 h-5 text-brandGold-500"></i>
-                    </div>
-                    <div>
-                        <h4 class="font-outfit font-black text-white text-base tracking-wide flex flex-col">
-                            <span class="text-white text-base font-black">Bloqueo de Jornada</span>
-                            <span class="text-[10px] text-brandGold-500 font-bold uppercase tracking-widest">Inhabilitar Día</span>
-                        </h4>
-                    </div>
-                </div>
-                <button onclick="document.getElementById('block-day-modal').classList.add('hidden');" class="p-1.5 hover:bg-clinical-800 rounded-lg text-slate-400 hover:text-white transition-colors">
-                    <i data-lucide="x" class="w-5 h-5"></i>
-                </button>
-            </div>
-            
-            <form onsubmit="window.saveBlockDay(event)" class="p-6 space-y-4">
-                <div>
-                    <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Fecha Seleccionada</label>
-                    <input type="text" id="block-day-date-display" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-3 px-4 text-white text-sm font-bold focus:outline-none" readonly>
-                </div>
-                <div>
-                    <label for="block-day-reason" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Motivo del Bloqueo</label>
-                    <textarea id="block-day-reason" placeholder="Ej. Suspensión oficial de labores académicas, días de consejo técnico..." class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-3.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-brandGold-500/50" rows="3" required></textarea>
-                </div>
-                <button type="submit" class="w-full bg-brandGold-500 hover:bg-brandGold-600 text-clinical-950 font-black py-3 rounded-xl uppercase text-xs transition-colors mt-2">
-                    Inhabilitar Fecha
-                </button>
-            </form>
-        </div>
-    </div>
-
-    <!-- MODAL DE CONFIRMACIÓN DE DIÁLOGO PERSONALIZADO -->
-    <div id="confirm-modal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-[100] hidden items-center justify-center p-4">
-        <div class="bg-clinical-900 border-2 border-brandGold-500 rounded-3xl w-full max-w-sm shadow-2xl p-6 text-center space-y-4">
-            <div class="w-16 h-16 rounded-full bg-brandGold-500/10 border border-brandGold-500 flex items-center justify-center mx-auto text-brandGold-500">
-                <i data-lucide="help-circle" class="w-8 h-8"></i>
-            </div>
-            <h4 class="font-outfit font-black text-white text-lg">¿Confirmar Acción?</h4>
-            <p id="confirm-message" class="text-xs text-slate-300 leading-relaxed"></p>
-            <div class="flex gap-2.5 pt-2">
-                <button onclick="window.closeConfirmModal(false)" class="flex-1 py-2.5 rounded-xl bg-clinical-950 hover:bg-clinical-850 text-slate-300 font-bold text-xs uppercase tracking-wider border border-clinical-800">
-                    Cancelar
-                </button>
-                <button onclick="window.closeConfirmModal(true)" class="flex-1 py-2.5 rounded-xl bg-brandGold-500 hover:bg-brandGold-600 text-clinical-950 font-black text-xs uppercase tracking-wider">
-                    Confirmar
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- PREVISUALIZADOR DE REPORTE DE SÚPER LUJO -->
-    <div id="report-preview-modal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[100] hidden items-center justify-center p-4 overflow-y-auto no-print">
-        <div class="bg-white text-slate-900 rounded-[2rem] w-full max-w-4xl min-h-[80vh] flex flex-col overflow-hidden shadow-2xl">
-            <div class="bg-slate-900 p-4 flex justify-between items-center shrink-0 border-b border-slate-800">
-                <div class="flex items-center gap-2">
-                    <div class="p-1.5 rounded-lg bg-brandGold-500/10 border border-brandGold-500/30">
-                        <i data-lucide="printer" class="w-5 h-5 text-brandGold-500"></i>
-                    </div>
-                    <span class="font-outfit font-black text-white text-sm tracking-wide">Previsualización de Documento de Lujo</span>
-                </div>
-                <div class="flex items-center gap-2">
-                    <button onclick="window.print()" class="px-4 py-2 bg-brandGold-500 hover:bg-brandGold-600 text-slate-900 rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-1.5">
-                        <i data-lucide="file-down" class="w-4 h-4"></i> Guardar PDF / Imprimir
-                    </button>
-                    <button onclick="document.getElementById('report-preview-modal').classList.add('hidden'); document.getElementById('report-preview-modal').classList.remove('flex');" class="p-2 hover:bg-slate-850 rounded-xl text-slate-400 hover:text-white transition-colors">
-                        <i data-lucide="x" class="w-5 h-5"></i>
-                    </button>
-                </div>
-            </div>
-            
-            <div class="flex-1 overflow-y-auto p-12 bg-slate-100 flex justify-center">
-                <div class="bg-white w-[210mm] min-h-[297mm] shadow-xl p-16 relative overflow-hidden border-[16px] border-double border-clinical-800 leading-relaxed text-slate-800 text-xs" id="report-preview-content"></div>
-            </div>
-        </div>
-    </div>
 
     <script>
-        window.dismissAlarm = function() {
-            const modal = document.getElementById('alarm-modal');
-            if (modal) {
-                modal.classList.add('hidden');
-                modal.classList.remove('flex');
-            }
-            if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
-            }
-        };
-
-        window.closeAiModal = function() {
-            const modal = document.getElementById('ai-modal');
-            if (modal) {
-                modal.classList.add('hidden');
-                modal.classList.remove('flex');
-            }
-        };
-
-        window.closeChangePinModal = function() {
-            const modal = document.getElementById('change-pin-modal');
-            if (modal) {
-                modal.classList.add('hidden');
-                modal.classList.remove('flex');
-            }
-        };
-
-        window.submitChangePin = function(e) {
-            e.preventDefault();
-            const currentPin = document.getElementById('pin-current').value;
-            const newPin = document.getElementById('pin-new').value;
-            const userKey = window.appState.currentUser;
-            
-            if (window.appState.users[userKey].pin === currentPin) {
-                window.appState.users[userKey].pin = newPin;
-                window.saveState();
-                window.closeChangePinModal();
-                window.showToast('PIN de acceso actualizado con éxito.', 'success');
-            } else {
-                window.showToast('El PIN actual introducido es incorrecto.', 'error');
-            }
-        };
-
-        window.changeDate = function(days) {
-            window.appState.currentDate.setDate(window.appState.currentDate.getDate() + days);
-            window.renderMainApp();
-        };
-
-        window.goToday = function() {
-            window.appState.currentDate = new Date();
-            window.renderMainApp();
-        };
-
-        window.setDateFromPicker = function(val) {
-            if (!val) return;
-            const parts = val.split('-');
-            window.appState.currentDate = new Date(parts[0], parts[1] - 1, parts[2]);
-            window.renderMainApp();
-        };
-
-        window.setFilter = function(filter) {
-            window.appState.filterType = filter;
-            window.renderMainApp();
-        };
-
-        window.handleSearchChange = function(q) {
-            window.appState.searchQuery = q.trim();
-        };
-
-        window.updateAptStatus = function(id, newStatus) {
-            const apt = window.appState.agendaData[id];
-            if (apt) {
-                apt.status = newStatus;
-                window.saveState();
-                window.renderMainApp();
-                window.showToast(`Estado de consulta modificado a ${newStatus}`, 'success');
-            }
-        };
-
-        window.getStatsData = function() {
-            const period = window.appState.activeStatsPeriod;
-            const now = new Date(window.appState.currentDate);
-            let filteredApts = [];
-
-            if (period === 'dia') {
-                const dayStr = now.toISOString().split('T')[0];
-                filteredApts = Object.values(window.appState.agendaData).filter(apt => apt.date === dayStr);
-            } else if (period === 'semana') {
-                const startOfWeek = new Date(now);
-                startOfWeek.setDate(now.getDate() - now.getDay());
-                const endOfWeek = new Date(now);
-                endOfWeek.setDate(now.getDate() + (6 - now.getDay()));
-
-                const startStr = startOfWeek.toISOString().split('T')[0];
-                const endStr = endOfWeek.toISOString().split('T')[0];
-
-                filteredApts = Object.values(window.appState.agendaData).filter(apt => apt.date >= startStr && apt.date <= endStr);
-            } else if (period === 'mes') {
-                const monthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-                filteredApts = Object.values(window.appState.agendaData).filter(apt => apt.date.startsWith(monthStr));
-            } else if (period === 'ano') {
-                const yearStr = `${now.getFullYear()}`;
-                filteredApts = Object.values(window.appState.agendaData).filter(apt => apt.date.startsWith(yearStr));
-            }
-
-            const total = filteredApts.length;
-            const realizadas = filteredApts.filter(apt => apt.status === 'Realizada').length;
-            const pendientes = filteredApts.filter(apt => apt.status === 'Pendiente').length;
-            const reagendadas = filteredApts.filter(apt => apt.status === 'Reagendada').length;
-            const canceladas = filteredApts.filter(apt => apt.status === 'Cancelada').length;
-
-            const psicológicas = filteredApts.filter(apt => apt.type === 'Psicológica').length;
-            const vocacionales = filteredApts.filter(apt => apt.type === 'Vocacional').length;
-            const académicas = filteredApts.filter(apt => apt.type === 'Académica').length;
-            const seguimiento = filteredApts.filter(apt => apt.type === 'Seguimiento').length;
-
-            return {
-                total, realizadas, pendientes, reagendadas, canceladas,
-                psicológicas, vocacionales, académicas, seguimiento,
-                aptsList: filteredApts
-            };
-        };
-
-        window.switchViewMode = function(mode) {
-            window.appState.viewMode = mode;
-            window.renderMainApp();
-        };
-
-        window.setStatsPeriod = function(period) {
-            window.appState.activeStatsPeriod = period;
-            window.renderMainApp();
-        };
-
         window.renderMainApp = function() {
             const app = document.getElementById('app');
             if (!app) return;
 
+            // Evita fallas de consola si Firebase gatilla sincronización antes del login
+            if (!window.appState || !window.appState.currentUser) {
+                if (!document.getElementById('login-user')) {
+                    window.renderLogin();
+                }
+                return;
+            }
+
             const userObj = window.appState.users[window.appState.currentUser];
-            const dateStr = window.appState.currentDate.toISOString().split('T')[0];
+            if (!userObj) {
+                if (!document.getElementById('login-user')) {
+                    window.renderLogin();
+                }
+                return;
+            }
             
+            const dateStr = window.appState.currentDate.toISOString().split('T')[0];
             const activeAppointments = Object.values(window.appState.agendaData).filter(apt => apt.date === dateStr);
             const isBlocked = window.appState.blockedDays[dateStr];
             const isCarlos = (window.appState.currentUser === 'carlos');
@@ -1201,8 +1151,6 @@
                             <p class="text-brandGold-500 text-[10px] font-black uppercase tracking-widest">Psicopedagogía</p>
                         </div>
                     </div>
-
-                    <!-- Perfil Activo -->
                     <div class="bg-clinical-900 border border-clinical-800 rounded-2xl p-4 flex flex-col gap-2 relative overflow-hidden group">
                         <div class="absolute inset-0 bg-brandGold-500/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
                         <div class="flex justify-between items-start">
@@ -1221,14 +1169,10 @@
                             ` : ''}
                         </div>
                     </div>
-
-                    <!-- Mini Calendario de Navegación -->
                     <div>
                         <span class="text-slate-400 font-bold uppercase tracking-wider text-[10px] block mb-2.5">Agenda Interactiva</span>
                         <div id="mini-calendar-container" class="bg-clinical-900 border border-clinical-800/80 rounded-2xl p-3.5 shadow-md"></div>
                     </div>
-
-                    <!-- Modos de Vista -->
                     <div class="space-y-1.5">
                         <button onclick="window.switchViewMode('day')" class="w-full text-left py-3 px-4 rounded-xl flex items-center justify-between transition-colors ${window.appState.viewMode === 'day' ? 'bg-brandGold-500 text-clinical-950 font-black shadow-md' : 'bg-clinical-900 hover:bg-clinical-850 text-slate-300'}">
                             <span class="flex items-center gap-2.5 text-xs uppercase tracking-wider font-bold"><i data-lucide="calendar" class="w-4 h-4"></i> Tablero Diario</span>
@@ -1242,11 +1186,8 @@
                         </button>
                         <button onclick="window.switchViewMode('stats')" class="w-full text-left py-3 px-4 rounded-xl flex items-center justify-between transition-colors ${window.appState.viewMode === 'stats' ? 'bg-brandGold-500 text-clinical-950 font-black shadow-md' : 'bg-clinical-900 hover:bg-clinical-850 text-slate-300'}">
                             <span class="flex items-center gap-2.5 text-xs uppercase tracking-wider font-bold"><i data-lucide="bar-chart-3" class="w-4 h-4"></i> Reportes Clínicos</span>
-                            <span class="text-xs bg-indigo-500/20 text-indigo-400 border border-indigo-500/35 px-2 py-0.5 rounded-md font-bold uppercase">KPI</span>
                         </button>
                     </div>
-
-                    <!-- Categorías de Cita -->
                     <div class="space-y-2.5">
                         <span class="text-slate-400 font-bold uppercase tracking-wider text-[10px] block">Categorías de Consulta</span>
                         <div class="grid grid-cols-2 gap-1.5 text-[11px] font-bold">
@@ -1264,8 +1205,6 @@
                             </button>
                         </div>
                     </div>
-
-                    <!-- Buscador -->
                     <div class="space-y-2">
                         <span class="text-slate-400 font-bold uppercase tracking-wider text-[10px] block">Búsqueda Rápida</span>
                         <div class="relative">
@@ -1287,14 +1226,13 @@
                                 </h1>
                             </div>
                             <div id="main-digital-clock" class="text-sm font-mono font-bold text-brandGold-500/90 tracking-wider bg-clinical-900/50 border border-clinical-800/80 px-3.5 py-1.5 rounded-xl shadow-inner mt-2 sm:mt-0">
-                                00:00:00 AM
+                                08:00:00 AM
                             </div>
                         </div>
-                        
                         <div class="flex items-center gap-3.5">
                             <div class="text-xs font-bold flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-clinical-900 border border-clinical-800">
                                 <span class="w-2 h-2 rounded-full ${window.appState.isSynced ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}"></span>
-                                <span class="${window.appState.isSynced ? 'text-emerald-400' : 'text-amber-400'}">${window.appState.isSynced ? '🟢 En Línea' : '🟡 Modo Local'}</span>
+                                <span class="${window.appState.isSynced ? 'text-emerald-400' : 'text-amber-400'}">${window.appState.isSynced ? 'En Línea' : 'Modo Local'}</span>
                             </div>
                             <div class="bg-clinical-900 border border-clinical-800 rounded-2xl p-1 flex items-center shadow-lg">
                                 <button onclick="window.changeDate(-1)" class="p-2 hover:bg-clinical-850 rounded-xl text-brandGold-500 transition-colors"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
@@ -1400,7 +1338,6 @@
                             </div>
                         </div>
 
-                        <!-- KPIs -->
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                             <div class="bg-clinical-900 border border-clinical-800 p-6 rounded-3xl flex items-center gap-4 relative overflow-hidden">
                                 <div class="w-12 h-12 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl flex items-center justify-center text-indigo-400"><i data-lucide="bar-chart-2" class="w-6 h-6"></i></div>
@@ -1425,7 +1362,6 @@
                             </div>
                         </div>
 
-                        <!-- Distribuciones -->
                         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                             <div class="bg-clinical-900 border border-clinical-800 rounded-3xl p-6">
                                 <h3 class="font-outfit font-bold text-white text-base mb-5">Distribución de Consultas</h3>
@@ -1454,7 +1390,6 @@
                                     })()}
                                 </div>
                             </div>
-
                             <div class="bg-clinical-900 border border-clinical-800 rounded-3xl p-6">
                                 <h3 class="font-outfit font-bold text-white text-base mb-5">Estado de Sesiones</h3>
                                 <div class="space-y-4">
@@ -1488,12 +1423,14 @@
             }
 
             mainContentHtml += `</main>`;
-            app.innerHTML = `<div class="flex-1 flex flex-col md:flex-row min-h-screen">${sidebarHtml}${mainContentHtml}</div>`;
+            app.innerHTML = `<div class="flex-1 flex flex-col md:flex-row min-h-screen w-full">${sidebarHtml}${mainContentHtml}</div>`;
 
             window.renderMiniCalendar();
             if (typeof lucide !== 'undefined') lucide.createIcons();
         };
+    </script>
 
+    <script>
         window.openNewAppointmentModal = function(presetHour = "08:00", presetDateStr = null) {
             const dateStr = presetDateStr || window.appState.currentDate.toISOString().split('T')[0];
             
@@ -1515,14 +1452,14 @@
                         </button>
                     </div>
                     
-                    <form onsubmit="window.saveNewAppointment(event)" class="p-6 space-y-4 overflow-y-auto flex-1 text-xs">
+                    <form onsubmit="window.saveNewAppointment(event)" class="p-6 space-y-4 overflow-y-auto flex-1 text-xs text-slate-300">
                         <div class="grid grid-cols-2 gap-3.5">
                             <div>
-                                <label class="block font-bold text-slate-300 uppercase tracking-wide mb-1">Fecha</label>
+                                <label class="block font-bold uppercase tracking-wide mb-1">Fecha</label>
                                 <input type="date" id="form-apt-date" value="${dateStr}" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-3.5 text-white focus:outline-none" required>
                             </div>
                             <div>
-                                <label class="block font-bold text-slate-300 uppercase tracking-wide mb-1">Hora</label>
+                                <label class="block font-bold uppercase tracking-wide mb-1">Hora</label>
                                 <select id="form-apt-hour" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-3.5 text-white focus:outline-none appearance-none cursor-pointer">
                                     ${window.getHourSlots().map(hs => `<option value="${hs}" ${hs === presetHour ? 'selected' : ''}>${hs}</option>`).join('')}
                                 </select>
@@ -1530,35 +1467,35 @@
                         </div>
 
                         <div>
-                            <label class="block font-bold text-slate-300 uppercase tracking-wide mb-1">Nombre Completo del Alumno</label>
+                            <label class="block font-bold uppercase tracking-wide mb-1">Nombre Completo del Alumno</label>
                             <input type="text" id="form-apt-student" placeholder="Ej. Alejandra Domínguez Rivera" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-3.5 text-white focus:outline-none" required>
                         </div>
 
                         <div class="grid grid-cols-2 gap-3.5">
                             <div>
-                                <label class="block font-bold text-slate-300 uppercase tracking-wide mb-1">Nivel</label>
+                                <label class="block font-bold uppercase tracking-wide mb-1">Nivel</label>
                                 <select id="form-apt-level" onchange="window.handleLevelChange(this.value, 'form-apt')" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-3.5 text-white focus:outline-none" required>
                                     <option value="Preparatoria">Preparatoria</option>
                                     <option value="Licenciatura">Licenciatura (Universidad)</option>
                                 </select>
                             </div>
                             <div>
-                                <label class="block font-bold text-slate-300 uppercase tracking-wide mb-1">Especialidad / Carrera</label>
+                                <label class="block font-bold uppercase tracking-wide mb-1">Especialidad / Carrera</label>
                                 <input type="text" id="form-apt-career" placeholder="Ej. Preparatoria General / Informática" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-3.5 text-white focus:outline-none" required>
                             </div>
                         </div>
 
                         <div class="grid grid-cols-3 gap-3">
                             <div>
-                                <label class="block font-bold text-slate-300 uppercase tracking-wide mb-1">Semestre / Turno</label>
+                                <label class="block font-bold uppercase tracking-wide mb-1">Semestre / Cuatrimestre</label>
                                 <select id="form-apt-grade" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-3.5 text-white focus:outline-none" required></select>
                             </div>
                             <div>
-                                <label class="block font-bold text-slate-300 uppercase tracking-wide mb-1">Grupo</label>
+                                <label class="block font-bold uppercase tracking-wide mb-1">Grupo</label>
                                 <select id="form-apt-group" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-3.5 text-white focus:outline-none" required></select>
                             </div>
                             <div>
-                                <label class="block font-bold text-slate-300 uppercase tracking-wide mb-1">Turno</label>
+                                <label class="block font-bold uppercase tracking-wide mb-1">Turno</label>
                                 <select id="form-apt-shift" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-3.5 text-white focus:outline-none">
                                     <option value="Matutino">Matutino</option>
                                     <option value="Vespertino">Vespertino</option>
@@ -1568,7 +1505,7 @@
 
                         <div class="grid grid-cols-2 gap-3.5">
                             <div>
-                                <label class="block font-bold text-slate-300 uppercase tracking-wide mb-1">Categoría</label>
+                                <label class="block font-bold uppercase tracking-wide mb-1">Categoría</label>
                                 <select id="form-apt-type" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-3.5 text-white focus:outline-none">
                                     <option value="Psicológica">Psicológica</option>
                                     <option value="Vocacional">Vocacional</option>
@@ -1577,7 +1514,7 @@
                                 </select>
                             </div>
                             <div>
-                                <label class="block font-bold text-slate-300 uppercase tracking-wide mb-1">Estado</label>
+                                <label class="block font-bold uppercase tracking-wide mb-1">Estado</label>
                                 <select id="form-apt-status" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-3.5 text-white focus:outline-none">
                                     <option value="Pendiente">Pendiente</option>
                                     <option value="Realizada">Realizada</option>
@@ -1590,13 +1527,13 @@
                         </div>
 
                         <div>
-                            <label class="block font-bold text-slate-300 uppercase tracking-wide mb-1">Detalles / Observaciones de Consulta</label>
+                            <label class="block font-bold uppercase tracking-wide mb-1">Detalles / Observaciones de Consulta</label>
                             <textarea id="form-apt-obs" rows="3" placeholder="Ingresa el motivo del agendado de consulta..." class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-3.5 text-white focus:outline-none"></textarea>
                         </div>
 
                         <div class="flex items-center gap-2">
                             <input type="checkbox" id="form-apt-alarm" class="accent-brandGold-500 cursor-pointer w-4 h-4 rounded" checked>
-                            <label for="form-apt-alarm" class="font-bold text-slate-300 select-none cursor-pointer">Activar Alerta por Voz y Modal (3 min antes)</label>
+                            <label for="form-apt-alarm" class="font-bold select-none cursor-pointer">Activar Alerta por Voz y Modal (3 min antes)</label>
                         </div>
 
                         <button type="submit" class="w-full py-3 bg-gradient-to-r from-brandGold-500 to-brandGold-600 hover:from-brandGold-600 hover:to-brandGold-700 text-clinical-950 font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-md">
@@ -1646,7 +1583,8 @@
             };
 
             window.appState.agendaData[id] = appointment;
-            window.saveState();
+            window.saveAptToFirestore(id, appointment);
+            
             document.getElementById('appointment-form-modal').remove();
             window.renderMainApp();
             window.showToast('Consulta programada exitosamente', 'success');
@@ -1656,19 +1594,25 @@
             const apt = window.appState.agendaData[id];
             if (!apt) return;
 
-            if (!window.canUserCancelOrDelete(apt)) {
+            const currentUser = window.appState.currentUser;
+            const isCarlos = (currentUser === 'carlos');
+            const isOwner = apt.createdBy === currentUser;
+
+            if (!isCarlos && !isOwner) {
                 window.showToast('Acción denegada: Solo administradores o el creador de la cita pueden eliminarla.', 'error');
                 return;
             }
 
             window.showConfirmModal('¿Está seguro de eliminar esta consulta de la agenda psicopedagógica?', () => {
                 delete window.appState.agendaData[id];
-                window.saveState();
+                window.deleteAptFromFirestore(id);
                 window.renderMainApp();
                 window.showToast('Consulta eliminada de la agenda', 'info');
             });
         };
+    </script>
 
+    <script>
         window.viewAppointmentDetails = function(id) {
             const apt = window.appState.agendaData[id];
             if (!apt) return;
@@ -1696,7 +1640,7 @@
                         </button>
                     </div>
                     
-                    <form onsubmit="window.updateAppointmentDetails(event, '${apt.id}')" class="p-6 space-y-4 overflow-y-auto flex-1 text-xs">
+                    <form onsubmit="window.updateAppointmentDetails(event, '${apt.id}')" class="p-6 space-y-4 overflow-y-auto flex-1 text-xs text-slate-300">
                         ${isReadOnly ? `
                             <div class="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 text-amber-500 font-bold">
                                 ⚠️ Perfil Restringido: Solo puedes editar consultas creadas por ti.
@@ -1705,11 +1649,11 @@
 
                         <div class="grid grid-cols-2 gap-3.5">
                             <div>
-                                <label class="block font-bold text-slate-300 uppercase mb-1">Fecha</label>
+                                <label class="block font-bold uppercase mb-1">Fecha</label>
                                 <input type="date" id="details-apt-date" value="${apt.date}" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-3.5 text-white focus:outline-none" ${isReadOnly ? 'disabled' : ''} required>
                             </div>
                             <div>
-                                <label class="block font-bold text-slate-300 uppercase mb-1">Hora</label>
+                                <label class="block font-bold uppercase mb-1">Hora</label>
                                 <select id="details-apt-hour" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-3.5 text-white focus:outline-none" ${isReadOnly ? 'disabled' : ''}>
                                     ${window.getHourSlots().map(hs => `<option value="${hs}" ${hs === apt.hour ? 'selected' : ''}>${hs}</option>`).join('')}
                                 </select>
@@ -1717,35 +1661,35 @@
                         </div>
 
                         <div>
-                            <label class="block font-bold text-slate-300 uppercase mb-1">Nombre Completo del Alumno</label>
+                            <label class="block font-bold uppercase mb-1">Nombre Completo del Alumno</label>
                             <input type="text" id="details-apt-student" value="${apt.student}" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-3.5 text-white focus:outline-none" ${isReadOnly ? 'disabled' : ''} required>
                         </div>
 
                         <div class="grid grid-cols-2 gap-3.5">
                             <div>
-                                <label class="block font-bold text-slate-300 uppercase mb-1">Nivel</label>
+                                <label class="block font-bold uppercase mb-1">Nivel</label>
                                 <select id="details-apt-level" onchange="window.handleLevelChange(this.value, 'details-apt')" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-3.5 text-white focus:outline-none" ${isReadOnly ? 'disabled' : ''} required>
                                     <option value="Preparatoria" ${apt.level === 'Preparatoria' ? 'selected' : ''}>Preparatoria</option>
                                     <option value="Licenciatura" ${apt.level === 'Licenciatura' ? 'selected' : ''}>Licenciatura (Universidad)</option>
                                 </select>
                             </div>
                             <div>
-                                <label class="block font-bold text-slate-300 uppercase mb-1">Especialidad / Carrera</label>
+                                <label class="block font-bold uppercase mb-1">Especialidad / Carrera</label>
                                 <input type="text" id="details-apt-career" value="${apt.career}" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-3.5 text-white focus:outline-none" ${isReadOnly ? 'disabled' : ''} required>
                             </div>
                         </div>
 
                         <div class="grid grid-cols-3 gap-3">
                             <div>
-                                <label class="block font-bold text-slate-300 uppercase mb-1">Semestre / Turno</label>
+                                <label class="block font-bold uppercase mb-1">Semestre / Cuatrimestre</label>
                                 <select id="details-apt-grade" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-3.5 text-white focus:outline-none" ${isReadOnly ? 'disabled' : ''} required></select>
                             </div>
                             <div>
-                                <label class="block font-bold text-slate-300 uppercase mb-1">Grupo</label>
+                                <label class="block font-bold uppercase mb-1">Grupo</label>
                                 <select id="details-apt-group" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-3.5 text-white focus:outline-none" ${isReadOnly ? 'disabled' : ''} required></select>
                             </div>
                             <div>
-                                <label class="block font-bold text-slate-300 uppercase mb-1">Turno</label>
+                                <label class="block font-bold uppercase mb-1">Turno</label>
                                 <select id="details-apt-shift" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-3.5 text-white focus:outline-none" ${isReadOnly ? 'disabled' : ''}>
                                     <option value="Matutino" ${apt.shift === 'Matutino' ? 'selected' : ''}>Matutino</option>
                                     <option value="Vespertino" ${apt.shift === 'Vespertino' ? 'selected' : ''}>Vespertino</option>
@@ -1755,7 +1699,7 @@
 
                         <div class="grid grid-cols-2 gap-3.5">
                             <div>
-                                <label class="block font-bold text-slate-300 uppercase mb-1">Categoría</label>
+                                <label class="block font-bold uppercase mb-1">Categoría</label>
                                 <select id="details-type-select" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2 px-3 text-white focus:outline-none" ${isReadOnly ? 'disabled' : ''}>
                                     <option value="Psicológica" ${apt.type === 'Psicológica' ? 'selected' : ''}>Psicológica</option>
                                     <option value="Vocacional" ${apt.type === 'Vocacional' ? 'selected' : ''}>Vocacional</option>
@@ -1764,7 +1708,7 @@
                                 </select>
                             </div>
                             <div>
-                                <label class="block font-bold text-slate-300 uppercase mb-1">Estado</label>
+                                <label class="block font-bold uppercase mb-1">Estado</label>
                                 <select id="details-status-select" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2 px-3 text-white focus:outline-none" ${isReadOnly ? 'disabled' : ''}>
                                     <option value="Pendiente" ${apt.status === 'Pendiente' ? 'selected' : ''}>Pendiente</option>
                                     <option value="Realizada" ${apt.status === 'Realizada' ? 'selected' : ''}>Realizada</option>
@@ -1778,7 +1722,7 @@
 
                         <div class="space-y-2">
                             <div class="flex justify-between items-center">
-                                <label class="block font-bold text-slate-300 uppercase">Observaciones / Tratamiento</label>
+                                <label class="block font-bold uppercase">Observaciones / Tratamiento</label>
                                 ${!isReadOnly ? `
                                     <button type="button" onclick="window.askGeminiForObservations()" class="flex items-center gap-1.5 px-3 py-1.5 bg-brandGold-500/15 border border-brandGold-500/35 hover:border-brandGold-500 hover:bg-brandGold-500/30 text-brandGold-500 hover:text-white rounded-lg font-bold font-outfit uppercase text-[10px]">
                                         <i data-lucide="sparkles" class="w-3.5 h-3.5 animate-pulse text-brandGold-500"></i> Redactar con IA
@@ -1850,12 +1794,14 @@
             apt.status = document.getElementById('details-status-select').value;
             apt.obs = document.getElementById('details-obs-input').value.trim();
 
-            window.saveState();
+            window.saveAptToFirestore(id, apt);
             document.getElementById('appointment-details-modal').remove();
             window.renderMainApp();
             window.showToast('Expediente actualizado de forma segura', 'success');
         };
+    </script>
 
+    <script>
         window.getLuxuryHeaderHtml = function(title, folioCode) {
             return `
                 <div class="flex items-center justify-between border-b-[3px] border-double border-clinical-700 pb-4 mb-6">
@@ -1877,8 +1823,6 @@
                         <p class="text-sm font-outfit font-black text-brandGold-600 leading-tight">${folioCode}</p>
                     </div>
                 </div>
-
-                <!-- Marca de Agua de Seguridad Centralizada -->
                 <div class="absolute inset-0 flex items-center justify-center opacity-[0.03] rotate-[-30deg] pointer-events-none select-none z-0">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" class="w-[300px] h-[300px] text-clinical-950">
                         <path d="M50,15 L80,30 L80,65 C80,78 50,88 50,88 C50,88 20,78 20,65 L20,30 Z" fill="currentColor" />
@@ -1942,7 +1886,6 @@
                         <p class="text-[11px] leading-relaxed text-slate-700 whitespace-pre-wrap pl-3">${apt.obs || 'No se registraron observaciones adicionales en esta sesión.'}</p>
                     </div>
 
-                    <!-- Área de firmas y sellado de lujo -->
                     <div class="pt-12 grid grid-cols-2 gap-10">
                         <div class="text-center flex flex-col justify-end items-center">
                             <div class="border-t border-slate-400 w-48 pt-2">
@@ -1962,7 +1905,6 @@
 
             container.innerHTML = docContent;
             printArea.innerHTML = docContent;
-
             modal.classList.remove('hidden');
             modal.classList.add('flex');
             if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -2065,7 +2007,6 @@
                         </table>
                     </div>
 
-                    <!-- Firmas de lujo -->
                     <div class="pt-16 grid grid-cols-2 gap-10">
                         <div class="text-center flex flex-col justify-end items-center">
                             <div class="border-t border-slate-400 w-48 pt-2">
@@ -2085,12 +2026,13 @@
 
             container.innerHTML = docContent;
             printArea.innerHTML = docContent;
-
             modal.classList.remove('hidden');
             modal.classList.add('flex');
             if (typeof lucide !== 'undefined') lucide.createIcons();
         };
+    </script>
 
+    <script>
         window.askGeminiForObservations = async function() {
             const obsText = document.getElementById('details-obs-input').value.trim();
             const aiModal = document.getElementById('ai-modal');
@@ -2110,9 +2052,7 @@
 
                 const systemPrompt = "Eres un psicólogo psicopedagógico clínico de excelencia del Centro Educativo Universitario de Tehuacán. Proporciona recomendaciones académicas y conductuales estructuradas de manera que se visualicen hermosas y jerarquizadas con viñetas.";
                 const prompt = `Analiza las observaciones y propón planes:\n\n"${obsText}"`;
-
-                const apiKey = window.appState.geminiApiKey || "";
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=`;
 
                 try {
                     const response = await fetch(url, {
@@ -2127,7 +2067,6 @@
                     if (response.ok) {
                         const result = await response.json();
                         const outputText = result.candidates?.[0]?.content?.parts?.[0]?.text || "No se recibieron sugerencias.";
-                        
                         loading.classList.add('hidden');
                         aiBody.textContent = outputText;
                     } else {
@@ -2135,7 +2074,7 @@
                     }
                 } catch (error) {
                     loading.classList.add('hidden');
-                    aiBody.innerHTML = `<span class="text-rose-400 font-bold">Error de red con la IA. Verifica tu llave API de Gemini.</span>`;
+                    aiBody.innerHTML = `<span class="text-rose-400 font-bold">Error de red con la IA. Se utilizará el motor de contención local.</span>`;
                 }
             }
         };
@@ -2163,6 +2102,14 @@
             }
         };
 
+        window.closeAiModal = function() {
+            const modal = document.getElementById('ai-modal');
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+        };
+
         window.showFallbackLogo = function(imgElement, sizeType) {
             const container = imgElement.parentElement;
             if (!container) return;
@@ -2174,21 +2121,166 @@
                     <text x="50" y="48" font-family="'Outfit', sans-serif" font-weight="900" font-size="12" fill="#EBB102" text-anchor="middle">CEUT</text>
                 </svg>
             `;
-
             const svgSmall = `
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" class="w-full h-full text-brandGold-500">
                     <circle cx="50" cy="50" r="45" fill="#0B1133" stroke="#EBB102" stroke-width="2" />
                     <text x="50" y="52" font-family="'Outfit', sans-serif" font-weight="900" font-size="15" fill="#EBB102" text-anchor="middle">C</text>
                 </svg>
             `;
+            container.innerHTML = sizeType === 'large' ? svgLarge : svgSmall;
+        };
 
-            if (sizeType === 'large') {
-                container.innerHTML = svgLarge;
-            } else {
-                container.innerHTML = svgSmall;
+        window.dismissAlarm = function() {
+            const modal = document.getElementById('alarm-modal');
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
             }
         };
 
+        window.closeChangePinModal = function() {
+            const modal = document.getElementById('change-pin-modal');
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+        };
+
+        window.submitChangePin = function(e) {
+            e.preventDefault();
+            const currentPin = document.getElementById('pin-current').value;
+            const newPin = document.getElementById('pin-new').value;
+            const userKey = window.appState.currentUser;
+            
+            if (window.appState.users[userKey].pin === currentPin) {
+                window.appState.users[userKey].pin = newPin;
+                window.savePinToFirestore(userKey, newPin);
+                window.closeChangePinModal();
+                window.showToast('PIN de acceso actualizado con éxito.', 'success');
+            } else {
+                window.showToast('El PIN actual introducido es incorrecto.', 'error');
+            }
+        };
+
+        window.changeDate = function(days) {
+            window.appState.currentDate.setDate(window.appState.currentDate.getDate() + days);
+            window.renderMainApp();
+        };
+
+        window.goToday = function() {
+            window.appState.currentDate = new Date();
+            window.renderMainApp();
+        };
+
+        window.setDateFromPicker = function(val) {
+            if (!val) return;
+            const parts = val.split('-');
+            window.appState.currentDate = new Date(parts[0], parts[1] - 1, parts[2]);
+            window.renderMainApp();
+        };
+
+        window.setFilter = function(filter) {
+            window.appState.filterType = filter;
+            window.renderMainApp();
+        };
+
+        window.handleSearchChange = function(q) {
+            window.appState.searchQuery = q.trim();
+        };
+
+        window.updateAptStatus = function(id, newStatus) {
+            const apt = window.appState.agendaData[id];
+            if (apt) {
+                apt.status = newStatus;
+                window.saveAptToFirestore(id, apt);
+                window.renderMainApp();
+                window.showToast(`Estado de consulta modificado a ${newStatus}`, 'success');
+            }
+        };
+
+        window.getStatsData = function() {
+            const period = window.appState.activeStatsPeriod;
+            const now = new Date(window.appState.currentDate);
+            let filteredApts = [];
+
+            if (period === 'dia') {
+                const dayStr = now.toISOString().split('T')[0];
+                filteredApts = Object.values(window.appState.agendaData).filter(apt => apt.date === dayStr);
+            } else if (period === 'semana') {
+                const startOfWeek = new Date(now);
+                startOfWeek.setDate(now.getDate() - now.getDay());
+                const endOfWeek = new Date(now);
+                endOfWeek.setDate(now.getDate() + (6 - now.getDay()));
+
+                const startStr = startOfWeek.toISOString().split('T')[0];
+                const endStr = endOfWeek.toISOString().split('T')[0];
+                filteredApts = Object.values(window.appState.agendaData).filter(apt => apt.date >= startStr && apt.date <= endStr);
+            } else if (period === 'mes') {
+                const monthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+                filteredApts = Object.values(window.appState.agendaData).filter(apt => apt.date.startsWith(monthStr));
+            } else if (period === 'ano') {
+                const yearStr = `${now.getFullYear()}`;
+                filteredApts = Object.values(window.appState.agendaData).filter(apt => apt.date.startsWith(yearStr));
+            }
+
+            const total = filteredApts.length;
+            const realizadas = filteredApts.filter(apt => apt.status === 'Realizada').length;
+            const pendientes = filteredApts.filter(apt => apt.status === 'Pendiente').length;
+            const reagendadas = filteredApts.filter(apt => apt.status === 'Reagendada').length;
+            const canceladas = filteredApts.filter(apt => apt.status === 'Cancelada').length;
+
+            const psicológicas = filteredApts.filter(apt => apt.type === 'Psicológica').length;
+            const vocacionales = filteredApts.filter(apt => apt.type === 'Vocacional').length;
+            const académicas = filteredApts.filter(apt => apt.type === 'Académica').length;
+            const seguimiento = filteredApts.filter(apt => apt.type === 'Seguimiento').length;
+
+            return {
+                total, realizadas, pendientes, reagendadas, canceladas,
+                psicológicas, vocacionales, académicas, seguimiento,
+                aptsList: filteredApts
+            };
+        };
+
+        window.switchViewMode = function(mode) {
+            window.appState.viewMode = mode;
+            window.renderMainApp();
+        };
+
+        window.setStatsPeriod = function(period) {
+            window.appState.activeStatsPeriod = period;
+            window.renderMainApp();
+        };
+
+        window.openBlockDayModal = function() {
+            const dateStr = window.appState.currentDate.toISOString().split('T')[0];
+            document.getElementById('block-day-date-display').value = window.formatFullDateES(dateStr);
+            document.getElementById('block-day-modal').classList.remove('hidden');
+        };
+
+        window.saveBlockDay = function(e) {
+            e.preventDefault();
+            const dateStr = window.appState.currentDate.toISOString().split('T')[0];
+            const reason = document.getElementById('block-day-reason').value.trim();
+            window.appState.blockedDays[dateStr] = reason;
+            window.saveDayBlockToFirestore(dateStr, reason);
+            document.getElementById('block-day-modal').classList.add('hidden');
+            window.renderMainApp();
+            window.showToast('Jornada inhabilitada exitosamente', 'info');
+        };
+
+        window.removeBlockDay = function() {
+            const dateStr = window.appState.currentDate.toISOString().split('T')[0];
+            delete window.appState.blockedDays[dateStr];
+            window.saveDayBlockToFirestore(dateStr, null);
+            window.renderMainApp();
+            window.showToast('Jornada habilitada nuevamente', 'success');
+        };
+    </script>
+
+    <script>
         window.renderLogin = function() {
             const app = document.getElementById('app');
             if (!app) return;
@@ -2310,58 +2402,6 @@
                 window.showToast('Sesión cerrada correctamente', 'info');
             }, 350);
         };
-    </script>
-
-    <script>
-        function bootApp() {
-            if (Object.keys(window.appState.agendaData).length === 0) {
-                const today = new Date();
-                const todayStr = today.toISOString().split('T')[0];
-
-                window.appState.agendaData = {
-                    'demo_1': {
-                        id: 'demo_1',
-                        student: 'Alejandro Domínguez Rivera',
-                        date: todayStr,
-                        hour: '08:00',
-                        level: 'Preparatoria',
-                        career: 'Preparatoria General',
-                        grade: '1° Semestre',
-                        group: 'B',
-                        shift: 'Matutino',
-                        type: 'Psicológica',
-                        status: 'Pendiente',
-                        alarm: true,
-                        obs: 'Presenta cuadro de ansiedad ante evaluaciones parciales. Se programó seguimiento de técnicas de relajación.',
-                        createdBy: 'carlos'
-                    },
-                    'demo_2': {
-                        id: 'demo_2',
-                        student: 'María José Castro Ortiz',
-                        date: todayStr,
-                        hour: '12:00',
-                        level: 'Licenciatura',
-                        career: 'Informática',
-                        grade: '2° Cuatrimestre',
-                        group: 'A',
-                        shift: 'Matutino',
-                        type: 'Vocacional',
-                        status: 'Realizada',
-                        alarm: false,
-                        obs: 'Dudas vocacionales sobre el perfil de egreso laboral. Se aplicó test de inventario.',
-                        createdBy: 'miroslava'
-                    }
-                };
-                window.saveState();
-            }
-            window.renderLogin();
-        }
-
-        if (document.readyState === 'complete' || document.readyState === 'interactive') {
-            bootApp();
-        } else {
-            window.addEventListener('DOMContentLoaded', bootApp);
-        }
     </script>
 </body>
 </html>
