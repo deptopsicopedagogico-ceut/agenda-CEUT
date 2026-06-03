@@ -180,7 +180,7 @@
                     </div>
                     <div>
                         <h4 class="font-outfit font-black text-white text-base tracking-wide" id="ai-modal-title">Asistente Psicopedagógico IA</h4>
-                        <p class="text-[10px] text-brandGold-500 font-bold uppercase tracking-widest">Desarrollado con Gemini 2.5 Flash</p>
+                        <p class="text-[10px] text-brandGold-500 font-bold uppercase tracking-widest">Desarrollado con Gemini 3.5 Flash</p>
                     </div>
                 </div>
                 <button onclick="window.closeAiModal()" class="p-1.5 hover:bg-clinical-800 rounded-lg text-slate-400 hover:text-white transition-colors">
@@ -352,7 +352,6 @@
             agendaData: safeGetLocalJSON('ceut_agenda_data', {}), 
             scheduleConfig: { startHour: 8, endHour: 21 },
             lastCheckedAlarmTime: null,
-            geminiApiKey: localStorage.getItem('ceut_gemini_key') || '',
             isSynced: false,
             confirmCallback: null
         };
@@ -622,6 +621,7 @@
             window.renderMainApp();
         };
 
+        // Genera las opciones dinámicamente de acuerdo a las nomenclaturas de image_a35c8e.png y Universidad
         window.handleLevelChange = function(levelVal, formPrefix) {
             const gradeSelect = document.getElementById(`${formPrefix}-grade`);
             const groupSelect = document.getElementById(`${formPrefix}-group`);
@@ -665,7 +665,10 @@
                 const aptForSlot = activeAppointments.find(apt => apt.hour === hour);
                 const blockKey = `${dateStr}_${hour}`;
                 const isHourBlocked = window.appState.blockedHours[blockKey];
-                const matchesFilter = window.appState.filterType === 'all' || (aptForSlot && aptForSlot.type === window.appState.filterType);
+                
+                // Filtro por categoría y por búsqueda (Si hay búsqueda, busca sobre el nombre de alumno)
+                const matchesFilter = (window.appState.filterType === 'all' || (aptForSlot && aptForSlot.type === window.appState.filterType)) &&
+                                     (!window.appState.searchQuery || (aptForSlot && aptForSlot.student.toLowerCase().includes(window.appState.searchQuery.toLowerCase())));
 
                 html += `<div class="flex items-stretch min-h-[5.5rem] group hover:bg-clinical-950/20 transition-colors">`;
                 html += `
@@ -696,7 +699,14 @@
                         const canEditOrDelete = isCarlos || isOwner;
                         const statuses = ['Pendiente', 'Realizada', 'Seguimiento', 'Reagendada', 'Cancelada', 'Sin Asistir'];
                         
-                        let selectHtml = `<select onchange="window.updateAptStatus('${aptForSlot.id}', this.value)" class="bg-clinical-900 border border-clinical-800 rounded-lg text-[10px] font-bold px-2 py-1 text-slate-300 focus:outline-none focus:ring-1 focus:ring-brandGold-500/50 appearance-none cursor-pointer">`;
+                        // Selector de estatus directo con color dinámico de borde
+                        let selectBorderClass = 'border-clinical-800';
+                        if (aptForSlot.status === 'Realizada') selectBorderClass = 'border-emerald-500/60 text-emerald-400';
+                        else if (aptForSlot.status === 'Cancelada' || aptForSlot.status === 'Sin Asistir') selectBorderClass = 'border-rose-500/60 text-rose-400';
+                        else if (aptForSlot.status === 'Pendiente') selectBorderClass = 'border-amber-500/60 text-amber-400';
+                        else if (aptForSlot.status === 'Seguimiento' || aptForSlot.status === 'Reagendada') selectBorderClass = 'border-blue-500/60 text-blue-400';
+
+                        let selectHtml = `<select onchange="window.updateAptStatus('${aptForSlot.id}', this.value)" class="bg-clinical-900 border ${selectBorderClass} rounded-lg text-[10px] font-bold px-2 py-1 focus:outline-none focus:ring-1 focus:ring-brandGold-500/50 appearance-none cursor-pointer">`;
                         statuses.forEach(st => {
                             selectHtml += `<option value="${st}" ${aptForSlot.status === st ? 'selected' : ''}>${st}</option>`;
                         });
@@ -731,7 +741,7 @@
                             </div>
                         `;
                     } else {
-                        html += `<span class="text-xs text-slate-500 font-semibold italic">Consulta filtrada por categoría</span>`;
+                        html += `<span class="text-xs text-slate-500 font-semibold italic">Consulta filtrada por categoría o búsqueda</span>`;
                     }
                 } else {
                     if (isBlocked) {
@@ -796,7 +806,7 @@
 
                 html += `
                     <th class="${thClass}">
-                        <button onclick="window.selectDateFromMiniCalendar('${dateStr}')" class="hover:underline focus:outline-none">
+                        <button onclick="window.selectDateFromMiniCalendar('${dateStr}')" class="hover:underline focus:outline-none w-full text-center">
                             <div class="font-outfit font-black">${dayName}</div>
                             <div class="text-[10px] text-slate-500 font-medium">${formatted}</div>
                         </button>
@@ -822,7 +832,7 @@
 
                     if (isDayBlocked) {
                         html += `
-                            <div class="bg-rose-950/20 text-rose-400 text-[10px] p-2 rounded-xl border border-rose-900/20 line-through">
+                            <div class="bg-rose-950/20 text-rose-400 text-[10px] p-2 rounded-xl border border-rose-900/20 line-through font-bold">
                                 Inhabilitado
                             </div>
                         `;
@@ -1697,7 +1707,7 @@
             const docContent = `
                 ${window.getLuxuryHeaderHtml('REPORTE CLÍNICO INDIVIDUAL', folio)}
                 
-                <div class="relative z-10 space-y-6">
+                <div class="relative z-10 space-y-6 text-slate-800">
                     <div class="text-center">
                         <h2 class="text-sm font-outfit font-black uppercase tracking-wider text-clinical-900">Expediente Clínico de Intervención</h2>
                         <p class="text-[10px] text-slate-500 mt-0.5">Expediente confidencial protegido por leyes de privacidad institucional</p>
@@ -1772,12 +1782,11 @@
                                window.appState.activeStatsPeriod === 'mes' ? 'Consolidado Mensual' : 'Consolidado Anual';
             
             const folio = `CEUT-INF-${window.appState.activeStatsPeriod.toUpperCase()}-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
-            const formattedDate = window.formatFullDateES(new Date());
 
             const docContent = `
                 ${window.getLuxuryHeaderHtml('REPORTE DE GESTIÓN', folio)}
                 
-                <div class="relative z-10 space-y-6">
+                <div class="relative z-10 space-y-6 text-slate-800">
                     <div class="text-center">
                         <h2 class="text-sm font-outfit font-black uppercase tracking-wider text-clinical-900">Informe de Desempeño Psicopedagógico</h2>
                         <p class="text-[10px] text-slate-500 mt-0.5">Métricas institucionales correspondientes al período: <span class="font-bold text-slate-800">${periodName}</span></p>
@@ -1950,7 +1959,7 @@
             if (aiBody && detailsInput && aiBody.textContent) {
                 detailsInput.value = detailsInput.value + "\n\n-- Recomendaciones de IA --\n" + aiBody.textContent;
                 window.closeAiModal();
-                window.showToast("Sugerencias añadidas al expediente", "success");
+                window.showToast("Sugerencias añadidass al expediente", "success");
             }
         };
 
@@ -2041,6 +2050,7 @@
 
         window.handleSearchChange = function(q) {
             window.appState.searchQuery = q.trim();
+            window.renderMainApp();
         };
 
         window.updateAptStatus = function(id, newStatus) {
@@ -2260,11 +2270,11 @@
     <!-- STREAMS_CHUNK: Inyectando el motor ESM de Firebase y el arranque síncrono ultra-rápido -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, deleteDoc, collection, query, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Parámetros globales de la plataforma
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'ceut-agenda-pp';
+        // Parámetros globales de la plataforma con fallback consistente y robusto
+        const appId = (typeof __app_id !== 'undefined' && __app_id) ? __app_id : 'ceut-agenda-pp-global';
         
         let firebaseConfig;
         try {
@@ -2274,7 +2284,7 @@
         }
 
         if (!firebaseConfig || !firebaseConfig.apiKey) {
-            // Configuración segura por defecto para evitar caídas catastróficas
+            // Configuración por defecto para asegurar la continuidad operativa local si no hay claves en el entorno
             firebaseConfig = {
                 apiKey: "dummy-key",
                 authDomain: "ceut-agenda-pp.firebaseapp.com",
@@ -2292,37 +2302,43 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
+        // Procedimiento de autenticación estrictamente ordenado (Garantiza RULE 3)
         async function startFirebaseSync() {
             try {
+                let userCredential = null;
                 if (initialAuthToken) {
-                    await signInWithCustomToken(auth, initialAuthToken);
+                    try {
+                        userCredential = await signInWithCustomToken(auth, initialAuthToken);
+                    } catch (tokenErr) {
+                        console.warn("Fallo de Custom Token, reintentando con sesión anónima:", tokenErr);
+                        userCredential = await signInAnonymously(auth);
+                    }
                 } else {
-                    await signInAnonymously(auth);
+                    userCredential = await signInAnonymously(auth);
+                }
+
+                if (userCredential && userCredential.user) {
+                    window.appState.isSynced = true;
+                    // Enlazamos los oyentes de Firestore únicamente tras tener éxito en la autenticación
+                    bindFirestoreRealtimeListeners();
+                } else {
+                    window.appState.isSynced = false;
                 }
             } catch (error) {
-                console.warn("Fallo de autenticación Firebase. Operando en modo Local.", error);
+                console.error("Fallo general de autenticación Firebase. Operando de modo Local.", error);
                 window.appState.isSynced = false;
                 if (window.appState.currentUser) {
                     window.renderMainApp();
                 }
-                return;
             }
-
-            onAuthStateChanged(auth, (user) => {
-                if (user) {
-                    window.appState.isSynced = true;
-                    bindFirestoreRealtimeListeners();
-                } else {
-                    window.appState.isSynced = false;
-                    if (window.appState.currentUser) {
-                        window.renderMainApp();
-                    }
-                }
-            });
         }
 
+        // Oyentes reactivos bidireccionales en tiempo real
         function bindFirestoreRealtimeListeners() {
-            // Sincronización en tiempo real de Consultas
+            if (!auth.currentUser) return;
+
+            // 1. Sincronización compartida de Consultas en tiempo real (Unificada para todo el equipo)
+            // Miroslava y los pasantes guardan en esta colección pública para compartir los espacios de Carlos
             const appointmentsQuery = query(collection(db, 'artifacts', appId, 'public', 'data', 'appointments'));
             onSnapshot(appointmentsQuery, (snapshot) => {
                 const fetchedApts = {};
@@ -2336,9 +2352,10 @@
                 }
             }, (error) => {
                 console.error("Fallo de sincronización de citas:", error);
+                window.appState.isSynced = false;
             });
 
-            // Sincronización de Horas Bloqueadas
+            // 2. Sincronización compartida de Horas Bloqueadas
             const hoursQuery = query(collection(db, 'artifacts', appId, 'public', 'data', 'blocked_hours'));
             onSnapshot(hoursQuery, (snapshot) => {
                 const fetchedHours = {};
@@ -2352,9 +2369,10 @@
                 }
             }, (error) => {
                 console.error("Fallo de sincronización de horas:", error);
+                window.appState.isSynced = false;
             });
 
-            // Sincronización de Días Bloqueados
+            // 3. Sincronización compartida de Días Bloqueados
             const daysQuery = query(collection(db, 'artifacts', appId, 'public', 'data', 'blocked_days'));
             onSnapshot(daysQuery, (snapshot) => {
                 const fetchedDays = {};
@@ -2368,9 +2386,10 @@
                 }
             }, (error) => {
                 console.error("Fallo de sincronización de días:", error);
+                window.appState.isSynced = false;
             });
 
-            // Sincronización de PIN de Carlos
+            // 4. Sincronización compartida de PINs de acceso para Carlos
             const pinsQuery = query(collection(db, 'artifacts', appId, 'public', 'data', 'pins'));
             onSnapshot(pinsQuery, (snapshot) => {
                 snapshot.forEach(doc => {
@@ -2385,10 +2404,11 @@
                 }
             }, (error) => {
                 console.error("Fallo de sincronización de PINs:", error);
+                window.appState.isSynced = false;
             });
         }
 
-        // Funciones de escritura remota
+        // Funciones de escritura remota seguras y protegidas (Garantizan RULE 1)
         window.saveAptToFirestore = async function(aptId, aptData) {
             if (!auth.currentUser) return;
             try {
@@ -2442,18 +2462,18 @@
             }
         };
 
-        // Inicializador síncrono de alto rendimiento para garantizar renderizado inmediato del login
+        // Inicializador de arranque instantáneo síncrono para el login inmediato en pantalla
         function runBootstrapping() {
-            // 1. Pinta la interfaz al instante para que el usuario no vea una pantalla azul vacía
+            // 1. Dibuja inmediatamente el acceso seguro (Evita la pantalla azul en blanco)
             window.renderLogin();
             
-            // 2. Levanta la conexión e inicio de Firebase en segundo plano sin interrumpir al usuario
+            // 2. Levanta las dependencias de sincronización de Firebase en segundo plano
             startFirebaseSync().catch(e => {
-                console.warn("Error en sincronización en segundo plano:", e);
+                console.warn("Fallo de carga en segundo plano de base de datos:", e);
             });
         }
 
-        // Ejecutar de forma segura según el estado actual del documento
+        // Lanzamiento controlado
         if (document.readyState === 'loading') {
             window.addEventListener('DOMContentLoaded', runBootstrapping);
         } else {
