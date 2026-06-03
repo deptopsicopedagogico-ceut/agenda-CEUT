@@ -512,6 +512,7 @@
         }, 1000);
     </script>
 
+    <!-- STREAMS_CHUNK: Configurando el renderizado de calendarios y planificadores -->
     <script>
         window.renderMiniCalendar = function() {
             const container = document.getElementById('mini-calendar-container');
@@ -527,9 +528,9 @@
             const totalDays = new Date(year, monthIdx + 1, 0).getDate();
 
             let calendarHtml = `
-                <div class="flex items-center justify-between mb-3 shrink-0">
+                <div class="flex items-center justify-between mb-3 shrink-0 text-slate-100">
                     <button type="button" onclick="window.navigateMiniCalendar(-1)" class="p-1 hover:bg-clinical-850 rounded-lg text-slate-400 hover:text-brandGold-500 transition-colors"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
-                    <span class="text-xs font-bold text-white uppercase tracking-wider font-outfit">${monthNames[monthIdx]} ${year}</span>
+                    <span class="text-xs font-bold uppercase tracking-wider font-outfit">${monthNames[monthIdx]} ${year}</span>
                     <button type="button" onclick="window.navigateMiniCalendar(1)" class="p-1 hover:bg-clinical-850 rounded-lg text-slate-400 hover:text-brandGold-500 transition-colors"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
                 </div>
                 <div class="grid grid-cols-7 gap-1 text-[10px] text-center font-bold">
@@ -652,6 +653,7 @@
         };
     </script>
 
+    <!-- STREAMS_CHUNK: Definiendo las rejillas y el planificador semanal/mensual -->
     <script>
         window.renderHoursGridHtml = function(activeAppointments, isBlocked, dateStr) {
             let html = '';
@@ -676,7 +678,7 @@
                 
                 if (isHourBlocked) {
                     html += `
-                        <div class="w-full bg-rose-950/30 border border-rose-900/30 rounded-2xl p-4 flex justify-between items-center shadow-sm">
+                        <div class="w-full bg-rose-950/30 border border-rose-900/30 rounded-2xl p-4 flex justify-between items-center shadow-sm animate-fade-up">
                             <div class="flex items-center gap-2 text-rose-400">
                                 <i data-lucide="ban" class="w-4 h-4"></i>
                                 <span class="text-xs font-bold uppercase tracking-wider">Horario Inhabilitado</span>
@@ -694,7 +696,7 @@
                         const canEditOrDelete = isCarlos || isOwner;
                         const statuses = ['Pendiente', 'Realizada', 'Seguimiento', 'Reagendada', 'Cancelada', 'Sin Asistir'];
                         
-                        let selectHtml = `<select onchange="window.updateAptStatus('${aptForSlot.id}', this.value)" class="bg-clinical-900 border border-clinical-800 rounded-lg text-[10px] font-bold px-2 py-0.5 text-slate-300 focus:outline-none focus:ring-1 focus:ring-brandGold-500/50 appearance-none cursor-pointer">`;
+                        let selectHtml = `<select onchange="window.updateAptStatus('${aptForSlot.id}', this.value)" class="bg-clinical-900 border border-clinical-800 rounded-lg text-[10px] font-bold px-2 py-1 text-slate-300 focus:outline-none focus:ring-1 focus:ring-brandGold-500/50 appearance-none cursor-pointer">`;
                         statuses.forEach(st => {
                             selectHtml += `<option value="${st}" ${aptForSlot.status === st ? 'selected' : ''}>${st}</option>`;
                         });
@@ -771,7 +773,7 @@
                             <i data-lucide="calendar-days" class="w-5 h-5 text-brandGold-500"></i>
                             <span class="text-sm font-bold text-white uppercase tracking-wider">Planificador Semanal</span>
                         </div>
-                        <span class="text-xs text-slate-400">Distribución de Lunes a Sábado</span>
+                        <span class="text-xs text-slate-400 font-bold uppercase">Distribución de Lunes a Sábado</span>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="w-full border-collapse text-left min-w-[800px]">
@@ -795,7 +797,7 @@
                 html += `
                     <th class="${thClass}">
                         <button onclick="window.selectDateFromMiniCalendar('${dateStr}')" class="hover:underline focus:outline-none">
-                            <div>${dayName}</div>
+                            <div class="font-outfit font-black">${dayName}</div>
                             <div class="text-[10px] text-slate-500 font-medium">${formatted}</div>
                         </button>
                     </th>
@@ -898,7 +900,7 @@
                         </div>
                         <div class="flex items-center gap-2">
                             <button onclick="window.navigateMiniCalendar(-1)" class="p-1 hover:bg-clinical-850 rounded-lg text-slate-400 hover:text-brandGold-500 transition-colors"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
-                            <span class="text-xs font-bold text-white uppercase tracking-wider">${monthNames[monthIdx]} ${year}</span>
+                            <span class="text-xs font-bold text-white uppercase tracking-wider font-outfit">${monthNames[monthIdx]} ${year}</span>
                             <button onclick="window.navigateMiniCalendar(1)" class="p-1 hover:bg-clinical-850 rounded-lg text-slate-400 hover:text-brandGold-500 transition-colors"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
                         </div>
                     </div>
@@ -944,7 +946,7 @@
                                   apt.status === 'Cancelada' ? '❌' :
                                   apt.status === 'Pendiente' ? '⏳' : '🔄';
                     html += `
-                        <div class="text-[9px] font-medium text-slate-200 bg-clinical-900 border border-clinical-800 rounded p-1 truncate" title="${apt.student}">
+                        <div class="text-[9px] font-medium text-slate-200 bg-clinical-900 border border-clinical-800 rounded p-1 truncate animate-fade-up" title="${apt.student}">
                             <span>${emoji}</span>
                             <span>${apt.hour} - ${apt.student}</span>
                         </div>
@@ -959,6 +961,7 @@
         };
     </script>
 
+    <!-- STREAMS_CHUNK: Generando la arquitectura principal del Tablero y Barra Lateral -->
     <script>
         window.renderMainApp = function() {
             const app = document.getElementById('app');
@@ -1021,7 +1024,7 @@
                     <div class="space-y-1.5">
                         <button onclick="window.switchViewMode('day')" class="w-full text-left py-3 px-4 rounded-xl flex items-center justify-between transition-colors ${window.appState.viewMode === 'day' ? 'bg-brandGold-500 text-clinical-950 font-black shadow-md' : 'bg-clinical-900 hover:bg-clinical-850 text-slate-300'}">
                             <span class="flex items-center gap-2.5 text-xs uppercase tracking-wider font-bold"><i data-lucide="calendar" class="w-4 h-4"></i> Tablero Diario</span>
-                            <span class="text-xs">${activeAppointments.length}</span>
+                            <span class="text-xs font-bold">${activeAppointments.length}</span>
                         </button>
                         <button onclick="window.switchViewMode('week')" class="w-full text-left py-3 px-4 rounded-xl flex items-center justify-between transition-colors ${window.appState.viewMode === 'week' ? 'bg-brandGold-500 text-clinical-950 font-black shadow-md' : 'bg-clinical-900 hover:bg-clinical-850 text-slate-300'}">
                             <span class="flex items-center gap-2.5 text-xs uppercase tracking-wider font-bold"><i data-lucide="calendar-days" class="w-4 h-4"></i> Vista Semanal</span>
@@ -1150,13 +1153,13 @@
                 `;
             } else if (window.appState.viewMode === 'week') {
                 mainContentHtml += `
-                    <section class="p-6 flex-1 max-w-7xl w-full mx-auto space-y-6">
+                    <section class="p-6 flex-1 max-w-7xl w-full mx-auto space-y-6 animate-fade-up">
                         ${window.renderWeekViewHtml()}
                     </section>
                 `;
             } else if (window.appState.viewMode === 'month') {
                 mainContentHtml += `
-                    <section class="p-6 flex-1 max-w-7xl w-full mx-auto space-y-6">
+                    <section class="p-6 flex-1 max-w-7xl w-full mx-auto space-y-6 animate-fade-up">
                         ${window.renderMonthViewHtml()}
                     </section>
                 `;
@@ -1171,7 +1174,7 @@
                             </div>
                             <div class="flex gap-2 items-center self-start sm:self-auto">
                                 ${isCarlos ? `
-                                    <button onclick="window.printConsolidatedStatsReport()" class="py-2 px-4 bg-brandGold-500 hover:bg-brandGold-600 text-clinical-950 font-black text-xs uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 shadow-md">
+                                    <button onclick="window.printConsolidatedStatsReport()" class="py-2.5 px-4 bg-brandGold-500 hover:bg-brandGold-600 text-clinical-950 font-black text-xs uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 shadow-md">
                                         <i data-lucide="printer" class="w-4 h-4"></i> Descargar Informe de Gestión de Lujo
                                     </button>
                                 ` : ''}
@@ -1268,13 +1271,14 @@
             }
 
             mainContentHtml += `</main>`;
-            app.innerHTML = `<div class="flex-1 flex flex-col md:flex-row min-h-screen w-full">${sidebarHtml}${mainContentHtml}</div>`;
+            app.innerHTML = `<div class="flex-1 flex flex-col md:flex-row min-h-screen w-full animate-fade-up">${sidebarHtml}${mainContentHtml}</div>`;
 
             window.renderMiniCalendar();
             window.safeCreateIcons();
         };
     </script>
 
+    <!-- STREAMS_CHUNK: Configurando los modales de creación y edición de consultas -->
     <script>
         window.openNewAppointmentModal = function(presetHour = "08:00", presetDateStr = null) {
             const dateStr = presetDateStr || window.appState.currentDate.toISOString().split('T')[0];
@@ -1457,6 +1461,7 @@
         };
     </script>
 
+    <!-- STREAMS_CHUNK: Estructurando los detalles de consultas e integraciones con Gemini IA -->
     <script>
         window.viewAppointmentDetails = function(id) {
             const apt = window.appState.agendaData[id];
@@ -1646,6 +1651,7 @@
         };
     </script>
 
+    <!-- STREAMS_CHUNK: Configurando la emisión e impresión de Reportes Membretados de Lujo -->
     <script>
         window.getLuxuryHeaderHtml = function(title, folioCode) {
             return `
@@ -1877,6 +1883,7 @@
         };
     </script>
 
+    <!-- STREAMS_CHUNK: Configurando los scripts auxiliares de Gemini IA y UI general -->
     <script>
         window.askGeminiForObservations = async function() {
             const obsText = document.getElementById('details-obs-input').value.trim();
@@ -2125,6 +2132,7 @@
         };
     </script>
 
+    <!-- STREAMS_CHUNK: Programando el inicio de sesión y validación de perfiles -->
     <script>
         window.renderLogin = function() {
             const app = document.getElementById('app');
@@ -2249,6 +2257,7 @@
         };
     </script>
 
+    <!-- STREAMS_CHUNK: Inyectando el motor ESM de Firebase y el arranque síncrono ultra-rápido -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -2256,14 +2265,26 @@
 
         // Parámetros globales de la plataforma
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'ceut-agenda-pp';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-            apiKey: "",
-            authDomain: "ceut-agenda-pp.firebaseapp.com",
-            projectId: "ceut-agenda-pp",
-            storageBucket: "ceut-agenda-pp.appspot.com",
-            messagingSenderId: "12345678",
-            appId: "1:12345678:web:123456"
-        };
+        
+        let firebaseConfig;
+        try {
+            firebaseConfig = typeof __firebase_config !== 'undefined' ? (typeof __firebase_config === 'string' ? JSON.parse(__firebase_config) : __firebase_config) : null;
+        } catch (e) {
+            console.error("Error al parsear configuración de Firebase:", e);
+        }
+
+        if (!firebaseConfig || !firebaseConfig.apiKey) {
+            // Configuración segura por defecto para evitar caídas catastróficas
+            firebaseConfig = {
+                apiKey: "dummy-key",
+                authDomain: "ceut-agenda-pp.firebaseapp.com",
+                projectId: "ceut-agenda-pp",
+                storageBucket: "ceut-agenda-pp.appspot.com",
+                messagingSenderId: "12345678",
+                appId: "1:12345678:web:123456"
+            };
+        }
+
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
         // Inicialización de Firebase
@@ -2281,7 +2302,9 @@
             } catch (error) {
                 console.warn("Fallo de autenticación Firebase. Operando en modo Local.", error);
                 window.appState.isSynced = false;
-                window.renderMainApp();
+                if (window.appState.currentUser) {
+                    window.renderMainApp();
+                }
                 return;
             }
 
@@ -2291,7 +2314,9 @@
                     bindFirestoreRealtimeListeners();
                 } else {
                     window.appState.isSynced = false;
-                    window.renderMainApp();
+                    if (window.appState.currentUser) {
+                        window.renderMainApp();
+                    }
                 }
             });
         }
@@ -2355,6 +2380,9 @@
                     }
                 });
                 localStorage.setItem('ceut_users', JSON.stringify(window.appState.users));
+                if (window.appState.currentUser) {
+                    window.renderMainApp();
+                }
             }, (error) => {
                 console.error("Fallo de sincronización de PINs:", error);
             });
@@ -2414,16 +2442,18 @@
             }
         };
 
-        // Inicializador híbrido súper-resistente para entornos de previsualización (Iframe)
-        async function runBootstrapping() {
-            try {
-                await startFirebaseSync();
-            } catch (e) {
-                console.warn("Fallo de arranque de sincronización. Operando sin conexión.", e);
-            }
+        // Inicializador síncrono de alto rendimiento para garantizar renderizado inmediato del login
+        function runBootstrapping() {
+            // 1. Pinta la interfaz al instante para que el usuario no vea una pantalla azul vacía
             window.renderLogin();
+            
+            // 2. Levanta la conexión e inicio de Firebase en segundo plano sin interrumpir al usuario
+            startFirebaseSync().catch(e => {
+                console.warn("Error en sincronización en segundo plano:", e);
+            });
         }
 
+        // Ejecutar de forma segura según el estado actual del documento
         if (document.readyState === 'loading') {
             window.addEventListener('DOMContentLoaded', runBootstrapping);
         } else {
