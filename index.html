@@ -322,29 +322,9 @@
         </div>
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, deleteDoc, collection, query, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        // Parámetros globales de la plataforma
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'ceut-agenda-pp';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-            apiKey: "",
-            authDomain: "ceut-agenda-pp.firebaseapp.com",
-            projectId: "ceut-agenda-pp",
-            storageBucket: "ceut-agenda-pp.appspot.com",
-            messagingSenderId: "12345678",
-            appId: "1:12345678:web:123456"
-        };
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
-        // Inicialización de Firebase
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const auth = getAuth(app);
-
-        // Estado inicial de la aplicación
+    <!-- STREAMS_CHUNK: Inicializando variables y utilidades globales -->
+    <script>
+        // Utilidades globales y resguardo del estado local seguro antes de inicializar Firebase
         const safeGetLocalJSON = (key, fallback) => {
             try {
                 const val = localStorage.getItem(key);
@@ -377,151 +357,16 @@
             confirmCallback: null
         };
 
-        async function startFirebaseSync() {
-            try {
-                if (initialAuthToken) {
-                    await signInWithCustomToken(auth, initialAuthToken);
-                } else {
-                    await signInAnonymously(auth);
+        window.safeCreateIcons = function() {
+            if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') {
+                try {
+                    lucide.createIcons();
+                } catch (e) {
+                    console.warn("Fallo temporal de renderizado de Lucide icons", e);
                 }
-            } catch (error) {
-                console.warn("Fallo de autenticación Firebase. Operando en modo Local.", error);
-                window.appState.isSynced = false;
-                window.renderMainApp();
-                return;
-            }
-
-            onAuthStateChanged(auth, (user) => {
-                if (user) {
-                    window.appState.isSynced = true;
-                    bindFirestoreRealtimeListeners();
-                } else {
-                    window.appState.isSynced = false;
-                    window.renderMainApp();
-                }
-            });
-        }
-
-        function bindFirestoreRealtimeListeners() {
-            // Sincronización en tiempo real de Consultas
-            const appointmentsQuery = query(collection(db, 'artifacts', appId, 'public', 'data', 'appointments'));
-            onSnapshot(appointmentsQuery, (snapshot) => {
-                const fetchedApts = {};
-                snapshot.forEach(doc => {
-                    fetchedApts[doc.id] = doc.data();
-                });
-                window.appState.agendaData = fetchedApts;
-                localStorage.setItem('ceut_agenda_data', JSON.stringify(fetchedApts));
-                window.renderMainApp();
-            }, (error) => {
-                console.error("Fallo de sincronización de citas:", error);
-            });
-
-            // Sincronización de Horas Bloqueadas
-            const hoursQuery = query(collection(db, 'artifacts', appId, 'public', 'data', 'blocked_hours'));
-            onSnapshot(hoursQuery, (snapshot) => {
-                const fetchedHours = {};
-                snapshot.forEach(doc => {
-                    fetchedHours[doc.id] = true;
-                });
-                window.appState.blockedHours = fetchedHours;
-                localStorage.setItem('ceut_blocked_hours', JSON.stringify(fetchedHours));
-                window.renderMainApp();
-            }, (error) => {
-                console.error("Fallo de sincronización de horas:", error);
-            });
-
-            // Sincronización de Días Bloqueados
-            const daysQuery = query(collection(db, 'artifacts', appId, 'public', 'data', 'blocked_days'));
-            onSnapshot(daysQuery, (snapshot) => {
-                const fetchedDays = {};
-                snapshot.forEach(doc => {
-                    fetchedDays[doc.id] = doc.data().reason || true;
-                });
-                window.appState.blockedDays = fetchedDays;
-                localStorage.setItem('ceut_blocked_days', JSON.stringify(fetchedDays));
-                window.renderMainApp();
-            }, (error) => {
-                console.error("Fallo de sincronización de días:", error);
-            });
-
-            // Sincronización de PIN de Carlos
-            const pinsQuery = query(collection(db, 'artifacts', appId, 'public', 'data', 'pins'));
-            onSnapshot(pinsQuery, (snapshot) => {
-                snapshot.forEach(doc => {
-                    const userKey = doc.id;
-                    if (window.appState.users[userKey]) {
-                        window.appState.users[userKey].pin = doc.data().pin;
-                    }
-                });
-                localStorage.setItem('ceut_users', JSON.stringify(window.appState.users));
-            }, (error) => {
-                console.error("Fallo de sincronización de PINs:", error);
-            });
-        }
-
-        // Funciones de escritura remota
-        window.saveAptToFirestore = async function(aptId, aptData) {
-            if (!auth.currentUser) return;
-            try {
-                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'appointments', aptId), aptData);
-            } catch (error) {
-                console.error("Error al guardar en Firestore:", error);
             }
         };
 
-        window.deleteAptFromFirestore = async function(aptId) {
-            if (!auth.currentUser) return;
-            try {
-                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'appointments', aptId));
-            } catch (error) {
-                console.error("Error al eliminar en Firestore:", error);
-            }
-        };
-
-        window.saveHourBlockToFirestore = async function(blockKey, blockState) {
-            if (!auth.currentUser) return;
-            try {
-                if (blockState) {
-                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'blocked_hours', blockKey), { blocked: true });
-                } else {
-                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'blocked_hours', blockKey));
-                }
-            } catch (error) {
-                console.error("Error al inhabilitar hora:", error);
-            }
-        };
-
-        window.saveDayBlockToFirestore = async function(dateStr, reason) {
-            if (!auth.currentUser) return;
-            try {
-                if (reason) {
-                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'blocked_days', dateStr), { reason });
-                } else {
-                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'blocked_days', dateStr));
-                }
-            } catch (error) {
-                console.error("Error al inhabilitar día:", error);
-            }
-        };
-
-        window.savePinToFirestore = async function(userKey, newPin) {
-            if (!auth.currentUser) return;
-            try {
-                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'pins', userKey), { pin: newPin });
-            } catch (error) {
-                console.error("Error al guardar PIN:", error);
-            }
-        };
-
-        // Bootstrapping
-        window.addEventListener('DOMContentLoaded', () => {
-            startFirebaseSync();
-            window.renderLogin();
-        });
-    </script>
-
-    <script>
         window.formatFullDateES = function(dateInput) {
             if (!dateInput) return "";
             const d = new Date(dateInput);
@@ -568,7 +413,7 @@
                 toast.firstElementChild.className = 'bg-clinical-950 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-3 border border-brandGold-500/30';
             }
             msg.textContent = message;
-            if (typeof lucide !== 'undefined') lucide.createIcons();
+            window.safeCreateIcons();
             
             toast.classList.remove('translate-y-[-100px]', 'opacity-0', 'pointer-events-none');
             toast.classList.add('translate-y-0', 'opacity-100');
@@ -725,7 +570,7 @@
 
             calendarHtml += `</div>`;
             container.innerHTML = calendarHtml;
-            if (typeof lucide !== 'undefined') lucide.createIcons();
+            window.safeCreateIcons();
         };
 
         window.navigateMiniCalendar = function(direction) {
@@ -1426,7 +1271,7 @@
             app.innerHTML = `<div class="flex-1 flex flex-col md:flex-row min-h-screen w-full">${sidebarHtml}${mainContentHtml}</div>`;
 
             window.renderMiniCalendar();
-            if (typeof lucide !== 'undefined') lucide.createIcons();
+            window.safeCreateIcons();
         };
     </script>
 
@@ -1544,7 +1389,7 @@
             `;
             document.body.appendChild(modal);
             window.handleLevelChange('Preparatoria', 'form-apt');
-            if (typeof lucide !== 'undefined') lucide.createIcons();
+            window.safeCreateIcons();
         };
 
         window.saveNewAppointment = function(e) {
@@ -1759,7 +1604,7 @@
             if (gradeS) gradeS.value = apt.grade;
             if (groupS) groupS.value = apt.group;
 
-            if (typeof lucide !== 'undefined') lucide.createIcons();
+            window.safeCreateIcons();
         };
 
         window.updateAppointmentDetails = function(e, id) {
@@ -1907,7 +1752,7 @@
             printArea.innerHTML = docContent;
             modal.classList.remove('hidden');
             modal.classList.add('flex');
-            if (typeof lucide !== 'undefined') lucide.createIcons();
+            window.safeCreateIcons();
         };
 
         window.printConsolidatedStatsReport = function() {
@@ -2028,7 +1873,7 @@
             printArea.innerHTML = docContent;
             modal.classList.remove('hidden');
             modal.classList.add('flex');
-            if (typeof lucide !== 'undefined') lucide.createIcons();
+            window.safeCreateIcons();
         };
     </script>
 
@@ -2342,7 +2187,7 @@
                     </div>
                 </div>
             `;
-            if (typeof lucide !== 'undefined') lucide.createIcons();
+            window.safeCreateIcons();
         };
 
         window.handleLogin = function(e) {
@@ -2387,7 +2232,7 @@
                 input.type = 'password';
                 icon.setAttribute('data-lucide', 'eye');
             }
-            if (typeof lucide !== 'undefined') lucide.createIcons();
+            window.safeCreateIcons();
         };
 
         window.logout = function() {
@@ -2402,6 +2247,188 @@
                 window.showToast('Sesión cerrada correctamente', 'info');
             }, 350);
         };
+    </script>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, deleteDoc, collection, query, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Parámetros globales de la plataforma
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'ceut-agenda-pp';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+            apiKey: "",
+            authDomain: "ceut-agenda-pp.firebaseapp.com",
+            projectId: "ceut-agenda-pp",
+            storageBucket: "ceut-agenda-pp.appspot.com",
+            messagingSenderId: "12345678",
+            appId: "1:12345678:web:123456"
+        };
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        // Inicialización de Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        async function startFirebaseSync() {
+            try {
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (error) {
+                console.warn("Fallo de autenticación Firebase. Operando en modo Local.", error);
+                window.appState.isSynced = false;
+                window.renderMainApp();
+                return;
+            }
+
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    window.appState.isSynced = true;
+                    bindFirestoreRealtimeListeners();
+                } else {
+                    window.appState.isSynced = false;
+                    window.renderMainApp();
+                }
+            });
+        }
+
+        function bindFirestoreRealtimeListeners() {
+            // Sincronización en tiempo real de Consultas
+            const appointmentsQuery = query(collection(db, 'artifacts', appId, 'public', 'data', 'appointments'));
+            onSnapshot(appointmentsQuery, (snapshot) => {
+                const fetchedApts = {};
+                snapshot.forEach(doc => {
+                    fetchedApts[doc.id] = doc.data();
+                });
+                window.appState.agendaData = fetchedApts;
+                localStorage.setItem('ceut_agenda_data', JSON.stringify(fetchedApts));
+                if (window.appState.currentUser) {
+                    window.renderMainApp();
+                }
+            }, (error) => {
+                console.error("Fallo de sincronización de citas:", error);
+            });
+
+            // Sincronización de Horas Bloqueadas
+            const hoursQuery = query(collection(db, 'artifacts', appId, 'public', 'data', 'blocked_hours'));
+            onSnapshot(hoursQuery, (snapshot) => {
+                const fetchedHours = {};
+                snapshot.forEach(doc => {
+                    fetchedHours[doc.id] = true;
+                });
+                window.appState.blockedHours = fetchedHours;
+                localStorage.setItem('ceut_blocked_hours', JSON.stringify(fetchedHours));
+                if (window.appState.currentUser) {
+                    window.renderMainApp();
+                }
+            }, (error) => {
+                console.error("Fallo de sincronización de horas:", error);
+            });
+
+            // Sincronización de Días Bloqueados
+            const daysQuery = query(collection(db, 'artifacts', appId, 'public', 'data', 'blocked_days'));
+            onSnapshot(daysQuery, (snapshot) => {
+                const fetchedDays = {};
+                snapshot.forEach(doc => {
+                    fetchedDays[doc.id] = doc.data().reason || true;
+                });
+                window.appState.blockedDays = fetchedDays;
+                localStorage.setItem('ceut_blocked_days', JSON.stringify(fetchedDays));
+                if (window.appState.currentUser) {
+                    window.renderMainApp();
+                }
+            }, (error) => {
+                console.error("Fallo de sincronización de días:", error);
+            });
+
+            // Sincronización de PIN de Carlos
+            const pinsQuery = query(collection(db, 'artifacts', appId, 'public', 'data', 'pins'));
+            onSnapshot(pinsQuery, (snapshot) => {
+                snapshot.forEach(doc => {
+                    const userKey = doc.id;
+                    if (window.appState.users[userKey]) {
+                        window.appState.users[userKey].pin = doc.data().pin;
+                    }
+                });
+                localStorage.setItem('ceut_users', JSON.stringify(window.appState.users));
+            }, (error) => {
+                console.error("Fallo de sincronización de PINs:", error);
+            });
+        }
+
+        // Funciones de escritura remota
+        window.saveAptToFirestore = async function(aptId, aptData) {
+            if (!auth.currentUser) return;
+            try {
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'appointments', aptId), aptData);
+            } catch (error) {
+                console.error("Error al guardar en Firestore:", error);
+            }
+        };
+
+        window.deleteAptFromFirestore = async function(aptId) {
+            if (!auth.currentUser) return;
+            try {
+                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'appointments', aptId));
+            } catch (error) {
+                console.error("Error al eliminar en Firestore:", error);
+            }
+        };
+
+        window.saveHourBlockToFirestore = async function(blockKey, blockState) {
+            if (!auth.currentUser) return;
+            try {
+                if (blockState) {
+                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'blocked_hours', blockKey), { blocked: true });
+                } else {
+                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'blocked_hours', blockKey));
+                }
+            } catch (error) {
+                console.error("Error al inhabilitar hora:", error);
+            }
+        };
+
+        window.saveDayBlockToFirestore = async function(dateStr, reason) {
+            if (!auth.currentUser) return;
+            try {
+                if (reason) {
+                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'blocked_days', dateStr), { reason });
+                } else {
+                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'blocked_days', dateStr));
+                }
+            } catch (error) {
+                console.error("Error al inhabilitar día:", error);
+            }
+        };
+
+        window.savePinToFirestore = async function(userKey, newPin) {
+            if (!auth.currentUser) return;
+            try {
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'pins', userKey), { pin: newPin });
+            } catch (error) {
+                console.error("Error al guardar PIN:", error);
+            }
+        };
+
+        // Inicializador híbrido súper-resistente para entornos de previsualización (Iframe)
+        async function runBootstrapping() {
+            try {
+                await startFirebaseSync();
+            } catch (e) {
+                console.warn("Fallo de arranque de sincronización. Operando sin conexión.", e);
+            }
+            window.renderLogin();
+        }
+
+        if (document.readyState === 'loading') {
+            window.addEventListener('DOMContentLoaded', runBootstrapping);
+        } else {
+            runBootstrapping();
+        }
     </script>
 </body>
 </html>
