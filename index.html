@@ -114,7 +114,7 @@
 </head>
 <body class="text-slate-100 min-h-screen relative overflow-x-hidden">
 
-    <!-- Toast global para notificaciones instantáneas de red -->
+    <!-- Toast global para notificaciones -->
     <div id="toast" class="fixed top-5 right-5 z-50 transform translate-y-[-100px] opacity-0 transition-all duration-300 pointer-events-none">
         <div class="bg-clinical-950 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-3 border">
             <span id="toast-icon"></span>
@@ -327,6 +327,7 @@
         </div>
     </div>
 
+    <!-- Scripts de Lógica y UI -->
     <script>
         const safeGetLocalJSON = (key, fallback) => {
             try {
@@ -341,8 +342,8 @@
             currentUser: null, 
             currentDate: new Date(),
             miniCalendarMonth: new Date(), 
-            activeStatsPeriod: 'dia', 
-            viewMode: 'day', // 'day' por defecto para visualización inmediata del cronograma
+            activeStatsPeriod: 'semana', 
+            viewMode: 'day', // Por defecto muestra el panel diario para un inicio enfocado
             searchQuery: '',
             filterType: 'all', 
             blockedDays: safeGetLocalJSON('ceut_blocked_days', {}), 
@@ -352,7 +353,7 @@
                 'miroslava': { name: 'Lic. Miroslava Abril Hoyos Rojas', role: 'Coordinadora', pin: '1015', isRestricted: true },
                 'abril': { name: 'Pasantes Depto. Psicopedagógico', role: 'Pasante Psicopedagógico', pin: '1015', isRestricted: true }
             }),
-            agendaData: {}, // Se recuperará y sincronizará directamente de Firebase en tiempo real
+            agendaData: safeGetLocalJSON('ceut_agenda_data', {}), 
             scheduleConfig: { startHour: 8, endHour: 21 },
             lastCheckedAlarmTime: null,
             isSynced: false,
@@ -470,7 +471,7 @@
             }
         };
 
-        // Reloj digital y monitoreo acústico de uso exclusivo para Carlos
+        // Monitoreo acústico de voz exclusivo para Carlos
         setInterval(() => {
             const now = new Date();
             const currentHour = String(now.getHours()).padStart(2, '0');
@@ -729,7 +730,7 @@
                                     </div>
                                     <p class="text-xs text-slate-400 mt-1.5 line-clamp-2 italic">"${aptForSlot.obs || 'Sin observaciones iniciales.'}"</p>
                                 </div>
-                                <div class="flex items-center gap-2 shrink-0">
+                                <div class="flex items-center gap-2 shrink-0 font-sans">
                                     <button onclick="window.viewAppointmentDetails('${aptForSlot.id}')" class="p-2 bg-clinical-900 border border-clinical-800 rounded-xl hover:border-brandGold-500/40 text-brandGold-500 hover:text-white transition-all text-xs font-bold flex items-center gap-1.5">
                                         <i data-lucide="eye" class="w-4 h-4"></i> Ver / Editar
                                     </button>
@@ -753,7 +754,7 @@
                         `;
                     } else {
                         html += `
-                            <div class="flex items-center justify-between w-full">
+                            <div class="flex items-center justify-between w-full font-sans">
                                 <button onclick="window.openNewAppointmentModal('${hour}')" class="text-left py-4 text-xs font-bold text-slate-500 hover:text-brandGold-500 flex items-center gap-2 transition-colors">
                                     <i data-lucide="plus-circle" class="w-4 h-4"></i> Programar consulta a las ${hour}
                                 </button>
@@ -829,7 +830,7 @@
                     const isHourBlocked = window.appState.blockedHours[blockKey];
                     const isDayBlocked = window.appState.blockedDays[dateStr];
 
-                    html += `<td class="p-2 border-r border-clinical-850 text-center relative min-h-[4rem] group">`;
+                    html += `<td class="p-2 border-r border-clinical-850 text-center relative min-h-[4rem] group font-sans">`;
 
                     if (isDayBlocked) {
                         html += `
@@ -1020,10 +1021,10 @@
                         <p class="text-slate-400 text-xs">${userObj.role}</p>
                         
                         <div class="mt-2 pt-2 border-t border-clinical-800/80 text-[10px] text-slate-500 font-mono break-all leading-tight">
-                            ID Usuario:<br><span class="text-brandGold-500/80">${window.appState.userId || 'Autenticando...'}</span>
+                            ID Usuario:<br><span class="text-brandGold-500/80">${window.appState.userId || 'Modo Local Activo'}</span>
                         </div>
 
-                        <div class="mt-2 pt-2 border-t border-clinical-800/80 flex justify-between items-center">
+                        <div class="mt-2 pt-2 border-t border-clinical-800/80 flex justify-between items-center font-sans">
                             ${isCarlos ? `
                                 <button onclick="document.getElementById('change-pin-modal').classList.remove('hidden'); document.getElementById('change-pin-modal').classList.add('flex');" class="text-[10px] font-bold text-brandGold-500/80 hover:text-brandGold-500 hover:underline flex items-center gap-1">
                                     <i data-lucide="key" class="w-3 h-3"></i> Cambiar PIN de Acceso
@@ -1035,7 +1036,7 @@
                         <span class="text-slate-400 font-bold uppercase tracking-wider text-[10px] block mb-2.5">Agenda Interactiva</span>
                         <div id="mini-calendar-container" class="bg-clinical-900 border border-clinical-800/80 rounded-2xl p-3.5 shadow-md"></div>
                     </div>
-                    <div class="space-y-1.5">
+                    <div class="space-y-1.5 font-sans">
                         <button onclick="window.switchViewMode('day')" class="w-full text-left py-3 px-4 rounded-xl flex items-center justify-between transition-colors ${window.appState.viewMode === 'day' ? 'bg-brandGold-500 text-clinical-950 font-black shadow-md' : 'bg-clinical-900 hover:bg-clinical-850 text-slate-300'}">
                             <span class="flex items-center gap-2.5 text-xs uppercase tracking-wider font-bold"><i data-lucide="calendar" class="w-4 h-4"></i> Tablero Diario</span>
                             <span class="text-xs font-bold">${activeAppointments.length}</span>
@@ -1050,7 +1051,7 @@
                             <span class="flex items-center gap-2.5 text-xs uppercase tracking-wider font-bold"><i data-lucide="bar-chart-3" class="w-4 h-4"></i> Reportes Clínicos</span>
                         </button>
                     </div>
-                    <div class="space-y-2.5">
+                    <div class="space-y-2.5 font-sans">
                         <span class="text-slate-400 font-bold uppercase tracking-wider text-[10px] block">Categorías de Consulta</span>
                         <div class="grid grid-cols-2 gap-1.5 text-[11px] font-bold">
                             <button onclick="window.setFilter('all')" class="py-2.5 px-3 rounded-xl flex items-center gap-1.5 transition-colors ${window.appState.filterType === 'all' ? 'bg-brandGold-500 text-clinical-950 shadow-md' : 'bg-clinical-900 text-slate-300 hover:bg-clinical-850'}">
@@ -1104,7 +1105,7 @@
                                 <span class="text-[9px] text-slate-500">Canal: ${window.appState.appId}</span>
                             </div>
 
-                            <div class="bg-clinical-900 border border-clinical-800 rounded-2xl p-1 flex items-center shadow-lg">
+                            <div class="bg-clinical-900 border border-clinical-800 rounded-2xl p-1 flex items-center shadow-lg font-sans">
                                 <button onclick="window.changeDate(-1)" class="p-2 hover:bg-clinical-850 rounded-xl text-brandGold-500 transition-colors"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
                                 <button onclick="window.goToday()" class="px-3 py-1.5 hover:bg-clinical-850 rounded-xl text-xs font-bold text-white transition-colors">Hoy</button>
                                 <button onclick="window.changeDate(1)" class="p-2 hover:bg-clinical-850 rounded-xl text-brandGold-500 transition-colors"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
@@ -1129,7 +1130,7 @@
                                     </div>
                                 </div>
                                 ${isCarlos ? `
-                                    <button onclick="window.removeBlockDay()" class="py-2.5 px-5 bg-clinical-900 border border-clinical-800 hover:border-rose-500 text-rose-400 hover:text-white rounded-xl text-xs font-bold transition-all uppercase tracking-wider">
+                                    <button onclick="window.removeBlockDay()" class="py-2.5 px-5 bg-clinical-900 border border-clinical-800 hover:border-rose-500 text-rose-400 hover:text-white rounded-xl text-xs font-bold transition-all uppercase tracking-wider font-sans">
                                         Habilitar Jornada
                                     </button>
                                 ` : ''}
@@ -1146,7 +1147,7 @@
                                         Hay programadas <span class="text-brandGold-500 font-bold">${activeAppointments.length} consulta(s)</span> para este día. Agregue consultas haciendo click sobre las celdas de abajo.
                                     </p>
                                 </div>
-                                <div class="flex gap-2 shrink-0 flex-wrap justify-center">
+                                <div class="flex gap-2 shrink-0 flex-wrap justify-center font-sans">
                                     ${isCarlos ? `
                                         <button onclick="window.openBlockDayModal()" class="py-3 px-5 bg-clinical-950 border border-clinical-800 hover:border-rose-500/40 text-slate-300 hover:text-rose-400 font-bold text-xs uppercase tracking-wider rounded-xl transition-all shadow-md">
                                             Inhabilitar Día
@@ -1189,7 +1190,7 @@
                 const stats = window.getStatsData();
                 mainContentHtml += `
                     <section class="p-6 flex-1 max-w-7xl w-full mx-auto space-y-6 animate-fade-up">
-                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 font-sans">
                             <div>
                                 <h2 class="font-outfit font-black text-2xl text-white">Informes de Intervención</h2>
                                 <p class="text-slate-400 text-xs mt-0.5">Métricas de impacto psicopedagógico y salud escolar.</p>
@@ -1212,27 +1213,27 @@
                             <div class="bg-clinical-900 border border-clinical-800 p-6 rounded-3xl flex items-center gap-4 relative overflow-hidden">
                                 <div class="w-12 h-12 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl flex items-center justify-center text-indigo-400"><i data-lucide="bar-chart-2" class="w-6 h-6"></i></div>
                                 <div>
-                                    <span class="text-slate-500 font-bold uppercase text-[9px] tracking-wider block">Total Consultas</span>
+                                    <span class="text-slate-500 font-bold uppercase text-[9px] tracking-wider block font-sans">Total Consultas</span>
                                     <span class="text-white font-outfit text-3xl font-black">${stats.total}</span>
                                 </div>
                             </div>
                             <div class="bg-clinical-900 border border-clinical-800 p-6 rounded-3xl flex items-center gap-4 relative overflow-hidden">
                                 <div class="w-12 h-12 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center justify-center text-emerald-400"><i data-lucide="check-circle" class="w-6 h-6"></i></div>
                                 <div>
-                                    <span class="text-slate-500 font-bold uppercase text-[9px] tracking-wider block">Realizadas</span>
+                                    <span class="text-slate-500 font-bold uppercase text-[9px] tracking-wider block font-sans">Realizadas</span>
                                     <span class="text-white font-outfit text-3xl font-black">${stats.realizadas}</span>
                                 </div>
                             </div>
                             <div class="bg-clinical-900 border border-clinical-800 p-6 rounded-3xl flex items-center gap-4 relative overflow-hidden">
                                 <div class="w-12 h-12 bg-rose-500/10 border border-rose-500/20 rounded-2xl flex items-center justify-center text-rose-400"><i data-lucide="alert-triangle" class="w-6 h-6"></i></div>
                                 <div>
-                                    <span class="text-slate-500 font-bold uppercase text-[9px] tracking-wider block">Canceladas / Reagendadas</span>
+                                    <span class="text-slate-500 font-bold uppercase text-[9px] tracking-wider block font-sans">Canceladas / Reagendadas</span>
                                     <span class="text-white font-outfit text-3xl font-black">${stats.canceladas + stats.reagendadas}</span>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 font-sans">
                             <div class="bg-clinical-900 border border-clinical-800 rounded-3xl p-6">
                                 <h3 class="font-outfit font-bold text-white text-base mb-5">Distribución de Consultas</h3>
                                 <div class="space-y-4">
@@ -1308,7 +1309,7 @@
             modal.id = "appointment-form-modal";
             modal.className = "fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 no-print";
             modal.innerHTML = `
-                <div class="bg-clinical-900 border-2 border-brandGold-500 rounded-3xl w-full max-w-xl shadow-2xl animate-fade-up overflow-hidden max-h-[90vh] flex flex-col">
+                <div class="bg-clinical-900 border-2 border-brandGold-500 rounded-3xl w-full max-w-xl shadow-2xl animate-fade-up overflow-hidden max-h-[90vh] flex flex-col font-sans">
                     <div class="bg-clinical-950 p-6 border-b border-clinical-850 flex justify-between items-center shrink-0">
                         <div class="flex items-center gap-2.5">
                             <i data-lucide="plus-circle" class="w-6 h-6 text-brandGold-500"></i>
@@ -1496,7 +1497,7 @@
             modal.id = "appointment-details-modal";
             modal.className = "fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 no-print";
             modal.innerHTML = `
-                <div class="bg-clinical-900 border-2 border-brandGold-500 rounded-3xl w-full max-w-xl shadow-2xl animate-fade-up overflow-hidden max-h-[90vh] flex flex-col">
+                <div class="bg-clinical-900 border-2 border-brandGold-500 rounded-3xl w-full max-w-xl shadow-2xl animate-fade-up overflow-hidden max-h-[90vh] flex flex-col font-sans">
                     <div class="bg-clinical-950 p-6 border-b border-clinical-850 flex justify-between items-center shrink-0">
                         <div class="flex items-center gap-2.5">
                             <i data-lucide="file-text" class="w-6 h-6 text-brandGold-500"></i>
@@ -1717,7 +1718,7 @@
             const docContent = `
                 ${window.getLuxuryHeaderHtml('REPORTE CLÍNICO INDIVIDUAL', folio)}
                 
-                <div class="relative z-10 space-y-6 text-slate-800">
+                <div class="relative z-10 space-y-6 text-slate-800 font-sans">
                     <div class="text-center">
                         <h2 class="text-sm font-outfit font-black uppercase tracking-wider text-clinical-900">Expediente Clínico de Intervención</h2>
                         <p class="text-[10px] text-slate-500 mt-0.5">Expediente confidencial protegido por leyes de privacidad institucional</p>
@@ -1760,13 +1761,13 @@
                     <div class="pt-12 grid grid-cols-2 gap-10">
                         <div class="text-center flex flex-col justify-end items-center">
                             <div class="border-t border-slate-400 w-48 pt-2">
-                                <p class="text-[10px] font-bold uppercase text-slate-800">Mtro. Carlos Aguilar Sánchez</p>
+                                <p class="text-[10px] font-bold uppercase text-slate-800 font-sans">Mtro. Carlos Aguilar Sánchez</p>
                                 <p class="text-[9px] text-slate-500">Responsable Psicopedagógico CEUT</p>
                             </div>
                         </div>
                         <div class="text-center flex flex-col items-center justify-center relative">
                             <div class="w-20 h-20 rounded-full border-2 border-double border-brandGold-500 flex flex-col items-center justify-center text-brandGold-700 select-none pointer-events-none opacity-80 rotate-12">
-                                <span class="text-[6px] font-bold uppercase tracking-widest text-center leading-none">PSICOPEDAGOGÍA<br><strong class="text-[8px] text-clinical-800">CEUT</strong><br>TEHUACÁN</span>
+                                <span class="text-[6px] font-bold uppercase tracking-widest text-center leading-none font-sans">PSICOPEDAGOGÍA<br><strong class="text-[8px] text-clinical-800">CEUT</strong><br>TEHUACÁN</span>
                             </div>
                             <p class="text-[9px] text-slate-400 mt-2">Sello del Departamento</p>
                         </div>
@@ -1796,7 +1797,7 @@
             const docContent = `
                 ${window.getLuxuryHeaderHtml('REPORTE DE GESTIÓN', folio)}
                 
-                <div class="relative z-10 space-y-6 text-slate-800">
+                <div class="relative z-10 space-y-6 text-slate-800 font-sans">
                     <div class="text-center">
                         <h2 class="text-sm font-outfit font-black uppercase tracking-wider text-clinical-900">Informe de Desempeño Psicopedagógico</h2>
                         <p class="text-[10px] text-slate-500 mt-0.5">Métricas institucionales correspondientes al período: <span class="font-bold text-slate-800">${periodName}</span></p>
@@ -1880,13 +1881,13 @@
                     <div class="pt-16 grid grid-cols-2 gap-10">
                         <div class="text-center flex flex-col justify-end items-center">
                             <div class="border-t border-slate-400 w-48 pt-2">
-                                <p class="text-[10px] font-bold uppercase text-slate-800">Mtro. Carlos Aguilar Sánchez</p>
+                                <p class="text-[10px] font-bold uppercase text-slate-800 font-sans">Mtro. Carlos Aguilar Sánchez</p>
                                 <p class="text-[9px] text-slate-500">Responsable Psicopedagógico CEUT</p>
                             </div>
                         </div>
                         <div class="text-center flex flex-col items-center justify-center">
-                            <div class="w-20 h-20 rounded-full border-2 border-double border-brandGold-500 flex flex-col items-center justify-center text-brandGold-700 select-none pointer-events-none opacity-80 rotate-12">
-                                <span class="text-[6px] font-bold uppercase tracking-widest text-center leading-none">PSICOPEDAGOGÍA<br><strong class="text-[8px] text-clinical-800">CEUT</strong><br>TEHUACÁN</span>
+                            <div class="w-20 h-20 rounded-full border-2 border-double border-brandGold-500 flex flex-col items-center justify-center text-brandGold-700 select-none pointer-events-none opacity-80 rotate-12 animate-fade-up">
+                                <span class="text-[6px] font-bold uppercase tracking-widest text-center leading-none font-sans">PSICOPEDAGOGÍA<br><strong class="text-[8px] text-clinical-800">CEUT</strong><br>TEHUACÁN</span>
                             </div>
                             <p class="text-[9px] text-slate-400 mt-2">Sello del Departamento</p>
                         </div>
@@ -2077,10 +2078,7 @@
             const now = new Date(window.appState.currentDate);
             let filteredApts = [];
 
-            if (period === 'dia') {
-                const dayStr = now.toISOString().split('T')[0];
-                filteredApts = Object.values(window.appState.agendaData).filter(apt => apt.date === dayStr);
-            } else if (period === 'semana') {
+            if (period === 'semana') {
                 const startOfWeek = new Date(now);
                 startOfWeek.setDate(now.getDate() - now.getDay());
                 const endOfWeek = new Date(now);
@@ -2177,7 +2175,7 @@
                                 Identidad y Excelencia Académica
                             </p>
                         </div>
-                        <div class="w-full md:w-1/2 space-y-5">
+                        <div class="w-full md:w-1/2 space-y-5 font-sans">
                             <div class="text-center md:text-left">
                                 <h1 class="font-outfit font-black text-2xl md:text-3xl text-white tracking-tight">
                                     Agenda Psicopedagógica
@@ -2283,224 +2281,246 @@
         const appId = (typeof __app_id !== 'undefined' && __app_id) ? __app_id : 'ceut-agenda-pp-global';
         window.appState.appId = appId;
         
-        let firebaseConfig;
+        let firebaseConfig = null;
         try {
             firebaseConfig = typeof __firebase_config !== 'undefined' ? (typeof __firebase_config === 'string' ? JSON.parse(__firebase_config) : __firebase_config) : null;
         } catch (e) {
             console.error("Error al parsear configuración de Firebase:", e);
         }
 
-        if (!firebaseConfig || !firebaseConfig.apiKey) {
-            firebaseConfig = {
-                apiKey: "dummy-key",
-                authDomain: "ceut-agenda-pp.firebaseapp.com",
-                projectId: "ceut-agenda-pp",
-                storageBucket: "ceut-agenda-pp.appspot.com",
-                messagingSenderId: "12345678",
-                appId: "1:12345678:web:123456"
-            };
-        }
+        // Validador robusto de credenciales de red
+        const isConfigValid = firebaseConfig && firebaseConfig.apiKey && firebaseConfig.apiKey !== "dummy-key" && !firebaseConfig.apiKey.includes("dummy");
 
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        if (isConfigValid) {
+            const app = initializeApp(firebaseConfig);
+            const db = getFirestore(app);
+            const auth = getAuth(app);
+            const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const auth = getAuth(app);
-
-        async function startFirebaseSync() {
-            try {
-                let userCredential = null;
-                if (initialAuthToken) {
-                    try {
-                        userCredential = await signInWithCustomToken(auth, initialAuthToken);
-                    } catch (tokenErr) {
-                        console.warn("Fallo de Custom Token, reintentando con sesión anónima:", tokenErr);
+            async function startFirebaseSync() {
+                try {
+                    let userCredential = null;
+                    if (initialAuthToken) {
+                        try {
+                            userCredential = await signInWithCustomToken(auth, initialAuthToken);
+                        } catch (tokenErr) {
+                            console.warn("Fallo de Custom Token, reintentando con sesión anónima:", tokenErr);
+                            userCredential = await signInAnonymously(auth);
+                        }
+                    } else {
                         userCredential = await signInAnonymously(auth);
                     }
-                } else {
-                    userCredential = await signInAnonymously(auth);
-                }
 
-                if (userCredential && userCredential.user) {
-                    window.appState.isSynced = true;
-                    window.appState.userId = userCredential.user.uid;
-                    bindFirestoreRealtimeListeners();
-                } else {
+                    if (userCredential && userCredential.user) {
+                        window.appState.isSynced = true;
+                        window.appState.userId = userCredential.user.uid;
+                        bindFirestoreRealtimeListeners();
+                    } else {
+                        window.appState.isSynced = false;
+                    }
+                } catch (error) {
+                    console.error("Fallo de autenticación Firebase. Ejecutando de modo Local.", error);
                     window.appState.isSynced = false;
                 }
-            } catch (error) {
-                console.error("Fallo general de autenticación Firebase. Operando de modo Local.", error);
-                window.appState.isSynced = false;
-                window.showToast("Incapaz de conectar con la nube. Sincronización inactiva: " + error.message, "error");
-                if (window.appState.currentUser) {
-                    window.renderMainApp();
-                }
             }
-        }
 
-        function bindFirestoreRealtimeListeners() {
-            if (!auth.currentUser) return;
+            function bindFirestoreRealtimeListeners() {
+                if (!auth.currentUser) return;
 
-            // 1. Sincronización compartida de Consultas en tiempo real (Unificada para todo el equipo)
-            const appointmentsQuery = query(collection(db, 'artifacts', appId, 'public', 'data', 'appointments'));
-            onSnapshot(appointmentsQuery, async (snapshot) => {
-                const fetchedApts = {};
-                snapshot.forEach(doc => {
-                    fetchedApts[doc.id] = doc.data();
-                });
-
-                // NO SE AGREGAN DEMOS - LA AGENDA SE MANTIENE COMPLETAMENTE LIMPIA PARA PRODUCCIÓN
-                window.appState.agendaData = fetchedApts;
-                localStorage.setItem('ceut_agenda_data', JSON.stringify(fetchedApts));
-                if (window.appState.currentUser) {
-                    window.renderMainApp();
-                }
-            }, (error) => {
-                console.error("Fallo de sincronización de citas:", error);
-                window.appState.isSynced = false;
-                window.showToast("Error de conexión (Sincronización Citas): " + error.message, "error");
-            });
-
-            // 2. Sincronización compartida de Horas Bloqueadas
-            const hoursQuery = query(collection(db, 'artifacts', appId, 'public', 'data', 'blocked_hours'));
-            onSnapshot(hoursQuery, (snapshot) => {
-                const fetchedHours = {};
-                snapshot.forEach(doc => {
-                    fetchedHours[doc.id] = true;
-                });
-                window.appState.blockedHours = fetchedHours;
-                localStorage.setItem('ceut_blocked_hours', JSON.stringify(fetchedHours));
-                if (window.appState.currentUser) {
-                    window.renderMainApp();
-                }
-            }, (error) => {
-                console.error("Fallo de sincronización de horas:", error);
-                window.appState.isSynced = false;
-                window.showToast("Error de conexión (Sincronización Horas): " + error.message, "error");
-            });
-
-            // 3. Sincronización compartida de Días Bloqueados
-            const daysQuery = query(collection(db, 'artifacts', appId, 'public', 'data', 'blocked_days'));
-            onSnapshot(daysQuery, (snapshot) => {
-                const fetchedDays = {};
-                snapshot.forEach(doc => {
-                    fetchedDays[doc.id] = doc.data().reason || true;
-                });
-                window.appState.blockedDays = fetchedDays;
-                localStorage.setItem('ceut_blocked_days', JSON.stringify(fetchedDays));
-                if (window.appState.currentUser) {
-                    window.renderMainApp();
-                }
-            }, (error) => {
-                console.error("Fallo de sincronización de días:", error);
-                window.appState.isSynced = false;
-                window.showToast("Error de conexión (Sincronización Días): " + error.message, "error");
-            });
-
-            // 4. Sincronización compartida de PINs de acceso para Carlos
-            const pinsQuery = query(collection(db, 'artifacts', appId, 'public', 'data', 'pins'));
-            onSnapshot(pinsQuery, (snapshot) => {
-                snapshot.forEach(doc => {
-                    const userKey = doc.id;
-                    if (window.appState.users[userKey]) {
-                        window.appState.users[userKey].pin = doc.data().pin;
+                // 1. Sincronización compartida de Consultas en tiempo real
+                const appointmentsQuery = query(collection(db, 'artifacts', appId, 'public', 'data', 'appointments'));
+                onSnapshot(appointmentsQuery, (snapshot) => {
+                    const fetchedApts = {};
+                    snapshot.forEach(doc => {
+                        fetchedApts[doc.id] = doc.data();
+                    });
+                    window.appState.agendaData = fetchedApts;
+                    localStorage.setItem('ceut_agenda_data', JSON.stringify(fetchedApts));
+                    if (window.appState.currentUser) {
+                        window.renderMainApp();
                     }
+                }, (error) => {
+                    console.error("Fallo de sincronización de citas:", error);
+                    window.appState.isSynced = false;
                 });
-                localStorage.setItem('ceut_users', JSON.stringify(window.appState.users));
-                if (window.appState.currentUser) {
-                    window.renderMainApp();
+
+                // 2. Sincronización compartida de Horas Bloqueadas
+                const hoursQuery = query(collection(db, 'artifacts', appId, 'public', 'data', 'blocked_hours'));
+                onSnapshot(hoursQuery, (snapshot) => {
+                    const fetchedHours = {};
+                    snapshot.forEach(doc => {
+                        fetchedHours[doc.id] = true;
+                    });
+                    window.appState.blockedHours = fetchedHours;
+                    localStorage.setItem('ceut_blocked_hours', JSON.stringify(fetchedHours));
+                    if (window.appState.currentUser) {
+                        window.renderMainApp();
+                    }
+                }, (error) => {
+                    console.error("Fallo de sincronización de horas:", error);
+                    window.appState.isSynced = false;
+                });
+
+                // 3. Sincronización compartida de Días Bloqueados
+                const daysQuery = query(collection(db, 'artifacts', appId, 'public', 'data', 'blocked_days'));
+                onSnapshot(daysQuery, (snapshot) => {
+                    const fetchedDays = {};
+                    snapshot.forEach(doc => {
+                        fetchedDays[doc.id] = doc.data().reason || true;
+                    });
+                    window.appState.blockedDays = fetchedDays;
+                    localStorage.setItem('ceut_blocked_days', JSON.stringify(fetchedDays));
+                    if (window.appState.currentUser) {
+                        window.renderMainApp();
+                    }
+                }, (error) => {
+                    console.error("Fallo de sincronización de días:", error);
+                    window.appState.isSynced = false;
+                });
+
+                // 4. Sincronización compartida de PINs de acceso para Carlos
+                const pinsQuery = query(collection(db, 'artifacts', appId, 'public', 'data', 'pins'));
+                onSnapshot(pinsQuery, (snapshot) => {
+                    snapshot.forEach(doc => {
+                        const userKey = doc.id;
+                        if (window.appState.users[userKey]) {
+                            window.appState.users[userKey].pin = doc.data().pin;
+                        }
+                    });
+                    localStorage.setItem('ceut_users', JSON.stringify(window.appState.users));
+                    if (window.appState.currentUser) {
+                        window.renderMainApp();
+                    }
+                }, (error) => {
+                    console.error("Fallo de sincronización de PINs:", error);
+                    window.appState.isSynced = false;
+                });
+            }
+
+            window.saveAptToFirestore = async function(aptId, aptData) {
+                // Escritura optimista local primero
+                window.appState.agendaData[aptId] = aptData;
+                localStorage.setItem('ceut_agenda_data', JSON.stringify(window.appState.agendaData));
+
+                if (!auth.currentUser) return;
+                try {
+                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'appointments', aptId), aptData);
+                } catch (error) {
+                    console.error("Error al guardar en Firestore:", error);
                 }
-            }, (error) => {
-                console.error("Fallo de sincronización de PINs:", error);
-                window.appState.isSynced = false;
-                window.showToast("Error de conexión (Sincronización Seguridad): " + error.message, "error");
-            });
-        }
+            };
 
-        window.saveAptToFirestore = async function(aptId, aptData) {
-            if (!auth.currentUser) {
-                window.showToast("Imposible sincronizar: No se detecta autenticación activa.", "error");
-                return;
-            }
-            try {
-                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'appointments', aptId), aptData);
-            } catch (error) {
-                console.error("Error al guardar en Firestore:", error);
-                window.showToast("Fallo al escribir cita en el servidor: " + error.message, "error");
-            }
-        };
+            window.deleteAptFromFirestore = async function(aptId) {
+                delete window.appState.agendaData[aptId];
+                localStorage.setItem('ceut_agenda_data', JSON.stringify(window.appState.agendaData));
 
-        window.deleteAptFromFirestore = async function(aptId) {
-            if (!auth.currentUser) {
-                window.showToast("Imposible sincronizar: No se detecta autenticación activa.", "error");
-                return;
-            }
-            try {
-                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'appointments', aptId));
-            } catch (error) {
-                console.error("Error al eliminar en Firestore:", error);
-                window.showToast("Fallo al eliminar cita en el servidor: " + error.message, "error");
-            }
-        };
+                if (!auth.currentUser) return;
+                try {
+                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'appointments', aptId));
+                } catch (error) {
+                    console.error("Error al eliminar en Firestore:", error);
+                }
+            };
 
-        window.saveHourBlockToFirestore = async function(blockKey, blockState) {
-            if (!auth.currentUser) {
-                window.showToast("Imposible inhabilitar: Sin sesión en el servidor.", "error");
-                return;
-            }
-            try {
+            window.saveHourBlockToFirestore = async function(blockKey, blockState) {
                 if (blockState) {
-                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'blocked_hours', blockKey), { blocked: true });
+                    window.appState.blockedHours[blockKey] = true;
                 } else {
-                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'blocked_hours', blockKey));
+                    delete window.appState.blockedHours[blockKey];
                 }
-            } catch (error) {
-                console.error("Error al inhabilitar hora:", error);
-                window.showToast("Fallo al registrar bloqueo de hora: " + error.message, "error");
-            }
-        };
+                localStorage.setItem('ceut_blocked_hours', JSON.stringify(window.appState.blockedHours));
 
-        window.saveDayBlockToFirestore = async function(dateStr, reason) {
-            if (!auth.currentUser) {
-                window.showToast("Imposible bloquear jornada: Sin sesión en el servidor.", "error");
-                return;
-            }
-            try {
+                if (!auth.currentUser) return;
+                try {
+                    if (blockState) {
+                        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'blocked_hours', blockKey), { blocked: true });
+                    } else {
+                        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'blocked_hours', blockKey));
+                    }
+                } catch (error) {
+                    console.error("Error al inhabilitar hora:", error);
+                }
+            };
+
+            window.saveDayBlockToFirestore = async function(dateStr, reason) {
                 if (reason) {
-                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'blocked_days', dateStr), { reason });
+                    window.appState.blockedDays[dateStr] = reason;
                 } else {
-                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'blocked_days', dateStr));
+                    delete window.appState.blockedDays[dateStr];
                 }
-            } catch (error) {
-                console.error("Error al inhabilitar día:", error);
-                window.showToast("Fallo al registrar bloqueo de día: " + error.message, "error");
-            }
-        };
+                localStorage.setItem('ceut_blocked_days', JSON.stringify(window.appState.blockedDays));
 
-        window.savePinToFirestore = async function(userKey, newPin) {
-            if (!auth.currentUser) {
-                window.showToast("Imposible actualizar PIN: Sin sesión en el servidor.", "error");
-                return;
-            }
-            try {
-                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'pins', userKey), { pin: newPin });
-            } catch (error) {
-                console.error("Error al guardar PIN:", error);
-                window.showToast("Fallo al propagar PIN de seguridad: " + error.message, "error");
-            }
-        };
+                if (!auth.currentUser) return;
+                try {
+                    if (reason) {
+                        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'blocked_days', dateStr), { reason });
+                    } else {
+                        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'blocked_days', dateStr));
+                    }
+                } catch (error) {
+                    console.error("Error al inhabilitar día:", error);
+                }
+            };
 
-        function runBootstrapping() {
+            window.savePinToFirestore = async function(userKey, newPin) {
+                window.appState.users[userKey].pin = newPin;
+                localStorage.setItem('ceut_users', JSON.stringify(window.appState.users));
+
+                if (!auth.currentUser) return;
+                try {
+                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'pins', userKey), { pin: newPin });
+                } catch (error) {
+                    console.error("Error al guardar PIN:", error);
+                }
+            };
+
+            // Iniciar bootstrap con red
             window.renderLogin();
             startFirebaseSync().catch(e => {
-                console.warn("Fallo de carga en segundo plano de base de datos:", e);
+                console.warn("Fallo de sincronización inicial:", e);
             });
-        }
 
-        if (document.readyState === 'loading') {
-            window.addEventListener('DOMContentLoaded', runBootstrapping);
         } else {
-            runBootstrapping();
+            // DEGRADACIÓN A MODO LOCAL PREMIUM (Sin errores de consola)
+            window.appState.isSynced = false;
+            window.appState.userId = "LOCAL_MODE";
+
+            window.saveAptToFirestore = function(aptId, aptData) {
+                window.appState.agendaData[aptId] = aptData;
+                localStorage.setItem('ceut_agenda_data', JSON.stringify(window.appState.agendaData));
+            };
+
+            window.deleteAptFromFirestore = function(aptId) {
+                delete window.appState.agendaData[aptId];
+                localStorage.setItem('ceut_agenda_data', JSON.stringify(window.appState.agendaData));
+            };
+
+            window.saveHourBlockToFirestore = function(blockKey, blockState) {
+                if (blockState) {
+                    window.appState.blockedHours[blockKey] = true;
+                } else {
+                    delete window.appState.blockedHours[blockKey];
+                }
+                localStorage.setItem('ceut_blocked_hours', JSON.stringify(window.appState.blockedHours));
+            };
+
+            window.saveDayBlockToFirestore = function(dateStr, reason) {
+                if (reason) {
+                    window.appState.blockedDays[dateStr] = reason;
+                } else {
+                    delete window.appState.blockedDays[dateStr];
+                }
+                localStorage.setItem('ceut_blocked_days', JSON.stringify(window.appState.blockedDays));
+            };
+
+            window.savePinToFirestore = function(userKey, newPin) {
+                window.appState.users[userKey].pin = newPin;
+                localStorage.setItem('ceut_users', JSON.stringify(window.appState.users));
+            };
+
+            // Arrancar inmediato en local
+            window.renderLogin();
+            console.info("CEUT: Sincronización inactiva por falta de claves en Iframe. Ejecutando de modo Local Premium.");
         }
     </script>
 </body>
