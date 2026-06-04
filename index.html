@@ -115,7 +115,7 @@
 <body class="text-slate-100 min-h-screen relative overflow-x-hidden">
 
     <!-- Toast global para notificaciones -->
-    <div id="toast" class="fixed top-5 right-5 z-50 transform translate-y-[-100px] opacity-0 transition-all duration-300 pointer-events-none">
+    <div id="toast" class="fixed top-5 right-5 z-[200] transform translate-y-[-100px] opacity-0 transition-all duration-300 pointer-events-none">
         <div class="bg-clinical-950 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-3 border">
             <span id="toast-icon"></span>
             <span id="toast-message" class="text-sm font-semibold"></span>
@@ -150,7 +150,7 @@
                     </div>
                     <div class="flex justify-between items-center text-xs border-t border-clinical-800/60 pt-2.5">
                         <span class="text-slate-400 font-bold">Detalles / Periodo</span>
-                        <span class="text-slate-300 font-medium" id="alarm-details">Preparatoria • Grado: 3 • Grupo: A</span>
+                        <span class="text-slate-300 font-medium" id="alarm-details">Preparatoria • Semestre: 3 • Grupo: A</span>
                     </div>
                 </div>
                 <p class="text-slate-300 text-xs mb-6 font-semibold flex items-center gap-1.5 justify-center">
@@ -171,7 +171,7 @@
     </div>
 
     <!-- Asistente IA de Gemini -->
-    <div id="ai-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden items-center justify-center p-4">
+    <div id="ai-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[110] hidden items-center justify-center p-4">
         <div class="bg-clinical-900 border-2 border-brandGold-500 rounded-3xl w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col shadow-2xl animate-fade-up">
             <div class="bg-clinical-950 p-6 border-b border-clinical-800/85 flex justify-between items-center shrink-0">
                 <div class="flex items-center gap-2">
@@ -209,7 +209,7 @@
     </div>
 
     <!-- Cambiar PIN Carlos -->
-    <div id="change-pin-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden items-center justify-center p-4">
+    <div id="change-pin-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[110] hidden items-center justify-center p-4">
         <div class="bg-clinical-900 border-2 border-brandGold-500 rounded-3xl w-full max-w-sm shadow-2xl animate-fade-up flex flex-col overflow-hidden">
             <div class="bg-clinical-950 p-6 border-b border-clinical-800/80 flex justify-between items-center shrink-0">
                 <div class="flex items-center gap-2">
@@ -244,7 +244,7 @@
     </div>
 
     <!-- Bloqueo de Jornada Completa (Día) -->
-    <div id="block-day-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden items-center justify-center p-4">
+    <div id="block-day-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[110] hidden items-center justify-center p-4">
         <div class="bg-clinical-900 border-2 border-brandGold-500 rounded-3xl w-full max-w-sm shadow-2xl animate-fade-up flex flex-col overflow-hidden">
             <div class="bg-clinical-950 p-6 border-b border-clinical-800/80 flex justify-between items-center shrink-0">
                 <div class="flex items-center gap-2">
@@ -279,7 +279,7 @@
     </div>
 
     <!-- Confirmación corporativa sin alert/confirm -->
-    <div id="confirm-modal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-[100] hidden items-center justify-center p-4">
+    <div id="confirm-modal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-[150] hidden items-center justify-center p-4">
         <div class="bg-clinical-900 border-2 border-brandGold-500 rounded-3xl w-full max-w-sm shadow-2xl p-6 text-center space-y-4 animate-fade-up">
             <div class="w-16 h-16 rounded-full bg-brandGold-500/10 border border-brandGold-500 flex items-center justify-center mx-auto text-brandGold-500">
                 <i data-lucide="help-circle" class="w-8 h-8"></i>
@@ -298,7 +298,7 @@
     </div>
 
     <!-- Previsualización de Hojas Membretadas en Pantalla -->
-    <div id="report-preview-modal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[100] hidden items-center justify-center p-4 overflow-y-auto no-print">
+    <div id="report-preview-modal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[120] hidden items-center justify-center p-4 overflow-y-auto no-print">
         <div class="bg-white text-slate-900 rounded-[2rem] w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl animate-fade-up">
             <div class="bg-slate-900 p-4 flex justify-between items-center shrink-0 border-b border-slate-800">
                 <div class="flex items-center gap-2">
@@ -327,7 +327,6 @@
         </div>
     </div>
 
-    <!-- Scripts de Lógica y UI -->
     <script>
         const safeGetLocalJSON = (key, fallback) => {
             try {
@@ -343,7 +342,7 @@
             currentDate: new Date(),
             miniCalendarMonth: new Date(), 
             activeStatsPeriod: 'semana', 
-            viewMode: 'day', // Por defecto muestra el panel diario para un inicio enfocado
+            viewMode: 'day', // Default view mode
             searchQuery: '',
             filterType: 'all', 
             blockedDays: safeGetLocalJSON('ceut_blocked_days', {}), 
@@ -367,7 +366,7 @@
                 try {
                     lucide.createIcons();
                 } catch (e) {
-                    console.warn("Fallo temporal de renderizado de Lucide", e);
+                    console.warn("Lucide render lag", e);
                 }
             }
         };
@@ -503,7 +502,7 @@
                         window.appState.lastCheckedAlarmTime = timeKey;
                         document.getElementById('alarm-name').textContent = apt.student;
                         document.getElementById('alarm-time').textContent = apt.hour + " " + (parseInt(apt.hour) < 12 ? 'AM' : 'PM');
-                        document.getElementById('alarm-details').textContent = `${apt.level} • Grado: ${apt.grade} • Grupo: ${apt.group}`;
+                        document.getElementById('alarm-details').textContent = `${apt.level} • Semestre: ${apt.grade} • Grupo: ${apt.group}`;
                         
                         const alarmModal = document.getElementById('alarm-modal');
                         if (alarmModal) {
@@ -2276,7 +2275,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, deleteDoc, collection, query, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, deleteDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const appId = (typeof __app_id !== 'undefined' && __app_id) ? __app_id : 'ceut-agenda-pp-global';
         window.appState.appId = appId;
@@ -2288,10 +2287,9 @@
             console.error("Error al parsear configuración de Firebase:", e);
         }
 
-        // Dejamos la comprobación de Firebase completamente abierta para permitir sincronizar con emuladores o claves dummy
-        const hasConfig = firebaseConfig && firebaseConfig.apiKey;
+        const isConfigValid = firebaseConfig && firebaseConfig.apiKey;
 
-        if (hasConfig) {
+        if (isConfigValid) {
             let app, db, auth;
             try {
                 app = initializeApp(firebaseConfig);
@@ -2302,6 +2300,8 @@
                 async function startFirebaseSync() {
                     try {
                         let userCredential = null;
+                        
+                        // RULE 3 - Auth Before Queries: ALWAYS sign in first and await it
                         if (initialAuthToken) {
                             try {
                                 userCredential = await signInWithCustomToken(auth, initialAuthToken);
@@ -2316,22 +2316,27 @@
                         if (userCredential && userCredential.user) {
                             window.appState.isSynced = true;
                             window.appState.userId = userCredential.user.uid;
-                            bindFirestoreRealtimeListeners();
+                            
+                            // RULE 3: Guard firestore listeners
+                            bindFirestoreRealtimeListeners(db, userCredential.user);
                         } else {
                             window.appState.isSynced = false;
+                            setupLocalMode();
                         }
                     } catch (error) {
                         console.warn("Fallo de autenticación Firebase. Ejecutando de modo Local temporal.", error);
                         window.appState.isSynced = false;
+                        setupLocalMode();
                     }
                 }
 
-                function bindFirestoreRealtimeListeners() {
-                    if (!auth.currentUser) return;
+                function bindFirestoreRealtimeListeners(database, firebaseUser) {
+                    if (!firebaseUser) return;
 
-                    // 1. Sincronización compartida de Consultas en tiempo real
-                    const appointmentsQuery = query(collection(db, 'artifacts', appId, 'public', 'data', 'appointments'));
-                    onSnapshot(appointmentsQuery, (snapshot) => {
+                    // 1. Sincronización compartida de Consultas en tiempo real (Rule 2: simple collection query)
+                    const appointmentsCol = collection(database, 'artifacts', appId, 'public', 'data', 'appointments');
+                    onSnapshot(appointmentsCol, (snapshot) => {
+                        if (!auth.currentUser) return; // Guard
                         const fetchedApts = {};
                         snapshot.forEach(doc => {
                             fetchedApts[doc.id] = doc.data();
@@ -2345,9 +2350,10 @@
                         console.warn("Fallo temporal de lectura en la nube:", error);
                     });
 
-                    // 2. Sincronización compartida de Horas Bloqueadas
-                    const hoursQuery = query(collection(db, 'artifacts', appId, 'public', 'data', 'blocked_hours'));
-                    onSnapshot(hoursQuery, (snapshot) => {
+                    // 2. Sincronización compartida de Horas Bloqueadas (Rule 2)
+                    const hoursCol = collection(database, 'artifacts', appId, 'public', 'data', 'blocked_hours');
+                    onSnapshot(hoursCol, (snapshot) => {
+                        if (!auth.currentUser) return; // Guard
                         const fetchedHours = {};
                         snapshot.forEach(doc => {
                             fetchedHours[doc.id] = true;
@@ -2361,9 +2367,10 @@
                         console.warn("Fallo temporal de lectura de bloqueos de horas:", error);
                     });
 
-                    // 3. Sincronización compartida de Días Bloqueados
-                    const daysQuery = query(collection(db, 'artifacts', appId, 'public', 'data', 'blocked_days'));
-                    onSnapshot(daysQuery, (snapshot) => {
+                    // 3. Sincronización compartida de Días Bloqueados (Rule 2)
+                    const daysCol = collection(database, 'artifacts', appId, 'public', 'data', 'blocked_days');
+                    onSnapshot(daysCol, (snapshot) => {
+                        if (!auth.currentUser) return; // Guard
                         const fetchedDays = {};
                         snapshot.forEach(doc => {
                             fetchedDays[doc.id] = doc.data().reason || true;
@@ -2377,9 +2384,10 @@
                         console.warn("Fallo temporal de lectura de días bloqueados:", error);
                     });
 
-                    // 4. Sincronización compartida de PINs de acceso para Carlos
-                    const pinsQuery = query(collection(db, 'artifacts', appId, 'public', 'data', 'pins'));
-                    onSnapshot(pinsQuery, (snapshot) => {
+                    // 4. Sincronización compartida de PINs de acceso para Carlos (Rule 2)
+                    const pinsCol = collection(database, 'artifacts', appId, 'public', 'data', 'pins');
+                    onSnapshot(pinsCol, (snapshot) => {
+                        if (!auth.currentUser) return; // Guard
                         snapshot.forEach(doc => {
                             const userKey = doc.id;
                             if (window.appState.users[userKey]) {
@@ -2395,11 +2403,12 @@
                     });
                 }
 
+                // Writers configured with auth guards (Rule 3)
                 window.saveAptToFirestore = async function(aptId, aptData) {
                     window.appState.agendaData[aptId] = aptData;
                     localStorage.setItem('ceut_agenda_data', JSON.stringify(window.appState.agendaData));
 
-                    if (!auth.currentUser) return;
+                    if (!auth.currentUser) return; // Guard
                     try {
                         await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'appointments', aptId), aptData);
                     } catch (error) {
@@ -2411,7 +2420,7 @@
                     delete window.appState.agendaData[aptId];
                     localStorage.setItem('ceut_agenda_data', JSON.stringify(window.appState.agendaData));
 
-                    if (!auth.currentUser) return;
+                    if (!auth.currentUser) return; // Guard
                     try {
                         await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'appointments', aptId));
                     } catch (error) {
@@ -2427,7 +2436,7 @@
                     }
                     localStorage.setItem('ceut_blocked_hours', JSON.stringify(window.appState.blockedHours));
 
-                    if (!auth.currentUser) return;
+                    if (!auth.currentUser) return; // Guard
                     try {
                         if (blockState) {
                             await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'blocked_hours', blockKey), { blocked: true });
@@ -2447,7 +2456,7 @@
                     }
                     localStorage.setItem('ceut_blocked_days', JSON.stringify(window.appState.blockedDays));
 
-                    if (!auth.currentUser) return;
+                    if (!auth.currentUser) return; // Guard
                     try {
                         if (reason) {
                             await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'blocked_days', dateStr), { reason });
@@ -2463,7 +2472,7 @@
                     window.appState.users[userKey].pin = newPin;
                     localStorage.setItem('ceut_users', JSON.stringify(window.appState.users));
 
-                    if (!auth.currentUser) return;
+                    if (!auth.currentUser) return; // Guard
                     try {
                         await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'pins', userKey), { pin: newPin });
                     } catch (error) {
@@ -2471,14 +2480,15 @@
                     }
                 };
 
-                // Lanzamiento del Bootstrap
+                // Bootstrap
                 window.renderLogin();
                 startFirebaseSync().catch(e => {
                     console.warn("Fallo de arranque de sincronización:", e);
+                    setupLocalMode();
                 });
 
             } catch (err) {
-                console.warn("Error de inicialización de Firebase. Iniciando en Modo Local Inteligente.", err);
+                console.warn("Error de inicialización de Firebase. Iniciando en Modo Local.", err);
                 setupLocalMode();
             }
         } else {
