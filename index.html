@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Agenda Psicopedagógica CEUT</title>
-    <link rel="icon" type="image/png" href="https://drive.google.com/thumbnail?id=1ao9olFJOvSPvgmeyLJhkD1P0Pmq_R3T2&sz=w128">
+    <link class="favicon" rel="icon" type="image/png" href="https://drive.google.com/thumbnail?id=1ao9olFJOvSPvgmeyLJhkD1P0Pmq_R3T2&sz=w128">
     
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -177,6 +177,84 @@
     </div>
 
     <script>
+        // ALGORITMO INTEGRADO DE DOM DIFFING (Previene por completo parpadeos y mantiene cursores activos)
+        function smartMorph(oldNode, newNode) {
+            if (oldNode.nodeType !== newNode.nodeType) {
+                oldNode.parentNode.replaceChild(newNode.cloneNode(true), oldNode);
+                return;
+            }
+            if (oldNode.nodeType === Node.TEXT_NODE) {
+                if (oldNode.nodeValue !== newNode.nodeValue) {
+                    oldNode.nodeValue = newNode.nodeValue;
+                }
+                return;
+            }
+            if (oldNode.nodeType === Node.ELEMENT_NODE) {
+                if (oldNode.tagName !== newNode.tagName) {
+                    oldNode.parentNode.replaceChild(newNode.cloneNode(true), oldNode);
+                    return;
+                }
+                
+                const isInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes(oldNode.tagName);
+                const isActive = (oldNode === document.activeElement);
+                
+                // Comparar Atributos
+                const oldAttrs = oldNode.attributes;
+                const newAttrs = newNode.attributes;
+                
+                for (let i = oldAttrs.length - 1; i >= 0; i--) {
+                    const attrName = oldAttrs[i].name;
+                    if (!newNode.hasAttribute(attrName)) {
+                        oldNode.removeAttribute(attrName);
+                    }
+                }
+                
+                for (let i = 0; i < newAttrs.length; i++) {
+                    const attrName = newAttrs[i].name;
+                    const attrValue = newAttrs[i].value;
+                    if (oldNode.getAttribute(attrName) !== attrValue) {
+                        oldNode.setAttribute(attrName, attrValue);
+                    }
+                }
+                
+                // Mantener los valores de los inputs y mantener el cursor/foco activo
+                if (isInput) {
+                    if (oldNode.value !== newNode.value) {
+                        if (isActive) {
+                            const start = oldNode.selectionStart;
+                            const end = oldNode.selectionEnd;
+                            oldNode.value = newNode.value;
+                            if (start !== null && end !== null) {
+                                oldNode.setSelectionRange(start, end);
+                            }
+                        } else {
+                            oldNode.value = newNode.value;
+                        }
+                    }
+                    if (oldNode.checked !== newNode.checked) {
+                        oldNode.checked = newNode.checked;
+                    }
+                }
+                
+                // Sincronizar nodos hijos recursivamente
+                const oldChildren = Array.from(oldNode.childNodes);
+                const newChildren = Array.from(newNode.childNodes);
+                const oldLen = oldChildren.length;
+                const newLen = newChildren.length;
+                const maxLen = Math.max(oldLen, newLen);
+                
+                for (let i = 0; i < maxLen; i++) {
+                    if (i >= oldLen) {
+                        oldNode.appendChild(newChildren[i].cloneNode(true));
+                    } else if (i >= newLen) {
+                        oldNode.removeChild(oldChildren[i]);
+                    } else {
+                        smartMorph(oldChildren[i], newChildren[i]);
+                    }
+                }
+            }
+        }
+
         const safeGetLocalJSON = (key, fallback) => {
             try {
                 const val = localStorage.getItem(key);
@@ -195,6 +273,7 @@
             searchQuery: '',
             filterType: 'all', 
             chatTarget: 'team',
+            unreadMessagesCount: 0, // Alerta visual de mensajes nuevos
             blockedDays: safeGetLocalJSON('ceut_blocked_days', {}), 
             blockedHours: safeGetLocalJSON('ceut_blocked_hours', {}), 
             users: safeGetLocalJSON('ceut_users', {
@@ -309,6 +388,32 @@
                 window.appState.confirmCallback();
             }
             window.appState.confirmCallback = null;
+        };
+
+        // Generador de audio sintetizado nativo para alertas de mensajes nuevos
+        window.playMessageNotificationSound = function() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                
+                osc.type = 'sine';
+                const now = ctx.currentTime;
+                // Notas dulces y profesionales (E5 entonces A5)
+                osc.frequency.setValueAtTime(659.25, now); 
+                osc.frequency.setValueAtTime(880.00, now + 0.12);
+                
+                gain.gain.setValueAtTime(0.12, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+                
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                
+                osc.start(now);
+                osc.stop(now + 0.5);
+            } catch (e) {
+                console.warn("Fallo de reproducción por política de Autoplay", e);
+            }
         };
     </script>
 
@@ -537,7 +642,7 @@
             }
         };
 
-        // Monitoreo acústico de voz exclusivo para Carlos
+        // Monitoreo acústico de voz exclusivo para Carlos y actualización del reloj
         setInterval(() => {
             const now = new Date();
             const currentHour = String(now.getHours()).padStart(2, '0');
@@ -766,7 +871,6 @@
                             </div>
                         `;
                     } else {
-                        // Sutil ocultamiento de datos confidenciales del director para Miroslava y pasantes
                         html += `
                             <div class="w-full bg-slate-900/40 border border-slate-800 rounded-2xl p-4 flex justify-between items-center shadow-sm animate-fade-up">
                                 <div class="flex items-center gap-2 text-brandGold-500 font-sans">
@@ -1260,7 +1364,7 @@
                         ${!isTeam ? `
                         <div class="px-4 py-2 bg-clinical-950/30 border-t border-clinical-800/50 flex flex-wrap gap-2 items-center">
                             <span class="text-[9px] text-brandGold-500 font-bold uppercase tracking-widest flex items-center gap-1">
-                                <i data-lucide="lightbulb" class="w-3 h-3"></i> Consultas sugeridad:
+                                <i data-lucide="lightbulb" class="w-3 h-3"></i> Consultas sugeridas:
                             </span>
                             <button onclick="window.useQuickChatSuggestion('¿Qué estrategias aplicar para un alumno con déficit de atención?')" class="bg-clinical-900 hover:bg-clinical-800 text-[10px] text-slate-300 py-1 px-2.5 rounded-full border border-clinical-800 hover:border-brandGold-500/30 transition-all font-sans font-bold">
                                 💡 Déficit de Atención
@@ -1399,8 +1503,7 @@
             }
 
             try {
-                const systemPrompt = "Actúa como un asesor psicopedagógico clínico de excelencia del Centro Educativo Universitario de Tehuacán (CEUT). Tu misión es responder consultas de forma estructurada, profesional, y breve. Posees acceso al historial de la conversación actual del equipo para mantener coherencia analítica.";
-                
+                const systemPrompt = "Actúa como un asesor psicopedagógico clínico de excelencia del Centro Educativo Universitario de Tehuacán (CEUT). Tu misión es responder consultas de forma de viñetas estructuradas y profesionales.";
                 const apiKey = ""; 
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
 
@@ -1654,6 +1757,12 @@
             const isBlocked = window.appState.blockedDays[dateStr];
             const isCarlos = (window.appState.currentUser === 'carlos');
 
+            // Badge de chat no leído dinámico
+            const unreadCount = window.appState.unreadMessagesCount || 0;
+            const chatBadgeHtml = unreadCount > 0 
+                ? `<span class="bg-rose-500 text-white font-black text-[10px] px-2 py-0.5 rounded-full animate-pulse">${unreadCount}</span>` 
+                : '';
+
             let sidebarHtml = `
                 <aside class="w-full md:w-80 bg-clinical-950/90 backdrop-blur-md border-b md:border-b-0 md:border-r border-clinical-850 p-6 flex flex-col gap-6 no-print shrink-0 z-20 font-sans">
                     <div class="flex items-center gap-3">
@@ -1704,7 +1813,8 @@
                             <span class="flex items-center gap-2.5 text-xs uppercase tracking-wider font-bold"><i data-lucide="calendar-range" class="w-4 h-4"></i> Vista Mensual</span>
                         </button>
                         <button onclick="window.switchViewMode('chat')" class="w-full text-left py-3 px-4 rounded-xl flex items-center justify-between transition-colors ${window.appState.viewMode === 'chat' ? 'bg-brandGold-500 text-clinical-950 font-black shadow-md' : 'bg-clinical-900 hover:bg-clinical-850 text-slate-300'}">
-                            <span class="flex items-center gap-2.5 text-xs uppercase tracking-wider font-bold"><i data-lucide="message-square" class="w-4 h-4"></i> Chat de Equipo</span>
+                            <span class="flex items-center gap-2.5 text-xs uppercase tracking-wider font-bold flex-1"><i data-lucide="message-square" class="w-4 h-4 mr-2.5"></i> Chat de Equipo</span>
+                            ${chatBadgeHtml}
                         </button>
                         ${isCarlos ? `
                             <button onclick="window.switchViewMode('carlos-events')" class="w-full text-left py-3 px-4 rounded-xl flex items-center justify-between transition-colors ${window.appState.viewMode === 'carlos-events' ? 'bg-brandGold-500 text-clinical-950 font-black shadow-md' : 'bg-clinical-900 hover:bg-clinical-850 text-slate-300'}">
@@ -1716,7 +1826,7 @@
                         </button>
                     </div>
                     <div class="space-y-2.5 font-sans">
-                        <span class="text-slate-400 font-bold uppercase tracking-wider text-[10px] block font-sans">Categorías</span>
+                        <span class="text-slate-400 font-bold uppercase tracking-wider text-[10px] block mb-2.5">Categorías</span>
                         <div class="grid grid-cols-2 gap-1.5 text-[11px] font-bold">
                             <button onclick="window.setFilter('all')" class="py-2.5 px-3 rounded-xl flex items-center gap-1.5 transition-colors ${window.appState.filterType === 'all' ? 'bg-brandGold-500 text-clinical-950 shadow-md' : 'bg-clinical-900 text-slate-300 hover:bg-clinical-850'}">
                                 <i data-lucide="layout-grid" class="w-4 h-4"></i> Todas
@@ -1758,7 +1868,7 @@
                         </div>
                         <div class="flex items-center gap-3.5 font-sans">
                             
-                            <div onclick="document.getElementById('network-modal').classList.remove('hidden');" class="text-[10px] font-mono font-bold flex flex-col items-end gap-1 px-3 py-1.5 rounded-xl bg-clinical-900 hover:bg-clinical-850 cursor-pointer border border-clinical-800 leading-none transition-colors">
+                            <div onclick="document.getElementById('network-modal').classList.remove('hidden');" class="text-[10px] font-mono font-bold flex flex-col items-end gap-1 px-3 py-1.5 rounded-xl bg-clinical-900 hover:bg-clinical-850 cursor-pointer border border-clinical-800/80 leading-none transition-colors">
                                 <div class="flex items-center gap-1.5">
                                     <span class="w-2.5 h-2.5 rounded-full ${window.appState.isSynced ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}"></span>
                                     <span class="${window.appState.isSynced ? 'text-emerald-400' : 'text-amber-400'}">
@@ -1913,7 +2023,14 @@
             }
 
             mainContentHtml += `</main>`;
-            app.innerHTML = `<div class="flex-1 flex flex-col md:flex-row min-h-screen w-full animate-fade-up font-sans">${sidebarHtml}${mainContentHtml}</div>`;
+            
+            // RENDERING CON DOM DIFFING (Quita por completo los parpadeos y conserva cursores)
+            const tempDiv = document.createElement('div');
+            tempDiv.id = 'app';
+            tempDiv.className = 'min-h-screen flex flex-col transition-opacity duration-350';
+            tempDiv.innerHTML = `<div class="flex-1 flex flex-col md:flex-row min-h-screen w-full animate-fade-up font-sans">${sidebarHtml}${mainContentHtml}</div>`;
+            
+            smartMorph(app, tempDiv);
 
             window.renderMiniCalendar();
             window.safeCreateIcons();
@@ -1921,6 +2038,14 @@
             if (window.appState.viewMode === 'chat' && window.scrollChatToBottom) {
                 window.scrollChatToBottom();
             }
+        };
+
+        window.switchViewMode = function(mode) {
+            window.appState.viewMode = mode;
+            if (mode === 'chat') {
+                window.appState.unreadMessagesCount = 0; // Limpia badge cuando lee el chat
+            }
+            window.renderMainApp();
         };
     </script>
 
@@ -1933,7 +2058,6 @@
             modal.id = "appointment-form-modal";
             modal.className = "fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 no-print";
             
-            // Renderizado condicional de pestañas en el creador solo si el usuario activo es el director Carlos
             modal.innerHTML = `
                 <div class="bg-clinical-900 border-2 border-brandGold-500 rounded-3xl w-full max-w-xl shadow-2xl animate-fade-up overflow-hidden max-h-[90vh] flex flex-col font-sans">
                     <div class="bg-clinical-950 p-6 border-b border-clinical-850 flex justify-between items-center shrink-0">
@@ -2722,11 +2846,6 @@
             };
         };
 
-        window.switchViewMode = function(mode) {
-            window.appState.viewMode = mode;
-            window.renderMainApp();
-        };
-
         window.setStatsPeriod = function(period) {
             window.appState.activeStatsPeriod = period;
             window.renderMainApp();
@@ -2828,6 +2947,10 @@
             const userKey = document.getElementById('login-user').value;
             const pinEntered = document.getElementById('login-pin').value;
             
+            if (window.appState && window.appState.unreadMessagesCount) {
+                window.appState.unreadMessagesCount = 0; // Limpia badge al loguear
+            }
+
             if (window.appState && window.appState.users && window.appState.users[userKey]) {
                 if (window.appState.users[userKey].pin === pinEntered) {
                     window.appState.currentUser = userKey;
@@ -2897,6 +3020,7 @@
                 searchQuery: '',
                 filterType: 'all', 
                 chatTarget: 'team',
+                unreadMessagesCount: 0,
                 blockedDays: {}, 
                 blockedHours: {}, 
                 users: {
@@ -3052,8 +3176,9 @@
                     }
                 });
 
-                // 6. Sincronización de Chat de Equipo
+                // 6. Sincronización de Chat de Equipo con Alertas y sonido
                 const chatCol = collection(database, 'artifacts', appId, 'public', 'data', 'chat_messages');
+                let isInitialLoad = true; // Previene falsos disparos en la carga primera
                 onSnapshot(chatCol, (snapshot) => {
                     if (!auth.currentUser) return;
                     const fetchedMsgs = [];
@@ -3061,6 +3186,25 @@
                         fetchedMsgs.push(doc.data());
                     });
                     fetchedMsgs.sort((a, b) => a.timestamp - b.timestamp);
+                    
+                    // Lógica de detección de mensajes nuevos de otros usuarios
+                    if (!isInitialLoad && fetchedMsgs.length > window.appState.chatMessages.length) {
+                        const latestMessage = fetchedMsgs[fetchedMsgs.length - 1];
+                        const currentUser = window.appState.currentUser;
+                        
+                        if (latestMessage.senderId !== currentUser) {
+                            // Emitir sonido
+                            window.playMessageNotificationSound();
+                            
+                            // Si el usuario no está en la pestaña de chat, activamos alerta visual y badge
+                            if (window.appState.viewMode !== 'chat') {
+                                window.appState.unreadMessagesCount = (window.appState.unreadMessagesCount || 0) + 1;
+                                window.showToast(`Nuevo mensaje de ${latestMessage.senderName}: "${latestMessage.text.substring(0, 30)}..."`, 'info');
+                            }
+                        }
+                    }
+                    isInitialLoad = false;
+
                     window.appState.chatMessages = fetchedMsgs;
                     localStorage.setItem('ceut_chat_messages', JSON.stringify(fetchedMsgs));
                     if (window.appState.currentUser) {
@@ -3069,6 +3213,8 @@
                             window.scrollChatToBottom();
                         }
                     }
+                }, (error) => {
+                    console.warn("Fallo al sincronizar chat", error);
                 });
             }
 
