@@ -1101,6 +1101,7 @@
                                         ${window.appState.isSynced ? '🟢 En Línea' : '🟡 Modo Local'}
                                     </span>
                                 </div>
+                                <span class="text-[8px] text-slate-400" id="sync-status-details">Conectando...</span>
                                 <span class="text-[9px] text-slate-500">Canal: ${window.appState.appId}</span>
                             </div>
 
@@ -2277,7 +2278,8 @@
         import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, deleteDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        const appId = (typeof __app_id !== 'undefined' && __app_id) ? __app_id : 'ceut-agenda-pp-global';
+        // RULE 1: Configurar estrictamente la ruta raíz
+        const appId = (typeof __app_id !== 'undefined' && __app_id) ? String(__app_id).trim() : 'ceut-agenda-pp-global';
         window.appState.appId = appId;
         
         let firebaseConfig = null;
@@ -2291,6 +2293,7 @@
 
         if (isConfigValid) {
             let app, db, auth;
+            const statusDetail = document.getElementById('sync-status-details');
             try {
                 app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
@@ -2303,6 +2306,7 @@
                         
                         // RULE 3 - Auth Before Queries: ALWAYS sign in first and await it
                         if (initialAuthToken) {
+                            if (statusDetail) statusDetail.textContent = 'Autenticando Token...';
                             try {
                                 userCredential = await signInWithCustomToken(auth, initialAuthToken);
                             } catch (tokenErr) {
@@ -2310,22 +2314,26 @@
                                 userCredential = await signInAnonymously(auth);
                             }
                         } else {
+                            if (statusDetail) statusDetail.textContent = 'Autenticando Anónimo...';
                             userCredential = await signInAnonymously(auth);
                         }
 
                         if (userCredential && userCredential.user) {
                             window.appState.isSynced = true;
                             window.appState.userId = userCredential.user.uid;
+                            if (statusDetail) statusDetail.textContent = 'Conectado a la Nube';
                             
                             // RULE 3: Guard firestore listeners
                             bindFirestoreRealtimeListeners(db, userCredential.user);
                         } else {
                             window.appState.isSynced = false;
+                            if (statusDetail) statusDetail.textContent = 'Error de Firma';
                             setupLocalMode();
                         }
                     } catch (error) {
-                        console.warn("Fallo de autenticación Firebase. Ejecutando de modo Local temporal.", error);
+                        console.warn("Fallo de autenticación Firebase. Ejecutando de modo Local.", error);
                         window.appState.isSynced = false;
+                        if (statusDetail) statusDetail.textContent = 'Error: ' + (error.message || 'Sin Conexión');
                         setupLocalMode();
                     }
                 }
@@ -2348,6 +2356,7 @@
                         }
                     }, (error) => {
                         console.warn("Fallo temporal de lectura en la nube:", error);
+                        if (statusDetail) statusDetail.textContent = 'Error de lectura';
                     });
 
                     // 2. Sincronización compartida de Horas Bloqueadas (Rule 2)
@@ -2480,8 +2489,9 @@
                     }
                 };
 
-                // Bootstrap
+                // Bootstrap síncrono inicial de login
                 window.renderLogin();
+                // Sincronización en segundo plano sin bloquear interfaz
                 startFirebaseSync().catch(e => {
                     console.warn("Fallo de arranque de sincronización:", e);
                     setupLocalMode();
@@ -2498,6 +2508,8 @@
         function setupLocalMode() {
             window.appState.isSynced = false;
             window.appState.userId = "MODO_LOCAL";
+            const statusDetail = document.getElementById('sync-status-details');
+            if (statusDetail) statusDetail.textContent = 'Modo Local Activo';
 
             window.saveAptToFirestore = function(aptId, aptData) {
                 window.appState.agendaData[aptId] = aptData;
