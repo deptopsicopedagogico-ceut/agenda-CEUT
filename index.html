@@ -85,6 +85,12 @@
             filter: invert(1) sepia(1) saturate(5) hue-rotate(5deg);
             cursor: pointer;
         }
+        .chat-bubble-self {
+            border-bottom-right-radius: 4px;
+        }
+        .chat-bubble-other {
+            border-bottom-left-radius: 4px;
+        }
         @media print {
             body {
                 background: #ffffff !important;
@@ -170,6 +176,142 @@
         </div>
     </div>
 
+    <script>
+        const safeGetLocalJSON = (key, fallback) => {
+            try {
+                const val = localStorage.getItem(key);
+                return val ? JSON.parse(val) : fallback;
+            } catch (e) {
+                return fallback;
+            }
+        };
+
+        window.appState = {
+            currentUser: null, 
+            currentDate: new Date(),
+            miniCalendarMonth: new Date(), 
+            activeStatsPeriod: 'semana', 
+            viewMode: 'day', 
+            searchQuery: '',
+            filterType: 'all', 
+            chatTarget: 'team',
+            blockedDays: safeGetLocalJSON('ceut_blocked_days', {}), 
+            blockedHours: safeGetLocalJSON('ceut_blocked_hours', {}), 
+            users: safeGetLocalJSON('ceut_users', {
+                'carlos': { name: 'Mtro. Carlos Aguilar Sánchez', role: 'Responsable Psicopedagógico', pin: '1015' },
+                'miroslava': { name: 'Lic. Miroslava Abril Hoyos Rojas', role: 'Coordinadora', pin: '1015', isRestricted: true },
+                'abril': { name: 'Pasantes Depto. Psicopedagógico', role: 'Pasante Psicopedagógico', pin: '1015', isRestricted: true }
+            }),
+            agendaData: safeGetLocalJSON('ceut_agenda_data', {}), 
+            carlosEvents: safeGetLocalJSON('ceut_carlos_events', {}),
+            chatMessages: safeGetLocalJSON('ceut_chat_messages', []),
+            scheduleConfig: { startHour: 8, endHour: 21 },
+            lastCheckedAlarmTime: null,
+            isSynced: false,
+            appId: 'agenda-ceut',
+            userId: null,
+            confirmCallback: null
+        };
+
+        window.safeCreateIcons = function() {
+            if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') {
+                try {
+                    lucide.createIcons();
+                } catch (e) {
+                    console.warn("Lucide render lag", e);
+                }
+            }
+        };
+
+        window.formatFullDateES = function(dateInput) {
+            if (!dateInput) return "";
+            const d = new Date(dateInput);
+            if (isNaN(d.getTime())) return String(dateInput);
+            const offset = d.getTimezoneOffset() * 60000;
+            const adjustedDate = new Date(d.getTime() + offset);
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            const formatted = adjustedDate.toLocaleDateString('es-MX', options);
+            return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+        };
+
+        window.scrollChatToBottom = function() {
+            setTimeout(() => {
+                const feed = document.getElementById('chat-messages-feed');
+                if (feed) {
+                    feed.scrollTop = feed.scrollHeight;
+                }
+            }, 80);
+        };
+
+        window.getHourSlots = function() {
+            const slots = [];
+            const { startHour, endHour } = window.appState.scheduleConfig;
+            for (let h = startHour; h < endHour; h++) {
+                slots.push(String(h).padStart(2, '0') + ':00');
+            }
+            return slots;
+        };
+
+        window.generateFolioCode = function(apt) {
+            if (!apt) return "CEUT-PP-00000";
+            const levelCode = apt.level === 'Preparatoria' ? 'PREP' : 'LIC';
+            const year = apt.date ? apt.date.split('-')[0] : new Date().getFullYear();
+            const numericHash = apt.id.replace(/[^0-9]/g, '');
+            const uniqueSeq = numericHash ? numericHash.slice(-5) : Math.floor(10000 + Math.random() * 90000);
+            return `CEUT-PP-${levelCode}-${year}-${uniqueSeq}`;
+        };
+
+        window.showToast = function(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const icon = document.getElementById('toast-icon');
+            const msg = document.getElementById('toast-message');
+            if (!toast) return;
+            
+            if (type === 'success') {
+                icon.innerHTML = '<i data-lucide="check-circle" class="w-5 h-5 text-emerald-400"></i>';
+                toast.firstElementChild.className = 'bg-clinical-950 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-3 border border-emerald-500/30';
+            } else if (type === 'error') {
+                icon.innerHTML = '<i data-lucide="alert-circle" class="w-5 h-5 text-rose-400"></i>';
+                toast.firstElementChild.className = 'bg-clinical-950 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-3 border border-rose-500/30';
+            } else {
+                icon.innerHTML = '<i data-lucide="info" class="w-5 h-5 text-brandGold-500"></i>';
+                toast.firstElementChild.className = 'bg-clinical-950 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-3 border border-brandGold-500/30';
+            }
+            msg.textContent = message;
+            window.safeCreateIcons();
+            
+            toast.classList.remove('translate-y-[-100px]', 'opacity-0', 'pointer-events-none');
+            toast.classList.add('translate-y-0', 'opacity-100');
+            
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-[-100px]', 'opacity-0', 'pointer-events-none');
+            }, 4000);
+        };
+
+        window.showConfirmModal = function(message, callback) {
+            const modal = document.getElementById('confirm-modal');
+            const msgEl = document.getElementById('confirm-message');
+            if (!modal || !msgEl) return;
+            msgEl.textContent = message;
+            window.appState.confirmCallback = callback;
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        };
+
+        window.closeConfirmModal = function(accepted) {
+            const modal = document.getElementById('confirm-modal');
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+            if (accepted && typeof window.appState.confirmCallback === 'function') {
+                window.appState.confirmCallback();
+            }
+            window.appState.confirmCallback = null;
+        };
+    </script>
+
     <!-- Asistente IA de Gemini -->
     <div id="ai-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[110] hidden items-center justify-center p-4">
         <div class="bg-clinical-900 border-2 border-brandGold-500 rounded-3xl w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col shadow-2xl animate-fade-up">
@@ -191,7 +333,7 @@
                 <div class="w-12 h-12 border-4 border-brandGold-500 border-t-transparent rounded-full animate-spin"></div>
                 <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">Procesando observaciones con IA...</p>
             </div>
-            <div class="p-6 overflow-y-auto flex-1 space-y-4 text-sm leading-relaxed text-slate-300" id="ai-modal-body"></div>
+            <div class="p-6 overflow-y-auto flex-1 space-y-4 text-sm leading-relaxed text-slate-300 animate-fade-up" id="ai-modal-body"></div>
             <div class="p-6 bg-clinical-950 border-t border-clinical-800/85 flex flex-col sm:flex-row gap-3 items-center justify-between shrink-0">
                 <span class="text-xs text-slate-400 font-medium">¿Deseas aplicar estos datos a las observaciones actuales?</span>
                 <div class="flex gap-2 w-full sm:w-auto">
@@ -245,12 +387,9 @@
 
                 <div class="space-y-2">
                     <div class="flex justify-between items-center">
-                        <label for="manual-config-input" class="block font-bold text-slate-300 uppercase tracking-wider font-sans">Conectar a tu Propia Base de Datos (Firebase)</label>
+                        <label for="manual-config-input" class="block font-bold text-slate-300 uppercase tracking-wider font-sans">Conectar a tu Propia Base de Datos</label>
                         <button onclick="window.resetCustomFirebaseConfig()" class="text-rose-400 hover:text-rose-300 hover:underline font-bold text-[10px] uppercase">Restablecer Config</button>
                     </div>
-                    <p class="text-slate-400 text-[10px] leading-relaxed">
-                        Si tu entorno está en "Modo Local", puedes pegar la configuración web de tu propio proyecto de Firebase para habilitar sincronización total en tiempo real entre tus dispositivos.
-                    </p>
                     <textarea id="manual-config-input" placeholder='{\n  "apiKey": "AIzaSy...",\n  "authDomain": "...",\n  "projectId": "...",\n  "appId": "..."\n}' class="w-full bg-clinical-950 border border-clinical-800 rounded-xl p-3 font-mono text-[10px] text-brandGold-500 focus:outline-none focus:ring-2 focus:ring-brandGold-500/50" rows="5"></textarea>
                 </div>
 
@@ -358,7 +497,7 @@
                     <div class="p-1.5 rounded-lg bg-brandGold-500/10 border border-brandGold-500/30">
                         <i data-lucide="printer" class="w-5 h-5 text-brandGold-500"></i>
                     </div>
-                    <span class="font-outfit font-black text-white text-sm tracking-wide">Previsualización de Documento de Lujo</span>
+                    <span class="font-outfit font-black text-white text-sm tracking-wide">Previsualización de Documento</span>
                 </div>
                 <div class="flex items-center gap-2">
                     <button onclick="window.print()" class="px-4 py-2 bg-brandGold-500 hover:bg-brandGold-600 text-slate-900 rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-lg">
@@ -381,128 +520,6 @@
     </div>
 
     <script>
-        const safeGetLocalJSON = (key, fallback) => {
-            try {
-                const val = localStorage.getItem(key);
-                return val ? JSON.parse(val) : fallback;
-            } catch (e) {
-                return fallback;
-            }
-        };
-
-        window.appState = {
-            currentUser: null, 
-            currentDate: new Date(),
-            miniCalendarMonth: new Date(), 
-            activeStatsPeriod: 'semana', 
-            viewMode: 'day', // Default view mode
-            searchQuery: '',
-            filterType: 'all', 
-            blockedDays: safeGetLocalJSON('ceut_blocked_days', {}), 
-            blockedHours: safeGetLocalJSON('ceut_blocked_hours', {}), 
-            users: safeGetLocalJSON('ceut_users', {
-                'carlos': { name: 'Mtro. Carlos Aguilar Sánchez', role: 'Responsable Psicopedagógico', pin: '1015' },
-                'miroslava': { name: 'Lic. Miroslava Abril Hoyos Rojas', role: 'Coordinadora', pin: '1015', isRestricted: true },
-                'abril': { name: 'Pasantes Depto. Psicopedagógico', role: 'Pasante Psicopedagógico', pin: '1015', isRestricted: true }
-            }),
-            agendaData: safeGetLocalJSON('ceut_agenda_data', {}), 
-            scheduleConfig: { startHour: 8, endHour: 21 },
-            lastCheckedAlarmTime: null,
-            isSynced: false,
-            appId: 'agenda-ceut',
-            userId: null,
-            confirmCallback: null
-        };
-
-        window.safeCreateIcons = function() {
-            if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') {
-                try {
-                    lucide.createIcons();
-                } catch (e) {
-                    console.warn("Lucide render lag", e);
-                }
-            }
-        };
-
-        window.formatFullDateES = function(dateInput) {
-            if (!dateInput) return "";
-            const d = new Date(dateInput);
-            if (isNaN(d.getTime())) return String(dateInput);
-            const offset = d.getTimezoneOffset() * 60000;
-            const adjustedDate = new Date(d.getTime() + offset);
-            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-            const formatted = adjustedDate.toLocaleDateString('es-MX', options);
-            return formatted.charAt(0).toUpperCase() + formatted.slice(1);
-        };
-
-        window.getHourSlots = function() {
-            const slots = [];
-            const { startHour, endHour } = window.appState.scheduleConfig;
-            for (let h = startHour; h < endHour; h++) {
-                slots.push(String(h).padStart(2, '0') + ':00');
-            }
-            return slots;
-        };
-
-        window.generateFolioCode = function(apt) {
-            if (!apt) return "CEUT-PP-00000";
-            const levelCode = apt.level === 'Preparatoria' ? 'PREP' : 'LIC';
-            const year = apt.date ? apt.date.split('-')[0] : new Date().getFullYear();
-            const numericHash = apt.id.replace(/[^0-9]/g, '');
-            const uniqueSeq = numericHash ? numericHash.slice(-5) : Math.floor(10000 + Math.random() * 90000);
-            return `CEUT-PP-${levelCode}-${year}-${uniqueSeq}`;
-        };
-
-        window.showToast = function(message, type = 'success') {
-            const toast = document.getElementById('toast');
-            const icon = document.getElementById('toast-icon');
-            const msg = document.getElementById('toast-message');
-            if (!toast) return;
-            
-            if (type === 'success') {
-                icon.innerHTML = '<i data-lucide="check-circle" class="w-5 h-5 text-emerald-400"></i>';
-                toast.firstElementChild.className = 'bg-clinical-950 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-3 border border-emerald-500/30';
-            } else if (type === 'error') {
-                icon.innerHTML = '<i data-lucide="alert-circle" class="w-5 h-5 text-rose-400"></i>';
-                toast.firstElementChild.className = 'bg-clinical-950 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-3 border border-rose-500/30';
-            } else {
-                icon.innerHTML = '<i data-lucide="info" class="w-5 h-5 text-brandGold-500"></i>';
-                toast.firstElementChild.className = 'bg-clinical-950 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-3 border border-brandGold-500/30';
-            }
-            msg.textContent = message;
-            window.safeCreateIcons();
-            
-            toast.classList.remove('translate-y-[-100px]', 'opacity-0', 'pointer-events-none');
-            toast.classList.add('translate-y-0', 'opacity-100');
-            
-            setTimeout(() => {
-                toast.classList.remove('translate-y-0', 'opacity-100');
-                toast.classList.add('translate-y-[-100px]', 'opacity-0', 'pointer-events-none');
-            }, 4000);
-        };
-
-        window.showConfirmModal = function(message, callback) {
-            const modal = document.getElementById('confirm-modal');
-            const msgEl = document.getElementById('confirm-message');
-            if (!modal || !msgEl) return;
-            msgEl.textContent = message;
-            window.appState.confirmCallback = callback;
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-        };
-
-        window.closeConfirmModal = function(accepted) {
-            const modal = document.getElementById('confirm-modal');
-            if (modal) {
-                modal.classList.add('hidden');
-                modal.classList.remove('flex');
-            }
-            if (accepted && typeof window.appState.confirmCallback === 'function') {
-                window.appState.confirmCallback();
-            }
-            window.appState.confirmCallback = null;
-        };
-
         window.speakCurrentAlarmText = function(student, hour) {
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
@@ -512,10 +529,7 @@
                 utter.rate = 0.95;
 
                 const voices = window.speechSynthesis.getVoices();
-                const femaleVoiceNames = ['paulina', 'sabina', 'monica', 'helena', 'hilda', 'sandra', 'maria', 'google español', 'microsoft paulina', 'dalia', 'juana', 'mujer', 'female'];
-                let voiceSelected = voices.find(v => v.lang.toLowerCase().includes('es-mx') && femaleVoiceNames.some(fn => v.name.toLowerCase().includes(fn)));
-                if (!voiceSelected) voiceSelected = voices.find(v => v.lang.toLowerCase().startsWith('es') && femaleVoiceNames.some(fn => v.name.toLowerCase().includes(fn)));
-                if (!voiceSelected) voiceSelected = voices.find(v => v.lang.toLowerCase().includes('es-mx'));
+                let voiceSelected = voices.find(v => v.lang.toLowerCase().includes('es-mx'));
                 if (!voiceSelected) voiceSelected = voices.find(v => v.lang.toLowerCase().startsWith('es'));
                 
                 if (voiceSelected) utter.voice = voiceSelected;
@@ -539,7 +553,6 @@
             if (mainClock) mainClock.textContent = clockStr;
             if (loginClock) loginClock.textContent = clockStr;
 
-            // Alerta acústica y visual: uso exclusivo del Mtro. Carlos
             if (window.appState && window.appState.currentUser === 'carlos') {
                 const dateStr = window.appState.currentDate.toISOString().split('T')[0];
                 const activeAppointments = Object.values(window.appState.agendaData).filter(apt => apt.date === dateStr && apt.alarm);
@@ -567,9 +580,7 @@
                 });
             }
         }, 1000);
-    </script>
 
-    <script>
         window.renderMiniCalendar = function() {
             const container = document.getElementById('mini-calendar-container');
             if (!container) return;
@@ -669,11 +680,11 @@
             if (window.appState.blockedHours[blockKey]) {
                 delete window.appState.blockedHours[blockKey];
                 window.saveHourBlockToFirestore(blockKey, false);
-                window.showToast(`Horario de las ${hour} habilitado con éxito.`, 'success');
+                window.showToast(`Horario de las ${hour} habilitado.`, 'success');
             } else {
                 window.appState.blockedHours[blockKey] = true;
                 window.saveHourBlockToFirestore(blockKey, true);
-                window.showToast(`Horario de las ${hour} inhabilitado al instante.`, 'info');
+                window.showToast(`Horario de las ${hour} inhabilitado.`, 'info');
             }
             window.renderMainApp();
         };
@@ -721,6 +732,10 @@
                 const blockKey = `${dateStr}_${hour}`;
                 const isHourBlocked = window.appState.blockedHours[blockKey];
                 
+                // DETECCIÓN DE EVENTO PRIVADO DE CARLOS
+                const carlosEventKey = `${dateStr}_${hour}`;
+                const hasCarlosEvent = window.appState.carlosEvents[carlosEventKey];
+
                 const matchesFilter = (window.appState.filterType === 'all' || (aptForSlot && aptForSlot.type === window.appState.filterType)) &&
                                      (!window.appState.searchQuery || (aptForSlot && aptForSlot.student.toLowerCase().includes(window.appState.searchQuery.toLowerCase())));
 
@@ -733,7 +748,35 @@
                 `;
                 html += `<div class="flex-1 p-4 flex items-center">`;
                 
-                if (isHourBlocked) {
+                if (hasCarlosEvent) {
+                    if (isCarlos) {
+                        html += `
+                            <div class="w-full bg-brandGold-950/35 border border-brandGold-500/40 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-md relative overflow-hidden group/card animate-fade-up">
+                                <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-brandGold-500"></div>
+                                <div class="flex-1 pl-2 font-sans">
+                                    <div class="flex items-center gap-2 flex-wrap">
+                                        <span class="text-white font-outfit font-black text-sm leading-tight">${hasCarlosEvent.title}</span>
+                                        <span class="text-[9px] font-black uppercase tracking-widest bg-brandGold-500 text-clinical-950 px-2 py-0.5 rounded-full">Mi Evento Privado</span>
+                                    </div>
+                                    <p class="text-xs text-slate-400 mt-1 italic">"${hasCarlosEvent.description || 'Sin notas del director.'}"</p>
+                                </div>
+                                <button onclick="window.deleteCarlosEvent('${carlosEventKey}')" class="p-2 bg-rose-950/20 hover:bg-rose-900/30 border border-rose-900/30 text-rose-400 hover:text-white rounded-xl transition-all font-sans text-xs font-bold" title="Eliminar Evento">
+                                    Eliminar Evento
+                                </button>
+                            </div>
+                        `;
+                    } else {
+                        // Sutil ocultamiento de datos confidenciales del director para Miroslava y pasantes
+                        html += `
+                            <div class="w-full bg-slate-900/40 border border-slate-800 rounded-2xl p-4 flex justify-between items-center shadow-sm animate-fade-up">
+                                <div class="flex items-center gap-2 text-brandGold-500 font-sans">
+                                    <i data-lucide="lock" class="w-4 h-4"></i>
+                                    <span class="text-xs font-bold uppercase tracking-wider">🔒 Inhabilitado - Evento de Dirección</span>
+                                </div>
+                            </div>
+                        `;
+                    }
+                } else if (isHourBlocked) {
                     html += `
                         <div class="w-full bg-rose-950/30 border border-rose-900/30 rounded-2xl p-4 flex justify-between items-center shadow-sm animate-fade-up">
                             <div class="flex items-center gap-2 text-rose-400">
@@ -832,7 +875,7 @@
 
             let html = `
                 <div class="bg-clinical-900 border border-clinical-800 rounded-3xl overflow-hidden shadow-2xl p-6 space-y-4">
-                    <div class="flex justify-between items-center pb-4 border-b border-clinical-800">
+                    <div class="flex justify-between items-center pb-4 border-b border-clinical-800 font-sans">
                         <div class="flex items-center gap-2">
                             <i data-lucide="calendar-days" class="w-5 h-5 text-brandGold-500"></i>
                             <span class="text-sm font-bold text-white uppercase tracking-wider">Planificador Semanal (Lunes a Sábado)</span>
@@ -840,7 +883,7 @@
                         <span class="text-xs text-slate-400 font-bold uppercase">Distribución de Consultas del Terapeuta Carlos</span>
                     </div>
                     <div class="overflow-x-auto">
-                        <table class="w-full border-collapse text-left min-w-[800px]">
+                        <table class="w-full border-collapse text-left min-w-[800px] font-sans">
                             <thead>
                                 <tr class="border-b border-clinical-850">
                                     <th class="p-3 text-xs font-bold text-slate-400 uppercase tracking-wider w-20">Hora</th>
@@ -881,10 +924,33 @@
                     const blockKey = `${dateStr}_${hour}`;
                     const isHourBlocked = window.appState.blockedHours[blockKey];
                     const isDayBlocked = window.appState.blockedDays[dateStr];
+                    
+                    const carlosEventKey = `${dateStr}_${hour}`;
+                    const hasCarlosEvent = window.appState.carlosEvents[carlosEventKey];
 
                     html += `<td class="p-2 border-r border-clinical-850 text-center relative min-h-[4rem] group font-sans">`;
 
-                    if (isDayBlocked) {
+                    if (hasCarlosEvent) {
+                        if (isCarlos) {
+                            html += `
+                                <div class="p-2 rounded-xl text-left border relative overflow-hidden bg-brandGold-950/40 border-brandGold-500/40 flex flex-col justify-between h-full min-h-[4.5rem]">
+                                    <div>
+                                        <div class="font-bold text-white text-[11px] truncate">${hasCarlosEvent.title}</div>
+                                        <div class="text-[9px] font-black uppercase mt-1 inline-block px-1.5 py-0.5 rounded bg-brandGold-500 text-clinical-950">Privado</div>
+                                    </div>
+                                    <div class="flex gap-1 justify-end mt-2">
+                                        <button onclick="window.deleteCarlosEvent('${carlosEventKey}')" class="p-1 hover:bg-rose-950/40 rounded text-rose-400" title="Eliminar"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                                    </div>
+                                </div>
+                            `;
+                        } else {
+                            html += `
+                                <div class="bg-slate-900/50 text-brandGold-500 text-[10px] p-2 rounded-xl border border-slate-800 font-bold">
+                                    🔒 Inhabilitado
+                                </div>
+                            `;
+                        }
+                    } else if (isDayBlocked) {
                         html += `
                             <div class="bg-rose-950/20 text-rose-400 text-[10px] p-2 rounded-xl border border-rose-900/20 line-through font-bold">
                                 Inhabilitado
@@ -957,7 +1023,7 @@
 
             let html = `
                 <div class="bg-clinical-900 border border-clinical-800 rounded-3xl overflow-hidden shadow-2xl p-6 space-y-4">
-                    <div class="flex justify-between items-center pb-4 border-b border-clinical-800">
+                    <div class="flex justify-between items-center pb-4 border-b border-clinical-800 font-sans">
                         <div class="flex items-center gap-2">
                             <i data-lucide="calendar" class="w-5 h-5 text-brandGold-500"></i>
                             <span class="text-sm font-bold text-white uppercase tracking-wider">Planificador Mensual</span>
@@ -984,6 +1050,8 @@
                 const dayDateStr = dayDate.toISOString().split('T')[0];
                 const activeAppointments = Object.values(window.appState.agendaData).filter(apt => apt.date === dayDateStr);
                 const isBlocked = window.appState.blockedDays[dayDateStr];
+                
+                const hasPrivateEventInDay = Object.keys(window.appState.carlosEvents).some(k => k.startsWith(dayDateStr));
 
                 let cellClass = "bg-clinical-950 border rounded-xl min-h-[6.5rem] p-2 flex flex-col justify-between transition-colors cursor-pointer relative ";
                 if (dayDateStr === selectedDateStr) {
@@ -1001,6 +1069,7 @@
                         <div class="flex justify-between items-center mb-1">
                             <span class="text-xs font-bold ${dayDateStr === todayStr ? 'text-blue-400' : 'text-slate-300'}">${day}</span>
                             ${isBlocked ? `<span class="text-[9px] bg-rose-500/20 text-rose-400 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">Inhábiles</span>` : ''}
+                            ${hasPrivateEventInDay ? `<span class="text-[8px] bg-brandGold-500/20 text-brandGold-500 px-1 py-0.5 rounded-full" title="Evento de Dirección">🔒 Dir</span>` : ''}
                         </div>
                         <div class="space-y-1 overflow-y-auto max-h-[4rem] flex-1">
                 `;
@@ -1022,6 +1091,541 @@
 
             html += `</div></div>`;
             return html;
+        };
+    </script>
+
+    <script>
+        window.getChatViewHtml = function() {
+            const currentUser = window.appState.currentUser;
+            const msgs = window.appState.chatMessages || [];
+            
+            let messagesHtml = '';
+            if (msgs.length === 0) {
+                messagesHtml = `
+                    <div class="flex flex-col items-center justify-center h-full text-slate-500 gap-2 font-sans py-12">
+                        <i data-lucide="message-square-dashed" class="w-12 h-12 text-slate-600"></i>
+                        <span class="text-xs font-bold uppercase tracking-wider">Canal de Chat Vacío.</span>
+                    </div>
+                `;
+            } else {
+                msgs.forEach(msg => {
+                    const isSelf = msg.senderId === currentUser;
+                    let borderClass = 'border-clinical-800 bg-clinical-950/40 text-slate-200';
+                    let roleBadge = '';
+                    let avatarHtml = '';
+                    
+                    if (msg.senderId === 'gemini_ia') {
+                        borderClass = 'border-brandGold-500 bg-brandGold-500/5 text-slate-100';
+                        roleBadge = `<span class="text-[8px] font-black uppercase text-brandGold-500 bg-brandGold-500/10 px-1.5 py-0.5 rounded ml-1 border border-brandGold-500/20">✨ Asistente IA</span>`;
+                        avatarHtml = `
+                            <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-brandGold-500 to-amber-600 flex items-center justify-center text-clinical-950 shadow-md shrink-0">
+                                <i data-lucide="sparkles" class="w-4 h-4"></i>
+                            </div>
+                        `;
+                    } else if (msg.senderId === 'carlos') {
+                        borderClass = isSelf ? 'border-brandGold-500 bg-brandGold-500/15 text-white chat-bubble-self' : 'border-brandGold-500/40 bg-clinical-900 text-slate-200 chat-bubble-other';
+                        roleBadge = `<span class="text-[8px] font-black uppercase text-brandGold-500 bg-brandGold-500/10 px-1.5 py-0.5 rounded ml-1 border border-brandGold-500/20">Director</span>`;
+                        avatarHtml = `
+                            <div class="w-8 h-8 rounded-full bg-clinical-800 border border-brandGold-500 flex items-center justify-center text-brandGold-500 font-black text-xs shadow-sm shrink-0">
+                                CA
+                            </div>
+                        `;
+                    } else if (msg.senderId === 'miroslava') {
+                        borderClass = isSelf ? 'border-indigo-500 bg-indigo-500/10 text-white chat-bubble-self' : 'border-indigo-500/40 bg-clinical-900 text-slate-200 chat-bubble-other';
+                        roleBadge = `<span class="text-[8px] font-black uppercase text-indigo-400 bg-indigo-500/10 px-1.5 py-0.5 rounded ml-1 border border-indigo-500/20">Coordinadora</span>`;
+                        avatarHtml = `
+                            <div class="w-8 h-8 rounded-full bg-clinical-800 border border-indigo-500 flex items-center justify-center text-indigo-400 font-black text-xs shadow-sm shrink-0">
+                                MH
+                            </div>
+                        `;
+                    } else if (msg.senderId === 'abril') {
+                        borderClass = isSelf ? 'border-emerald-500 bg-emerald-500/10 text-white chat-bubble-self' : 'border-emerald-500/40 bg-clinical-900 text-slate-200 chat-bubble-other';
+                        roleBadge = `<span class="text-[8px] font-black uppercase text-emerald-400 bg-emerald-400/10 px-1.5 py-0.5 rounded ml-1 border border-emerald-500/20">Pasante</span>`;
+                        avatarHtml = `
+                            <div class="w-8 h-8 rounded-full bg-clinical-800 border border-emerald-500 flex items-center justify-center text-emerald-400 font-black text-xs shadow-sm shrink-0">
+                                PA
+                            </div>
+                        `;
+                    } else {
+                        borderClass = isSelf ? 'border-slate-500 bg-slate-500/10 text-white chat-bubble-self' : 'border-slate-500/40 bg-clinical-900 text-slate-200 chat-bubble-other';
+                        roleBadge = `<span class="text-[8px] font-black uppercase text-slate-400 bg-slate-500/10 px-1.5 py-0.5 rounded ml-1 border border-slate-500/20">Usuario</span>`;
+                        avatarHtml = `
+                            <div class="w-8 h-8 rounded-full bg-clinical-800 border border-slate-500 flex items-center justify-center text-slate-300 font-black text-xs shadow-sm shrink-0">
+                                US
+                            </div>
+                        `;
+                    }
+
+                    const timeStr = new Date(msg.timestamp).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+
+                    const canDeleteMessage = (currentUser === 'carlos') || (msg.senderId === currentUser);
+                    const deleteButtonHtml = canDeleteMessage ? `
+                        <button onclick="window.deleteSingleChatMessage('${msg.id}')" class="text-slate-500 hover:text-rose-400 p-1 rounded-lg hover:bg-clinical-950/60 transition-all opacity-0 group-hover:opacity-100 shrink-0" title="Eliminar mensaje">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                        </button>
+                    ` : '';
+
+                    messagesHtml += `
+                        <div class="flex items-start gap-3 mb-4 group ${isSelf ? 'flex-row-reverse text-right' : 'text-left'} animate-fade-up font-sans">
+                            ${avatarHtml}
+                            <div class="flex flex-col ${isSelf ? 'items-end' : 'items-start'} max-w-[80%]">
+                                <div class="flex items-baseline gap-1.5 mb-1 text-[10px] font-bold text-slate-400">
+                                    <span>${msg.senderName}</span>
+                                    ${roleBadge}
+                                    <span class="text-[9px] font-mono font-medium">${timeStr}</span>
+                                </div>
+                                <div class="flex gap-2 items-center ${isSelf ? 'flex-row-reverse' : 'flex-row'}">
+                                    <div class="p-3.5 rounded-2xl border text-xs leading-relaxed break-words shadow-md ${borderClass}">
+                                        ${msg.text}
+                                    </div>
+                                    ${deleteButtonHtml}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
+            const isTeam = window.appState.chatTarget !== 'ai';
+            const teamBtnClass = isTeam ? 'bg-brandGold-500 text-clinical-950' : 'bg-clinical-900 text-slate-400 hover:text-white';
+            const aiBtnClass = !isTeam ? 'bg-brandGold-500 text-clinical-950' : 'bg-clinical-900 text-slate-400 hover:text-white';
+            const placeholderText = isTeam ? 'Escribe un mensaje de coordinación para el equipo...' : 'Pregunta al Asistente Psicopedagógico IA...';
+
+            const clearChatBtnHtml = (currentUser === 'carlos') ? `
+                <button type="button" onclick="window.clearAllChatHistory()" class="px-3 py-1.5 bg-rose-950/30 hover:bg-rose-900/40 text-rose-400 hover:text-rose-300 border border-rose-900/30 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-sm" title="Vaciar todo el historial de chat">
+                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    <span>Vaciar Chat</span>
+                </button>
+            ` : '';
+
+            return `
+                <div class="max-w-7xl mx-auto flex flex-col md:flex-row gap-6 h-[calc(100vh-140px)] animate-fade-up font-sans">
+                    <div class="w-full md:w-64 bg-clinical-900 border border-clinical-800 rounded-3xl p-5 flex flex-col gap-4 shrink-0 font-sans h-fit md:h-full">
+                        <div class="border-b border-clinical-850 pb-3">
+                            <span class="text-xs font-bold text-white uppercase tracking-wider block">Equipo CEUT</span>
+                            <p class="text-[10px] text-slate-500 font-medium">Sincronización Clínica Directa</p>
+                        </div>
+                        <div class="space-y-3 flex-1 overflow-y-auto">
+                            <div class="flex items-center justify-between p-2 rounded-xl bg-clinical-950/40 border border-clinical-850">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                    <div class="text-left">
+                                        <span class="text-[11px] font-bold text-white block">Mtro. Carlos Aguilar</span>
+                                        <span class="text-[9px] text-slate-500">Director / Responsable</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex items-center justify-between p-2 rounded-xl bg-clinical-950/40 border border-clinical-850">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                    <div class="text-left">
+                                        <span class="text-[11px] font-bold text-white block">Lic. Miroslava Hoyos</span>
+                                        <span class="text-[9px] text-slate-500">Coordinadora Auxiliar</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex items-center justify-between p-2 rounded-xl bg-clinical-950/40 border border-clinical-850">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                    <div class="text-left">
+                                        <span class="text-[11px] font-bold text-white block">Pasantes de Depto.</span>
+                                        <span class="text-[9px] text-slate-500">Auxiliar</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex-1 bg-clinical-900 border border-clinical-800 rounded-3xl flex flex-col overflow-hidden shadow-2xl h-full">
+                        <div class="bg-clinical-950 p-4 border-b border-clinical-800 flex items-center justify-between shrink-0">
+                            <div class="flex items-center gap-2.5">
+                                <div class="w-8 h-8 rounded-lg bg-brandGold-500/10 border border-brandGold-500/30 flex items-center justify-center text-brandGold-500">
+                                    <i data-lucide="message-square" class="w-4 h-4"></i>
+                                </div>
+                                <div class="text-left">
+                                    <span class="text-xs font-bold text-white uppercase tracking-wider block">Canal de Coordinación</span>
+                                    <p class="text-[9px] text-slate-500">Mensajería interna en tiempo real</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                ${clearChatBtnHtml}
+                                <span class="text-[9px] text-brandGold-500 bg-brandGold-500/10 border border-brandGold-500/20 font-black px-2 py-0.5 rounded-full uppercase tracking-wider">CEUT Live</span>
+                            </div>
+                        </div>
+
+                        <div id="chat-messages-feed" class="flex-1 p-6 overflow-y-auto bg-clinical-950/10 flex flex-col scroll-smooth">
+                            ${messagesHtml}
+                        </div>
+
+                        ${!isTeam ? `
+                        <div class="px-4 py-2 bg-clinical-950/30 border-t border-clinical-800/50 flex flex-wrap gap-2 items-center">
+                            <span class="text-[9px] text-brandGold-500 font-bold uppercase tracking-widest flex items-center gap-1">
+                                <i data-lucide="lightbulb" class="w-3 h-3"></i> Consultas sugeridad:
+                            </span>
+                            <button onclick="window.useQuickChatSuggestion('¿Qué estrategias aplicar para un alumno con déficit de atención?')" class="bg-clinical-900 hover:bg-clinical-800 text-[10px] text-slate-300 py-1 px-2.5 rounded-full border border-clinical-800 hover:border-brandGold-500/30 transition-all font-sans font-bold">
+                                💡 Déficit de Atención
+                            </button>
+                            <button onclick="window.useQuickChatSuggestion('Generar pautas para orientar a un estudiante con alta ansiedad ante exámenes.')" class="bg-clinical-900 hover:bg-clinical-800 text-[10px] text-slate-300 py-1 px-2.5 rounded-full border border-clinical-800 hover:border-brandGold-500/30 transition-all font-sans font-bold">
+                                💡 Ansiedad
+                            </button>
+                        </div>
+                        ` : ''}
+
+                        <form onsubmit="window.sendChatMessage(event)" class="p-4 bg-clinical-950 border-t border-clinical-800 flex flex-col gap-2 shrink-0 font-sans">
+                            <div class="flex items-center justify-between px-1">
+                                <span class="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Enviar a:</span>
+                                <div class="flex gap-1.5">
+                                    <button type="button" id="chat-target-team" onclick="window.setChatTarget('team')" class="px-2.5 py-1 rounded-md text-[9px] font-bold uppercase tracking-wider transition-colors ${teamBtnClass}">
+                                        👥 Equipo
+                                    </button>
+                                    <button type="button" id="chat-target-ai" onclick="window.setChatTarget('ai')" class="px-2.5 py-1 rounded-md text-[9px] font-bold uppercase tracking-wider transition-colors ${aiBtnClass}">
+                                        ✨ Asistente IA
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="flex gap-2">
+                                <input type="text" id="chat-input-text" placeholder="${placeholderText}" class="flex-1 bg-clinical-900 border border-clinical-800 rounded-xl px-4 py-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-brandGold-500/50" required>
+                                <button type="submit" class="p-3 bg-brandGold-500 hover:bg-brandGold-600 text-clinical-950 rounded-xl transition-all shadow-md flex items-center justify-center shrink-0">
+                                    <i data-lucide="send" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+        };
+
+        window.setChatTarget = function(target) {
+            window.appState.chatTarget = target;
+            window.renderMainApp();
+            if (window.scrollChatToBottom) window.scrollChatToBottom();
+        };
+
+        window.deleteSingleChatMessage = function(msgId) {
+            window.showConfirmModal('¿Está seguro de eliminar este mensaje del historial del chat?', async () => {
+                if (window.deleteChatMessageFromFirestore) {
+                    await window.deleteChatMessageFromFirestore(msgId);
+                } else {
+                    window.appState.chatMessages = window.appState.chatMessages.filter(m => m.id !== msgId);
+                    localStorage.setItem('ceut_chat_messages', JSON.stringify(window.appState.chatMessages));
+                    window.renderMainApp();
+                }
+                window.showToast('Mensaje eliminado.', 'info');
+            });
+        };
+
+        window.clearAllChatHistory = function() {
+            window.showConfirmModal('¿Está seguro de eliminar TODO el historial de conversación en este canal? Esta acción no se puede deshacer.', async () => {
+                const msgsToDelete = [...window.appState.chatMessages];
+                if (window.deleteChatMessageFromFirestore) {
+                    for (const msg of msgsToDelete) {
+                        await window.deleteChatMessageFromFirestore(msg.id);
+                    }
+                } else {
+                    window.appState.chatMessages = [];
+                    localStorage.setItem('ceut_chat_messages', JSON.stringify([]));
+                    window.renderMainApp();
+                }
+                window.showToast('Conversación vaciada exitosamente.', 'success');
+            });
+        };
+
+        window.useQuickChatSuggestion = function(text) {
+            const input = document.getElementById('chat-input-text');
+            if (input) {
+                input.value = text;
+                input.focus();
+            }
+        };
+
+        window.sendChatMessage = async function(e) {
+            e.preventDefault();
+            const input = document.getElementById('chat-input-text');
+            if (!input) return;
+            const text = input.value.trim();
+            if (!text) return;
+
+            const currentUser = window.appState.currentUser;
+            const userObj = window.appState.users[currentUser];
+            if (!userObj) return;
+
+            const msgId = "msg_" + Date.now();
+            const msgData = {
+                id: msgId,
+                senderId: currentUser,
+                senderName: userObj.name,
+                senderRole: userObj.role,
+                text: text,
+                timestamp: Date.now()
+            };
+
+            input.value = '';
+
+            if (window.saveChatMessageToFirestore) {
+                await window.saveChatMessageToFirestore(msgId, msgData);
+            } else {
+                window.appState.chatMessages.push(msgData);
+                localStorage.setItem('ceut_chat_messages', JSON.stringify(window.appState.chatMessages));
+                window.renderMainApp();
+                if (window.scrollChatToBottom) window.scrollChatToBottom();
+            }
+
+            if (window.appState.chatTarget === 'ai') {
+                await window.callGeminiChatAssistant(text);
+            }
+        };
+
+        window.callGeminiChatAssistant = async function(userText) {
+            const currentUser = window.appState.currentUser;
+            const userObj = window.appState.users[currentUser];
+            if (!userObj) return;
+
+            const loadingMsgId = "msg_loading_" + Date.now();
+            const loadingMsg = {
+                id: loadingMsgId,
+                senderId: 'gemini_ia',
+                senderName: '✨ Asistente IA',
+                senderRole: 'Asesor de Inteligencia Artificial',
+                text: '<span class="animate-pulse italic text-slate-400 flex items-center gap-1.5"><i data-lucide="loader" class="w-3.5 h-3.5 animate-spin text-brandGold-500"></i> Analizando caso con IA...</span>',
+                timestamp: Date.now()
+            };
+
+            if (window.saveChatMessageToFirestore) {
+                await window.saveChatMessageToFirestore(loadingMsgId, loadingMsg);
+            } else {
+                window.appState.chatMessages.push(loadingMsg);
+                window.renderMainApp();
+                if (window.scrollChatToBottom) window.scrollChatToBottom();
+            }
+
+            try {
+                const systemPrompt = "Actúa como un asesor psicopedagógico clínico de excelencia del Centro Educativo Universitario de Tehuacán (CEUT). Tu misión es responder consultas de forma estructurada, profesional, y breve. Posees acceso al historial de la conversación actual del equipo para mantener coherencia analítica.";
+                
+                const apiKey = ""; 
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+                const relevantMsgs = window.appState.chatMessages.filter(m => m.id !== loadingMsgId).slice(-12);
+                const chatHistory = relevantMsgs.map(m => {
+                    const role = m.senderId === 'gemini_ia' ? 'model' : 'user';
+                    const prefix = role === 'user' ? `[${m.senderName} (${m.senderRole})]: ` : '';
+                    return {
+                        role: role,
+                        parts: [{ text: `${prefix}${m.text}` }]
+                    };
+                });
+
+                if (chatHistory.length === 0 || chatHistory[chatHistory.length - 1].parts[0].text !== userText) {
+                    chatHistory.push({
+                        role: 'user',
+                        parts: [{ text: `[${userObj.name} (${userObj.role})]: ${userText}` }]
+                    });
+                }
+
+                const payload = {
+                    contents: chatHistory,
+                    systemInstruction: {
+                        parts: [{ text: systemPrompt }]
+                    }
+                };
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    const aiResponseText = result.candidates?.[0]?.content?.parts?.[0]?.text || "No logré procesar tu solicitud.";
+                    
+                    if (window.deleteChatMessageFromFirestore) {
+                        await window.deleteChatMessageFromFirestore(loadingMsgId);
+                    } else {
+                        window.appState.chatMessages = window.appState.chatMessages.filter(m => m.id !== loadingMsgId);
+                    }
+
+                    const aiMsgId = "msg_ai_" + Date.now();
+                    const aiMsg = {
+                        id: aiMsgId,
+                        senderId: 'gemini_ia',
+                        senderName: '✨ Asistente IA',
+                        senderRole: 'Asistente de Inteligencia Artificial',
+                        text: aiResponseText,
+                        timestamp: Date.now()
+                    };
+
+                    if (window.saveChatMessageToFirestore) {
+                        await window.saveChatMessageToFirestore(aiMsgId, aiMsg);
+                    } else {
+                        window.appState.chatMessages.push(aiMsg);
+                        localStorage.setItem('ceut_chat_messages', JSON.stringify(window.appState.chatMessages));
+                        window.renderMainApp();
+                    }
+                } else {
+                    throw new Error();
+                }
+            } catch (error) {
+                if (window.deleteChatMessageFromFirestore) {
+                    await window.deleteChatMessageFromFirestore(loadingMsgId);
+                } else {
+                    window.appState.chatMessages = window.appState.chatMessages.filter(m => m.id !== loadingMsgId);
+                }
+                
+                const errMsgId = "msg_err_" + Date.now();
+                const errMsg = {
+                    id: errMsgId,
+                    senderId: 'gemini_ia',
+                    senderName: '✨ Asistente IA',
+                    senderRole: 'Asistente de Inteligencia Artificial',
+                    text: '⚠️ No es posible conectar temporalmente con el motor en la nube de Gemini. Por favor verifica tu consola de red o reintenta en un momento.',
+                    timestamp: Date.now()
+                };
+                
+                if (window.saveChatMessageToFirestore) {
+                    await window.saveChatMessageToFirestore(errMsgId, errMsg);
+                } else {
+                    window.appState.chatMessages.push(errMsg);
+                    localStorage.setItem('ceut_chat_messages', JSON.stringify(window.appState.chatMessages));
+                    window.renderMainApp();
+                }
+            }
+        };
+    </script>
+
+    <script>
+        window.getCarlosEventsViewHtml = function() {
+            const dateStr = window.appState.currentDate.toISOString().split('T')[0];
+            const events = Object.entries(window.appState.carlosEvents).map(([key, val]) => {
+                const [date, hour] = key.split('_');
+                return { key, date, hour, title: val.title, description: val.description };
+            });
+
+            events.sort((a, b) => {
+                if (a.date !== b.date) return a.date.localeCompare(b.date);
+                return a.hour.localeCompare(b.hour);
+            });
+
+            let listHtml = '';
+            if (events.length === 0) {
+                listHtml = `
+                    <p class="text-slate-500 font-bold uppercase text-[10px] py-12 text-center font-sans">
+                        No hay eventos privados registrados por el director.
+                    </p>
+                `;
+            } else {
+                events.forEach(ev => {
+                    listHtml += `
+                        <div class="bg-clinical-950 border border-clinical-800 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm animate-fade-up font-sans">
+                            <div>
+                                <span class="bg-brandGold-500/10 text-brandGold-500 border border-brandGold-500/20 text-[9px] font-black uppercase px-2 py-0.5 rounded">
+                                    🔒 ${window.formatFullDateES(ev.date)} • ${ev.hour} Hrs
+                                </span>
+                                <h4 class="font-outfit font-black text-white text-base mt-2">${ev.title}</h4>
+                                <p class="text-slate-400 text-xs mt-1 italic">"${ev.description || 'Sin notas.'}"</p>
+                            </div>
+                            <button onclick="window.deleteCarlosEvent('${ev.key}')" class="px-3.5 py-2 bg-rose-950/20 hover:bg-rose-900/35 text-rose-400 hover:text-white border border-rose-900/30 rounded-xl transition-all font-bold text-xs font-sans">
+                                Eliminar Evento
+                            </button>
+                        </div>
+                    `;
+                });
+            }
+
+            return `
+                <div class="max-w-4xl mx-auto space-y-6 animate-fade-up font-sans">
+                    <div class="bg-clinical-900 border border-clinical-800 rounded-[2rem] p-8 shadow-2xl relative overflow-hidden flex flex-col md:flex-row gap-6 items-center">
+                        <div class="absolute inset-0 bg-gradient-to-r from-brandGold-500/5 to-transparent pointer-events-none"></div>
+                        <div class="w-16 h-16 rounded-2xl bg-brandGold-500/15 border-2 border-brandGold-500 flex items-center justify-center text-brandGold-500 shrink-0">
+                            <i data-lucide="lock" class="w-8 h-8"></i>
+                        </div>
+                        <div class="flex-1 text-center md:text-left">
+                            <h3 class="font-outfit font-black text-xl text-white">Eventos Privados del Director</h3>
+                            <p class="text-slate-400 text-xs mt-1 leading-relaxed">
+                                Registre juntas, audiencias o ausencias técnicas. Este bloque inhabilitará su horario de atención para los demás terapeutas y pasantes de forma automática y confidencial.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="bg-clinical-900 border border-clinical-800 rounded-3xl p-6 h-fit">
+                            <h3 class="font-outfit font-black text-white text-base uppercase border-b border-clinical-800 pb-3 mb-4">Añadir Evento</h3>
+                            <form onsubmit="window.saveCarlosEvent(event)" class="space-y-4 text-xs text-slate-300">
+                                <div>
+                                    <label class="block font-bold uppercase mb-1">Fecha</label>
+                                    <input type="date" id="carlos-event-date" value="${dateStr}" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-3.5 text-white focus:outline-none" required>
+                                </div>
+                                <div>
+                                    <label class="block font-bold uppercase mb-1">Hora de Inhabilitación</label>
+                                    <select id="carlos-event-hour" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-3.5 text-white focus:outline-none cursor-pointer">
+                                        ${window.getHourSlots().map(hs => `<option value="${hs}">${hs}</option>`).join('')}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block font-bold uppercase mb-1">Título del Evento Privado</label>
+                                    <input type="text" id="carlos-event-title" placeholder="Ej. Junta con Rectoría de CEUT" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-3.5 text-white focus:outline-none" required>
+                                </div>
+                                <div>
+                                    <label class="block font-bold uppercase mb-1">Descripción / Notas</label>
+                                    <textarea id="carlos-event-description" placeholder="Anotaciones personales..." rows="3" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-3.5 text-white focus:outline-none"></textarea>
+                                </div>
+                                <button type="submit" class="w-full py-3 bg-gradient-to-r from-brandGold-500 to-brandGold-600 hover:from-brandGold-600 hover:to-brandGold-700 text-clinical-950 font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-md">
+                                    Registrar Evento Privado
+                                </button>
+                            </form>
+                        </div>
+
+                        <div class="md:col-span-2 bg-clinical-900 border border-clinical-800 rounded-3xl p-6">
+                            <h3 class="font-outfit font-black text-white text-base uppercase border-b border-clinical-800 pb-3 mb-4">Eventos Activos</h3>
+                            <div class="space-y-4 overflow-y-auto max-h-[500px]">
+                                ${listHtml}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        };
+
+        window.saveCarlosEvent = function(e) {
+            e.preventDefault();
+            const date = document.getElementById('carlos-event-date').value;
+            const hour = document.getElementById('carlos-event-hour').value;
+            const title = document.getElementById('carlos-event-title').value.trim();
+            const description = document.getElementById('carlos-event-description').value.trim();
+
+            const eventKey = `${date}_${hour}`;
+            
+            const collidesWithAppointment = Object.values(window.appState.agendaData).some(apt => apt.date === date && apt.hour === hour);
+            if (collidesWithAppointment) {
+                window.showToast('No se puede inhabilitar este horario porque ya cuenta con una cita agendada.', 'error');
+                return;
+            }
+
+            const eventData = { title, description };
+            window.appState.carlosEvents[eventKey] = eventData;
+
+            if (window.saveCarlosEventToFirestore) {
+                window.saveCarlosEventToFirestore(eventKey, eventData);
+            } else {
+                localStorage.setItem('ceut_carlos_events', JSON.stringify(window.appState.carlosEvents));
+                window.renderMainApp();
+                window.showToast('Evento registrado de forma privada.', 'success');
+            }
+
+            document.getElementById('carlos-event-title').value = '';
+            document.getElementById('carlos-event-description').value = '';
+        };
+
+        window.deleteCarlosEvent = function(key) {
+            window.showConfirmModal('¿Está seguro de habilitar nuevamente este horario y remover su evento privado?', () => {
+                delete window.appState.carlosEvents[key];
+                if (window.deleteCarlosEventFromFirestore) {
+                    window.deleteCarlosEventFromFirestore(key);
+                } else {
+                    localStorage.setItem('ceut_carlos_events', JSON.stringify(window.appState.carlosEvents));
+                    window.renderMainApp();
+                    window.showToast('Evento removido y horario habilitado.', 'info');
+                }
+            });
         };
     </script>
 
@@ -1051,7 +1655,7 @@
             const isCarlos = (window.appState.currentUser === 'carlos');
 
             let sidebarHtml = `
-                <aside class="w-full md:w-80 bg-clinical-950/90 backdrop-blur-md border-b md:border-b-0 md:border-r border-clinical-850 p-6 flex flex-col gap-6 no-print shrink-0 z-20">
+                <aside class="w-full md:w-80 bg-clinical-950/90 backdrop-blur-md border-b md:border-b-0 md:border-r border-clinical-850 p-6 flex flex-col gap-6 no-print shrink-0 z-20 font-sans">
                     <div class="flex items-center gap-3">
                         <div class="w-14 h-14 bg-clinical-900 rounded-2xl flex items-center justify-center p-1 border-2 border-brandGold-500/20 shadow-lg">
                             <img src="https://drive.google.com/thumbnail?id=1ao9olFJOvSPvgmeyLJhkD1P0Pmq_R3T2&sz=w128" onerror="window.showFallbackLogo(this, 'small')" class="w-full h-full object-contain filter drop-shadow-[0_1px_2px_rgba(235,177,2,0.4)]">
@@ -1099,12 +1703,20 @@
                         <button onclick="window.switchViewMode('month')" class="w-full text-left py-3 px-4 rounded-xl flex items-center justify-between transition-colors ${window.appState.viewMode === 'month' ? 'bg-brandGold-500 text-clinical-950 font-black shadow-md' : 'bg-clinical-900 hover:bg-clinical-850 text-slate-300'}">
                             <span class="flex items-center gap-2.5 text-xs uppercase tracking-wider font-bold"><i data-lucide="calendar-range" class="w-4 h-4"></i> Vista Mensual</span>
                         </button>
+                        <button onclick="window.switchViewMode('chat')" class="w-full text-left py-3 px-4 rounded-xl flex items-center justify-between transition-colors ${window.appState.viewMode === 'chat' ? 'bg-brandGold-500 text-clinical-950 font-black shadow-md' : 'bg-clinical-900 hover:bg-clinical-850 text-slate-300'}">
+                            <span class="flex items-center gap-2.5 text-xs uppercase tracking-wider font-bold"><i data-lucide="message-square" class="w-4 h-4"></i> Chat de Equipo</span>
+                        </button>
+                        ${isCarlos ? `
+                            <button onclick="window.switchViewMode('carlos-events')" class="w-full text-left py-3 px-4 rounded-xl flex items-center justify-between transition-colors ${window.appState.viewMode === 'carlos-events' ? 'bg-brandGold-500 text-clinical-950 font-black shadow-md' : 'bg-clinical-900 hover:bg-clinical-850 text-slate-300'}">
+                                <span class="flex items-center gap-2.5 text-xs uppercase tracking-wider font-bold"><i data-lucide="lock" class="w-4 h-4"></i> Mis Eventos</span>
+                            </button>
+                        ` : ''}
                         <button onclick="window.switchViewMode('stats')" class="w-full text-left py-3 px-4 rounded-xl flex items-center justify-between transition-colors ${window.appState.viewMode === 'stats' ? 'bg-brandGold-500 text-clinical-950 font-black shadow-md' : 'bg-clinical-900 hover:bg-clinical-850 text-slate-300'}">
                             <span class="flex items-center gap-2.5 text-xs uppercase tracking-wider font-bold"><i data-lucide="bar-chart-3" class="w-4 h-4"></i> Reportes Clínicos</span>
                         </button>
                     </div>
                     <div class="space-y-2.5 font-sans">
-                        <span class="text-slate-400 font-bold uppercase tracking-wider text-[10px] block">Categorías de Consulta</span>
+                        <span class="text-slate-400 font-bold uppercase tracking-wider text-[10px] block font-sans">Categorías</span>
                         <div class="grid grid-cols-2 gap-1.5 text-[11px] font-bold">
                             <button onclick="window.setFilter('all')" class="py-2.5 px-3 rounded-xl flex items-center gap-1.5 transition-colors ${window.appState.filterType === 'all' ? 'bg-brandGold-500 text-clinical-950 shadow-md' : 'bg-clinical-900 text-slate-300 hover:bg-clinical-850'}">
                                 <i data-lucide="layout-grid" class="w-4 h-4"></i> Todas
@@ -1135,7 +1747,7 @@
                     <header class="bg-clinical-950/60 backdrop-blur-md border-b border-clinical-850 p-6 flex flex-col sm:flex-row justify-between items-center gap-4 shrink-0 no-print">
                         <div class="text-center sm:text-left flex flex-col sm:flex-row sm:items-baseline sm:gap-5">
                             <div>
-                                <span class="text-brandGold-500 text-xs font-black uppercase tracking-widest">SISTEMA INTEGRAL CEUT</span>
+                                <span class="text-brandGold-500 text-xs font-black uppercase tracking-widest font-sans">SISTEMA INTEGRAL CEUT</span>
                                 <h1 class="font-outfit font-black text-2xl text-white tracking-tight leading-none mt-1">
                                     ${window.formatFullDateES(window.appState.currentDate)}
                                 </h1>
@@ -1146,7 +1758,6 @@
                         </div>
                         <div class="flex items-center gap-3.5 font-sans">
                             
-                            <!-- Indicador de canal activo para comprobar visibilidad compartida -->
                             <div onclick="document.getElementById('network-modal').classList.remove('hidden');" class="text-[10px] font-mono font-bold flex flex-col items-end gap-1 px-3 py-1.5 rounded-xl bg-clinical-900 hover:bg-clinical-850 cursor-pointer border border-clinical-800 leading-none transition-colors">
                                 <div class="flex items-center gap-1.5">
                                     <span class="w-2.5 h-2.5 rounded-full ${window.appState.isSynced ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}"></span>
@@ -1196,8 +1807,8 @@
                                 </div>
                                 <div class="flex-1 text-center md:text-left">
                                     <h3 class="font-outfit font-black text-xl text-white">Tablero del Día</h3>
-                                    <p class="text-slate-400 text-xs mt-1 leading-relaxed">
-                                        Hay programadas <span class="text-brandGold-500 font-bold">${activeAppointments.length} consulta(s)</span> para este día. Agregue consultas haciendo click sobre las celdas de abajo.
+                                    <p class="text-slate-400 text-xs mt-1 leading-relaxed font-sans">
+                                        Hay programadas <span class="text-brandGold-500 font-bold">${activeAppointments.length} consulta(s)</span> para este día.
                                     </p>
                                 </div>
                                 <div class="flex gap-2 shrink-0 flex-wrap justify-center font-sans">
@@ -1207,19 +1818,19 @@
                                         </button>
                                     ` : ''}
                                     <button onclick="window.openNewAppointmentModal()" class="py-3 px-6 bg-gradient-to-r from-brandGold-500 to-brandGold-600 hover:from-brandGold-600 hover:to-brandGold-700 text-clinical-950 font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-lg shrink-0">
-                                        + Nueva Consulta
+                                        + Registrar Evento / Cita
                                     </button>
                                 </div>
                             </div>
                         `}
 
                         <div class="bg-clinical-900 border border-clinical-800 rounded-3xl overflow-hidden shadow-2xl animate-fade-up">
-                            <div class="bg-clinical-950 p-4 border-b border-clinical-800 flex items-center justify-between">
+                            <div class="bg-clinical-950 p-4 border-b border-clinical-800 flex items-center justify-between font-sans">
                                 <div class="flex items-center gap-2">
                                     <i data-lucide="clock" class="w-4 h-4 text-brandGold-500"></i>
-                                    <span class="text-xs font-bold text-white uppercase tracking-wider">Cronograma Diario</span>
+                                    <span class="text-xs font-bold text-white uppercase tracking-wider font-sans">Cronograma Diario</span>
                                 </div>
-                                <span class="text-[10px] text-slate-500 font-semibold uppercase">Zona Horaria: Tehuacán MX</span>
+                                <span class="text-[10px] text-slate-500 font-semibold uppercase font-sans">Zona Horaria: Tehuacán MX</span>
                             </div>
                             <div class="divide-y divide-clinical-850">
                                 ${window.renderHoursGridHtml(activeAppointments, isBlocked, dateStr)}
@@ -1237,6 +1848,18 @@
                 mainContentHtml += `
                     <section class="p-6 flex-1 max-w-7xl w-full mx-auto space-y-6 animate-fade-up">
                         ${window.renderMonthViewHtml()}
+                    </section>
+                `;
+            } else if (window.appState.viewMode === 'chat') {
+                mainContentHtml += `
+                    <section class="p-6 flex-1 max-w-7xl w-full mx-auto space-y-6 animate-fade-up">
+                        ${window.getChatViewHtml()}
+                    </section>
+                `;
+            } else if (window.appState.viewMode === 'carlos-events' && isCarlos) {
+                mainContentHtml += `
+                    <section class="p-6 flex-1 max-w-7xl w-full mx-auto space-y-6 animate-fade-up">
+                        ${window.getCarlosEventsViewHtml()}
                     </section>
                 `;
             } else {
@@ -1262,7 +1885,7 @@
                             </div>
                         </div>
 
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 font-sans">
                             <div class="bg-clinical-900 border border-clinical-800 p-6 rounded-3xl flex items-center gap-4 relative overflow-hidden">
                                 <div class="w-12 h-12 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl flex items-center justify-center text-indigo-400"><i data-lucide="bar-chart-2" class="w-6 h-6"></i></div>
                                 <div>
@@ -1285,89 +1908,39 @@
                                 </div>
                             </div>
                         </div>
-
-                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 font-sans">
-                            <div class="bg-clinical-900 border border-clinical-800 rounded-3xl p-6">
-                                <h3 class="font-outfit font-bold text-white text-base mb-5">Distribución de Consultas</h3>
-                                <div class="space-y-4">
-                                    ${(() => {
-                                        const maxVal = Math.max(stats.psicológicas, stats.vocacionales, stats.académicas, stats.seguimiento, 1);
-                                        const getPercent = (v) => ((v / maxVal) * 100).toFixed(0);
-                                        return `
-                                            <div>
-                                                <div class="flex justify-between text-xs font-bold text-slate-300 mb-1.5"><span>Psicológicas</span><span class="text-indigo-400">${stats.psicológicas}</span></div>
-                                                <div class="w-full h-3.5 bg-clinical-950 rounded-full overflow-hidden border border-clinical-850"><div class="h-full bg-indigo-500 transition-all duration-500" style="width: ${getPercent(stats.psicológicas)}%"></div></div>
-                                            </div>
-                                            <div>
-                                                <div class="flex justify-between text-xs font-bold text-slate-300 mb-1.5"><span>Vocacionales</span><span class="text-amber-400">${stats.vocacionales}</span></div>
-                                                <div class="w-full h-3.5 bg-clinical-950 rounded-full overflow-hidden border border-clinical-850"><div class="h-full bg-amber-500 transition-all duration-500" style="width: ${getPercent(stats.vocacionales)}%"></div></div>
-                                            </div>
-                                            <div>
-                                                <div class="flex justify-between text-xs font-bold text-slate-300 mb-1.5"><span>Académicas</span><span class="text-teal-400">${stats.académicas}</span></div>
-                                                <div class="w-full h-3.5 bg-clinical-950 rounded-full overflow-hidden border border-clinical-850"><div class="h-full bg-teal-500 transition-all duration-500" style="width: ${getPercent(stats.académicas)}%"></div></div>
-                                            </div>
-                                            <div>
-                                                <div class="flex justify-between text-xs font-bold text-slate-300 mb-1.5"><span>Seguimiento</span><span class="text-rose-400">${stats.seguimiento}</span></div>
-                                                <div class="w-full h-3.5 bg-clinical-950 rounded-full overflow-hidden border border-clinical-850"><div class="h-full bg-rose-500 transition-all duration-500" style="width: ${getPercent(stats.seguimiento)}%"></div></div>
-                                            </div>
-                                        `;
-                                    })()}
-                                </div>
-                            </div>
-                            <div class="bg-clinical-900 border border-clinical-800 rounded-3xl p-6">
-                                <h3 class="font-outfit font-bold text-white text-base mb-5">Estado de Sesiones</h3>
-                                <div class="space-y-4">
-                                    ${(() => {
-                                        const maxVal = Math.max(stats.realizadas, stats.pendientes, stats.reagendadas, stats.canceladas, 1);
-                                        const getPercent = (v) => ((v / maxVal) * 100).toFixed(0);
-                                        return `
-                                            <div>
-                                                <div class="flex justify-between text-xs font-bold text-slate-300 mb-1.5"><span>Realizadas</span><span class="text-emerald-400">${stats.realizadas}</span></div>
-                                                <div class="w-full h-3.5 bg-clinical-950 rounded-full overflow-hidden border border-clinical-850"><div class="h-full bg-emerald-500 transition-all duration-500" style="width: ${getPercent(stats.realizadas)}%"></div></div>
-                                            </div>
-                                            <div>
-                                                <div class="flex justify-between text-xs font-bold text-slate-300 mb-1.5"><span>Pendientes</span><span class="text-slate-300">${stats.pendientes}</span></div>
-                                                <div class="w-full h-3.5 bg-clinical-950 rounded-full overflow-hidden border border-clinical-850"><div class="h-full bg-slate-500 transition-all duration-500" style="width: ${getPercent(stats.pendientes)}%"></div></div>
-                                            </div>
-                                            <div>
-                                                <div class="flex justify-between text-xs font-bold text-slate-300 mb-1.5"><span>Reagendadas</span><span class="text-brandGold-500">${stats.reagendadas}</span></div>
-                                                <div class="w-full h-3.5 bg-clinical-950 rounded-full overflow-hidden border border-clinical-850"><div class="h-full bg-brandGold-500 transition-all duration-500" style="width: ${getPercent(stats.reagendadas)}%"></div></div>
-                                            </div>
-                                            <div>
-                                                <div class="flex justify-between text-xs font-bold text-slate-300 mb-1.5"><span>Canceladas</span><span class="text-rose-500">${stats.canceladas}</span></div>
-                                                <div class="w-full h-3.5 bg-clinical-950 rounded-full overflow-hidden border border-clinical-850"><div class="h-full bg-rose-500 transition-all duration-500" style="width: ${getPercent(stats.canceladas)}%"></div></div>
-                                            </div>
-                                        `;
-                                    })()}
-                                </div>
-                            </div>
-                        </div>
                     </section>
                 `;
             }
 
             mainContentHtml += `</main>`;
-            app.innerHTML = `<div class="flex-1 flex flex-col md:flex-row min-h-screen w-full animate-fade-up">${sidebarHtml}${mainContentHtml}</div>`;
+            app.innerHTML = `<div class="flex-1 flex flex-col md:flex-row min-h-screen w-full animate-fade-up font-sans">${sidebarHtml}${mainContentHtml}</div>`;
 
             window.renderMiniCalendar();
             window.safeCreateIcons();
+            
+            if (window.appState.viewMode === 'chat' && window.scrollChatToBottom) {
+                window.scrollChatToBottom();
+            }
         };
     </script>
 
     <script>
         window.openNewAppointmentModal = function(presetHour = "08:00", presetDateStr = null) {
             const dateStr = presetDateStr || window.appState.currentDate.toISOString().split('T')[0];
+            const isCarlos = (window.appState.currentUser === 'carlos');
             
             const modal = document.createElement('div');
             modal.id = "appointment-form-modal";
             modal.className = "fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 no-print";
+            
+            // Renderizado condicional de pestañas en el creador solo si el usuario activo es el director Carlos
             modal.innerHTML = `
                 <div class="bg-clinical-900 border-2 border-brandGold-500 rounded-3xl w-full max-w-xl shadow-2xl animate-fade-up overflow-hidden max-h-[90vh] flex flex-col font-sans">
                     <div class="bg-clinical-950 p-6 border-b border-clinical-850 flex justify-between items-center shrink-0">
                         <div class="flex items-center gap-2.5">
                             <i data-lucide="plus-circle" class="w-6 h-6 text-brandGold-500"></i>
                             <div>
-                                <h3 class="font-outfit font-black text-white text-lg leading-tight">Programar Consulta</h3>
+                                <h3 class="font-outfit font-black text-white text-lg leading-tight" id="form-modal-title">Programar</h3>
                                 <p class="text-[10px] text-brandGold-500 font-bold uppercase tracking-widest">Agenda CEUT</p>
                             </div>
                         </div>
@@ -1375,8 +1948,20 @@
                             <i data-lucide="x" class="w-5 h-5"></i>
                         </button>
                     </div>
+
+                    ${isCarlos ? `
+                        <div class="bg-clinical-950 px-6 py-2 border-b border-clinical-850/50 flex gap-4 text-xs font-bold">
+                            <button type="button" id="tab-btn-student" onclick="window.switchFormTab('student')" class="pb-2 border-b-2 border-brandGold-500 text-brandGold-500 transition-all">
+                                👥 Cita con Alumno
+                            </button>
+                            <button type="button" id="tab-btn-private" onclick="window.switchFormTab('private')" class="pb-2 text-slate-400 hover:text-white transition-all">
+                                🔒 Evento Privado (Confidencial)
+                            </button>
+                        </div>
+                    ` : ''}
                     
                     <form onsubmit="window.saveNewAppointment(event)" class="p-6 space-y-4 overflow-y-auto flex-1 text-xs text-slate-300">
+                        <input type="hidden" id="form-tab-type" value="student">
                         <div class="grid grid-cols-2 gap-3.5">
                             <div>
                                 <label class="block font-bold uppercase tracking-wide mb-1">Fecha</label>
@@ -1390,78 +1975,93 @@
                             </div>
                         </div>
 
-                        <div>
-                            <label class="block font-bold uppercase tracking-wide mb-1">Nombre Completo del Alumno</label>
-                            <input type="text" id="form-apt-student" placeholder="Ej. Alejandra Domínguez Rivera" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-3.5 text-white focus:outline-none" required>
+                        <!-- SECCIÓN 1: Campos exclusivos para Citas Clínicas de Alumnos -->
+                        <div id="form-student-fields" class="space-y-4">
+                            <div>
+                                <label class="block font-bold uppercase tracking-wide mb-1">Nombre Completo del Alumno</label>
+                                <input type="text" id="form-apt-student" placeholder="Ej. Alejandra Domínguez Rivera" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-3.5 text-white focus:outline-none">
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-3.5">
+                                <div>
+                                    <label class="block font-bold uppercase tracking-wide mb-1">Nivel</label>
+                                    <select id="form-apt-level" onchange="window.handleLevelChange(this.value, 'form-apt')" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-3.5 text-white focus:outline-none">
+                                        <option value="Preparatoria">Preparatoria</option>
+                                        <option value="Licenciatura">Licenciatura (Universidad)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block font-bold uppercase tracking-wide mb-1">Especialidad / Carrera</label>
+                                    <input type="text" id="form-apt-career" placeholder="Ej. Preparatoria General / Informática" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-3.5 text-white focus:outline-none">
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-3 gap-3">
+                                <div>
+                                    <label class="block font-bold uppercase tracking-wide mb-1">Semestre / Cuatrimestre</label>
+                                    <select id="form-apt-grade" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-3.5 text-white focus:outline-none"></select>
+                                </div>
+                                <div>
+                                    <label class="block font-bold uppercase tracking-wide mb-1">Grupo</label>
+                                    <select id="form-apt-group" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-3.5 text-white focus:outline-none"></select>
+                                </div>
+                                <div>
+                                    <label class="block font-bold uppercase tracking-wide mb-1">Turno</label>
+                                    <select id="form-apt-shift" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-3.5 text-white focus:outline-none">
+                                        <option value="Matutino">Matutino</option>
+                                        <option value="Vespertino">Vespertino</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-3.5">
+                                <div>
+                                    <label class="block font-bold uppercase tracking-wide mb-1">Categoría</label>
+                                    <select id="form-apt-type" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-3.5 text-white focus:outline-none">
+                                        <option value="Psicológica">Psicológica</option>
+                                        <option value="Vocacional">Vocacional</option>
+                                        <option value="Académica">Académica</option>
+                                        <option value="Seguimiento">Seguimiento</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block font-bold uppercase tracking-wide mb-1">Estado</label>
+                                    <select id="form-apt-status" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-3.5 text-white focus:outline-none">
+                                        <option value="Pendiente">Pendiente</option>
+                                        <option value="Realizada">Realizada</option>
+                                        <option value="Reagendada">Reagendada</option>
+                                        <option value="Seguimiento">Seguimiento</option>
+                                        <option value="Cancelada">Cancelada</option>
+                                        <option value="Sin Asistir">Sin Asistir</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block font-bold uppercase tracking-wide mb-1">Detalles / Observaciones de Consulta</label>
+                                <textarea id="form-apt-obs" rows="3" placeholder="Ingresa el motivo del agendado de consulta..." class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-3.5 text-white focus:outline-none"></textarea>
+                            </div>
+
+                            <div class="flex items-center gap-2">
+                                <input type="checkbox" id="form-apt-alarm" class="accent-brandGold-500 cursor-pointer w-4 h-4 rounded" checked>
+                                <label for="form-apt-alarm" class="font-bold select-none cursor-pointer">Activar Alerta por Voz y Modal (3 min antes)</label>
+                            </div>
                         </div>
 
-                        <div class="grid grid-cols-2 gap-3.5">
+                        <!-- SECCIÓN 2: Campos exclusivos para Eventos Personales del Director -->
+                        <div id="form-private-fields" class="hidden space-y-4">
                             <div>
-                                <label class="block font-bold uppercase tracking-wide mb-1">Nivel</label>
-                                <select id="form-apt-level" onchange="window.handleLevelChange(this.value, 'form-apt')" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-3.5 text-white focus:outline-none" required>
-                                    <option value="Preparatoria">Preparatoria</option>
-                                    <option value="Licenciatura">Licenciatura (Universidad)</option>
-                                </select>
+                                <label class="block font-bold uppercase tracking-wide mb-1">Título del Evento Privado</label>
+                                <input type="text" id="form-private-title" placeholder="Ej. Junta Extraordinaria con Rectoría de CEUT" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-3.5 text-white focus:outline-none">
                             </div>
                             <div>
-                                <label class="block font-bold uppercase tracking-wide mb-1">Especialidad / Carrera</label>
-                                <input type="text" id="form-apt-career" placeholder="Ej. Preparatoria General / Informática" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-3.5 text-white focus:outline-none" required>
+                                <label class="block font-bold uppercase tracking-wide mb-1">Notas / Descripción Privada</label>
+                                <textarea id="form-private-description" rows="4" placeholder="Notas que solo tú como Mtro. Carlos podrás leer..." class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-3.5 text-white focus:outline-none"></textarea>
                             </div>
-                        </div>
-
-                        <div class="grid grid-cols-3 gap-3">
-                            <div>
-                                <label class="block font-bold uppercase tracking-wide mb-1">Semestre / Cuatrimestre</label>
-                                <select id="form-apt-grade" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-3.5 text-white focus:outline-none" required></select>
-                            </div>
-                            <div>
-                                <label class="block font-bold uppercase tracking-wide mb-1">Grupo</label>
-                                <select id="form-apt-group" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-3.5 text-white focus:outline-none" required></select>
-                            </div>
-                            <div>
-                                <label class="block font-bold uppercase tracking-wide mb-1">Turno</label>
-                                <select id="form-apt-shift" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-3.5 text-white focus:outline-none">
-                                    <option value="Matutino">Matutino</option>
-                                    <option value="Vespertino">Vespertino</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-2 gap-3.5">
-                            <div>
-                                <label class="block font-bold uppercase tracking-wide mb-1">Categoría</label>
-                                <select id="form-apt-type" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-3.5 text-white focus:outline-none">
-                                    <option value="Psicológica">Psicológica</option>
-                                    <option value="Vocacional">Vocacional</option>
-                                    <option value="Académica">Académica</option>
-                                    <option value="Seguimiento">Seguimiento</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block font-bold uppercase tracking-wide mb-1">Estado</label>
-                                <select id="form-apt-status" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-3.5 text-white focus:outline-none">
-                                    <option value="Pendiente">Pendiente</option>
-                                    <option value="Realizada">Realizada</option>
-                                    <option value="Reagendada">Reagendada</option>
-                                    <option value="Seguimiento">Seguimiento</option>
-                                    <option value="Cancelada">Cancelada</option>
-                                    <option value="Sin Asistir">Sin Asistir</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="block font-bold uppercase tracking-wide mb-1">Detalles / Observaciones de Consulta</label>
-                            <textarea id="form-apt-obs" rows="3" placeholder="Ingresa el motivo del agendado de consulta..." class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-3.5 text-white focus:outline-none"></textarea>
-                        </div>
-
-                        <div class="flex items-center gap-2">
-                            <input type="checkbox" id="form-apt-alarm" class="accent-brandGold-500 cursor-pointer w-4 h-4 rounded" checked>
-                            <label for="form-apt-alarm" class="font-bold select-none cursor-pointer">Activar Alerta por Voz y Modal (3 min antes)</label>
                         </div>
 
                         <button type="submit" class="w-full py-3 bg-gradient-to-r from-brandGold-500 to-brandGold-600 hover:from-brandGold-600 hover:to-brandGold-700 text-clinical-950 font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-md">
-                            Guardar Consulta en Agenda
+                            Guardar en Agenda
                         </button>
                     </form>
                 </div>
@@ -1469,6 +2069,28 @@
             document.body.appendChild(modal);
             window.handleLevelChange('Preparatoria', 'form-apt');
             window.safeCreateIcons();
+        };
+
+        window.switchFormTab = function(tabType) {
+            const studentTabBtn = document.getElementById('tab-btn-student');
+            const privateTabBtn = document.getElementById('tab-btn-private');
+            const studentFields = document.getElementById('form-student-fields');
+            const privateFields = document.getElementById('form-private-fields');
+            const tabTypeInput = document.getElementById('form-tab-type');
+
+            if (tabType === 'student') {
+                studentTabBtn.className = 'pb-2 border-b-2 border-brandGold-500 text-brandGold-500 transition-all';
+                privateTabBtn.className = 'pb-2 text-slate-400 hover:text-white transition-all';
+                studentFields.classList.remove('hidden');
+                privateFields.classList.add('hidden');
+                tabTypeInput.value = 'student';
+            } else {
+                privateTabBtn.className = 'pb-2 border-b-2 border-brandGold-500 text-brandGold-500 transition-all';
+                studentTabBtn.className = 'pb-2 text-slate-400 hover:text-white transition-all';
+                privateFields.classList.remove('hidden');
+                studentFields.classList.add('hidden');
+                tabTypeInput.value = 'private';
+            }
         };
 
         window.saveNewAppointment = function(e) {
@@ -1483,35 +2105,63 @@
             }
 
             const collides = Object.values(window.appState.agendaData).some(apt => apt.date === date && apt.hour === hour);
-            if (collides) {
-                window.showToast('El terapeuta ya cuenta con una cita programada en ese horario.', 'error');
+            const collidesPrivate = window.appState.carlosEvents[blockKey];
+
+            if (collides || collidesPrivate) {
+                window.showToast('Ya existe un evento o consulta programada en ese horario.', 'error');
                 return;
             }
 
-            const id = "apt_" + Date.now();
-            const appointment = {
-                id,
-                date,
-                hour,
-                student: document.getElementById('form-apt-student').value.trim(),
-                level: document.getElementById('form-apt-level').value,
-                career: document.getElementById('form-apt-career').value.trim(),
-                grade: document.getElementById('form-apt-grade').value,
-                group: document.getElementById('form-apt-group').value,
-                shift: document.getElementById('form-apt-shift').value,
-                type: document.getElementById('form-apt-type').value,
-                status: document.getElementById('form-apt-status').value,
-                obs: document.getElementById('form-apt-obs').value.trim(),
-                alarm: document.getElementById('form-apt-alarm').checked,
-                createdBy: window.appState.currentUser
-            };
+            const tabType = document.getElementById('form-tab-type').value;
 
-            window.appState.agendaData[id] = appointment;
-            window.saveAptToFirestore(id, appointment);
+            if (tabType === 'private') {
+                const title = document.getElementById('form-private-title').value.trim();
+                const description = document.getElementById('form-private-description').value.trim();
+                if (!title) {
+                    window.showToast('Por favor introduce un título para el evento privado.', 'error');
+                    return;
+                }
+                const eventData = { title, description };
+                window.appState.carlosEvents[blockKey] = eventData;
+
+                if (window.saveCarlosEventToFirestore) {
+                    window.saveCarlosEventToFirestore(blockKey, eventData);
+                } else {
+                    localStorage.setItem('ceut_carlos_events', JSON.stringify(window.appState.carlosEvents));
+                    window.renderMainApp();
+                }
+                window.showToast('Evento personal registrado de forma privada.', 'success');
+            } else {
+                const studentName = document.getElementById('form-apt-student').value.trim();
+                if (!studentName) {
+                    window.showToast('Por favor introduce el nombre del alumno.', 'error');
+                    return;
+                }
+                const id = "apt_" + Date.now();
+                const appointment = {
+                    id,
+                    date,
+                    hour,
+                    student: studentName,
+                    level: document.getElementById('form-apt-level').value,
+                    career: document.getElementById('form-apt-career').value.trim(),
+                    grade: document.getElementById('form-apt-grade').value,
+                    group: document.getElementById('form-apt-group').value,
+                    shift: document.getElementById('form-apt-shift').value,
+                    type: document.getElementById('form-apt-type').value,
+                    status: document.getElementById('form-apt-status').value,
+                    obs: document.getElementById('form-apt-obs').value.trim(),
+                    alarm: document.getElementById('form-apt-alarm').checked,
+                    createdBy: window.appState.currentUser
+                };
+
+                window.appState.agendaData[id] = appointment;
+                window.saveAptToFirestore(id, appointment);
+                window.showToast('Consulta programada exitosamente', 'success');
+            }
             
             document.getElementById('appointment-form-modal').remove();
             window.renderMainApp();
-            window.showToast('Consulta programada exitosamente', 'success');
         };
 
         window.cancelAppointment = function(id) {
@@ -1728,7 +2378,7 @@
     <script>
         window.getLuxuryHeaderHtml = function(title, folioCode) {
             return `
-                <div class="flex items-center justify-between border-b-[3px] border-double border-clinical-700 pb-4 mb-6">
+                <div class="flex items-center justify-between border-b-[3px] border-double border-clinical-700 pb-4 mb-6 font-sans">
                     <div class="flex items-center gap-4">
                         <div class="w-14 h-14 shrink-0">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" class="w-full h-full">
@@ -1747,11 +2397,6 @@
                         <p class="text-[8px] font-bold text-slate-500 uppercase tracking-widest">Folio de Control</p>
                         <p class="text-xs sm:text-sm font-outfit font-black text-brandGold-600 leading-none mt-1">${folioCode}</p>
                     </div>
-                </div>
-                <div class="absolute inset-0 flex items-center justify-center opacity-[0.03] rotate-[-30deg] pointer-events-none select-none z-0">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" class="w-[300px] h-[300px] text-clinical-950">
-                        <path d="M50,15 L80,30 L80,65 C80,78 50,88 50,88 C50,88 20,78 20,65 L20,30 Z" fill="currentColor" />
-                    </svg>
                 </div>
             `;
         };
@@ -1774,7 +2419,7 @@
                 <div class="relative z-10 space-y-6 text-slate-800 font-sans">
                     <div class="text-center">
                         <h2 class="text-sm font-outfit font-black uppercase tracking-wider text-clinical-900">Expediente Clínico de Intervención</h2>
-                        <p class="text-[10px] text-slate-500 mt-0.5 font-sans">Expediente confidencial protegido por leyes de privacidad institucional</p>
+                        <p class="text-[10px] text-slate-500 mt-0.5 font-sans">Expediente confidencial protegido por privacidad institucional</p>
                     </div>
 
                     <table class="w-full border-collapse border border-slate-300 text-[10px] text-left">
@@ -1811,7 +2456,7 @@
                         <p class="text-[11px] leading-relaxed text-slate-700 whitespace-pre-wrap pl-3">${apt.obs || 'No se registraron observaciones adicionales en esta sesión.'}</p>
                     </div>
 
-                    <div class="pt-12 grid grid-cols-2 gap-10">
+                    <div class="pt-12 grid grid-cols-2 gap-10 font-sans">
                         <div class="text-center flex flex-col justify-end items-center">
                             <div class="border-t border-slate-400 w-48 pt-2">
                                 <p class="text-[10px] font-bold uppercase text-slate-800 font-sans">Mtro. Carlos Aguilar Sánchez</p>
@@ -1853,7 +2498,7 @@
                 <div class="relative z-10 space-y-6 text-slate-800 font-sans">
                     <div class="text-center">
                         <h2 class="text-sm font-outfit font-black uppercase tracking-wider text-clinical-900">Informe de Desempeño Psicopedagógico</h2>
-                        <p class="text-[10px] text-slate-500 mt-0.5">Métricas institucionales correspondientes al período: <span class="font-bold text-slate-800">${periodName}</span></p>
+                        <p class="text-[10px] text-slate-500 mt-0.5 font-sans">Métricas institucionales correspondientes al período: <span class="font-bold text-slate-800">${periodName}</span></p>
                     </div>
 
                     <div class="grid grid-cols-3 gap-4 text-center">
@@ -1868,81 +2513,6 @@
                         <div class="border border-slate-200 bg-slate-50/50 p-3 rounded-xl">
                             <span class="text-slate-500 font-bold uppercase text-[8px] tracking-wider block">Tasa de Inasistencia</span>
                             <span class="text-rose-600 font-outfit text-xl font-black">${stats.canceladas} Sesiones</span>
-                        </div>
-                    </div>
-
-                    <div class="space-y-3">
-                        <h3 class="text-xs font-outfit font-black uppercase tracking-wider text-clinical-900 border-b border-slate-200 pb-1 flex items-center gap-1.5">
-                            <span class="w-1.5 h-3 bg-brandGold-500 rounded-sm"></span> Distribución por Áreas
-                        </h3>
-                        <table class="w-full border-collapse text-[10px] text-left">
-                            <thead>
-                                <tr class="bg-slate-50">
-                                    <th class="p-2 border border-slate-200">Área de Intervención</th>
-                                    <th class="p-2 border border-slate-200 text-center">Sesiones Ofrecidas</th>
-                                    <th class="p-2 border border-slate-200 text-center">Porcentaje de Impacto</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td class="p-2 border border-slate-200 font-medium">Intervención Psicológica</td>
-                                    <td class="p-2 border border-slate-200 text-center">${stats.psicológicas}</td>
-                                    <td class="p-2 border border-slate-200 text-center">${stats.total ? ((stats.psicológicas/stats.total)*100).toFixed(0) : 0}%</td>
-                                </tr>
-                                <tr>
-                                    <td class="p-2 border border-slate-200 font-medium">Evaluación Vocacional</td>
-                                    <td class="p-2 border border-slate-200 text-center">${stats.vocacionales}</td>
-                                    <td class="p-2 border border-slate-200 text-center">${stats.total ? ((stats.vocacionales/stats.total)*100).toFixed(0) : 0}%</td>
-                                </tr>
-                                <tr>
-                                    <td class="p-2 border border-slate-200 font-medium">Seguimiento Académico</td>
-                                    <td class="p-2 border border-slate-200 text-center">${stats.académicas}</td>
-                                    <td class="p-2 border border-slate-200 text-center">${stats.total ? ((stats.académicas/stats.total)*100).toFixed(0) : 0}%</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div class="space-y-3">
-                        <h3 class="text-xs font-outfit font-black uppercase tracking-wider text-clinical-900 border-b border-slate-200 pb-1 flex items-center gap-1.5">
-                            <span class="w-1.5 h-3 bg-brandGold-500 rounded-sm"></span> Listado General de Alumnos Atendidos
-                        </h3>
-                        <table class="w-full border-collapse text-[9px] text-left">
-                            <thead>
-                                <tr class="bg-slate-50">
-                                    <th class="p-2 border border-slate-200">Alumno</th>
-                                    <th class="p-2 border border-slate-200">Especialidad / Carrera</th>
-                                    <th class="p-2 border border-slate-200 text-center">Fecha / Hora</th>
-                                    <th class="p-2 border border-slate-200 text-center">Categoría</th>
-                                    <th class="p-2 border border-slate-200 text-center">Estado</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${stats.aptsList.map(apt => `
-                                    <tr>
-                                        <td class="p-2 border border-slate-200 font-medium">${apt.student}</td>
-                                        <td class="p-2 border border-slate-200">${apt.level} • ${apt.career}</td>
-                                        <td class="p-2 border border-slate-200 text-center">${apt.date} a las ${apt.hour}</td>
-                                        <td class="p-2 border border-slate-200 text-center font-bold">${apt.type}</td>
-                                        <td class="p-2 border border-slate-200 text-center font-bold">${apt.status}</td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div class="pt-16 grid grid-cols-2 gap-10">
-                        <div class="text-center flex flex-col justify-end items-center">
-                            <div class="border-t border-slate-400 w-48 pt-2">
-                                <p class="text-[10px] font-bold uppercase text-slate-800 font-sans">Mtro. Carlos Aguilar Sánchez</p>
-                                <p class="text-[9px] text-slate-500">Responsable Psicopedagógico CEUT</p>
-                            </div>
-                        </div>
-                        <div class="text-center flex flex-col items-center justify-center">
-                            <div class="w-20 h-20 rounded-full border-2 border-double border-brandGold-500 flex flex-col items-center justify-center text-brandGold-700 select-none pointer-events-none opacity-80 rotate-12 animate-fade-up">
-                                <span class="text-[6px] font-bold uppercase tracking-widest text-center leading-none font-sans">PSICOPEDAGOGÍA<br><strong class="text-[8px] text-clinical-800 font-bold">CEUT</strong><br>TEHUACÁN</span>
-                            </div>
-                            <p class="text-[9px] text-slate-400 mt-2">Sello del Departamento</p>
                         </div>
                     </div>
                 </div>
@@ -1998,7 +2568,7 @@
                     }
                 } catch (error) {
                     loading.classList.add('hidden');
-                    aiBody.innerHTML = `<span class="text-rose-400 font-bold">Error de red con la IA. Se utilizará el motor de contención local.</span>`;
+                    aiBody.innerHTML = `<span class="text-rose-400 font-bold font-sans">Error de red con la IA. Se utilizará el motor de contención local.</span>`;
                 }
             }
         };
@@ -2022,7 +2592,7 @@
             if (aiBody && detailsInput && aiBody.textContent) {
                 detailsInput.value = detailsInput.value + "\n\n-- Recomendaciones de IA --\n" + aiBody.textContent;
                 window.closeAiModal();
-                window.showToast("Sugerencias añadidias al expediente", "success");
+                window.showToast("Sugerencias añadidas al expediente", "success");
             }
         };
 
@@ -2037,21 +2607,7 @@
         window.showFallbackLogo = function(imgElement, sizeType) {
             const container = imgElement.parentElement;
             if (!container) return;
-
-            const svgLarge = `
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" class="w-full h-full text-brandGold-500 drop-shadow-[0_0_12px_rgba(235,177,2,0.4)]">
-                    <circle cx="50" cy="50" r="46" fill="#0B1133" stroke="#EBB102" stroke-width="2.5" />
-                    <path d="M50,18 L70,30 L70,58 C70,68 50,76 50,76 L30,58 L30,30 Z" fill="#141E59" stroke="#EBB102" stroke-width="2" />
-                    <text x="50" y="48" font-family="'Outfit', sans-serif" font-weight="900" font-size="12" fill="#EBB102" text-anchor="middle">CEUT</text>
-                </svg>
-            `;
-            const svgSmall = `
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" class="w-full h-full text-brandGold-500">
-                    <circle cx="50" cy="50" r="45" fill="#0B1133" stroke="#EBB102" stroke-width="2" />
-                    <text x="50" y="52" font-family="'Outfit', sans-serif" font-weight="900" font-size="15" fill="#EBB102" text-anchor="middle">C</text>
-                </svg>
-            `;
-            container.innerHTML = sizeType === 'large' ? svgLarge : svgSmall;
+            container.innerHTML = `<span class="text-brandGold-500 font-bold text-center">CEUT</span>`;
         };
 
         window.dismissAlarm = function() {
@@ -2083,9 +2639,9 @@
                 window.appState.users[userKey].pin = newPin;
                 window.savePinToFirestore(userKey, newPin);
                 window.closeChangePinModal();
-                window.showToast('PIN de acceso actualizado con éxito.', 'success');
+                window.showToast('PIN de acceso actualizado.', 'success');
             } else {
-                window.showToast('El PIN actual introducido es incorrecto.', 'error');
+                window.showToast('El PIN actual es incorrecto.', 'error');
             }
         };
 
@@ -2190,7 +2746,7 @@
             window.saveDayBlockToFirestore(dateStr, reason);
             document.getElementById('block-day-modal').classList.add('hidden');
             window.renderMainApp();
-            window.showToast('Jornada inhabilitada exitosamente', 'info');
+            window.showToast('Jornada inhabilitada', 'info');
         };
 
         window.removeBlockDay = function() {
@@ -2331,11 +2887,38 @@
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, deleteDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Canal de conexión de la Agenda
+        if (!window.appState) {
+            window.appState = {
+                currentUser: null, 
+                currentDate: new Date(),
+                miniCalendarMonth: new Date(), 
+                activeStatsPeriod: 'semana', 
+                viewMode: 'day', 
+                searchQuery: '',
+                filterType: 'all', 
+                chatTarget: 'team',
+                blockedDays: {}, 
+                blockedHours: {}, 
+                users: {
+                    'carlos': { name: 'Mtro. Carlos Aguilar Sánchez', role: 'Responsable Psicopedagógico', pin: '1015' },
+                    'miroslava': { name: 'Lic. Miroslava Abril Hoyos Rojas', role: 'Coordinadora', pin: '1015', isRestricted: true },
+                    'abril': { name: 'Pasantes Depto. Psicopedagógico', role: 'Pasante Psicopedagógico', pin: '1015', isRestricted: true }
+                },
+                agendaData: {}, 
+                carlosEvents: {},
+                chatMessages: [],
+                scheduleConfig: { startHour: 8, endHour: 21 },
+                lastCheckedAlarmTime: null,
+                isSynced: false,
+                appId: 'agenda-ceut',
+                userId: null,
+                confirmCallback: null
+            };
+        }
+
         window.appState.appId = 'agenda-ceut';
         const appId = 'agenda-ceut';
         
-        // Configuración oficial y permanente proporcionada por el usuario
         const firebaseConfig = {
             apiKey: "AIzaSyAgBfvz5S4u2qCACCzUBz4TLxNO4E9lZOc",
             authDomain: "agenda-ceut.firebaseapp.com",
@@ -2366,7 +2949,6 @@
                         statusDetail.textContent = 'Autenticando...';
                         if (diagnosticStatus) {
                             diagnosticStatus.textContent = 'Autenticando...';
-                            diagnosticStatus.className = 'px-2.5 py-1 rounded-full text-[10px] font-black uppercase text-amber-400 bg-amber-500/10 border border-amber-500/20';
                         }
                     }
 
@@ -2379,7 +2961,6 @@
                         if (statusDetail) statusDetail.textContent = '🟢 En Línea';
                         if (diagnosticStatus) {
                             diagnosticStatus.textContent = 'Sincronizado';
-                            diagnosticStatus.className = 'px-2.5 py-1 rounded-full text-[10px] font-black uppercase text-emerald-400 bg-emerald-500/10 border border-emerald-500/20';
                         }
                         if (diagnosticUid) diagnosticUid.textContent = userCredential.user.uid;
                         
@@ -2388,7 +2969,6 @@
                         setupLocalMode();
                     }
                 } catch (error) {
-                    console.warn("Fallo de conexión Firebase. Utilizando Modo Local de contingencia.", error);
                     setupLocalMode(error.message);
                 }
             }
@@ -2409,8 +2989,6 @@
                     if (window.appState.currentUser) {
                         window.renderMainApp();
                     }
-                }, (error) => {
-                    console.warn("Retraso o bloqueo de lectura en tiempo real:", error);
                 });
 
                 // 2. Sincronización de horas bloqueadas
@@ -2426,8 +3004,6 @@
                     if (window.appState.currentUser) {
                         window.renderMainApp();
                     }
-                }, (error) => {
-                    console.warn("Fallo temporal de lectura de horas bloqueadas:", error);
                 });
 
                 // 3. Sincronización de días bloqueados
@@ -2443,8 +3019,6 @@
                     if (window.appState.currentUser) {
                         window.renderMainApp();
                     }
-                }, (error) => {
-                    console.warn("Fallo temporal de lectura de días bloqueados:", error);
                 });
 
                 // 4. Sincronización de pines
@@ -2461,8 +3035,40 @@
                     if (window.appState.currentUser) {
                         window.renderMainApp();
                     }
-                }, (error) => {
-                    console.warn("Fallo temporal de lectura de PINs de acceso:", error);
+                });
+
+                // 5. Sincronización de eventos de Carlos
+                const carlosEventsCol = collection(database, 'artifacts', appId, 'public', 'data', 'carlos_events');
+                onSnapshot(carlosEventsCol, (snapshot) => {
+                    if (!auth.currentUser) return;
+                    const fetchedEvents = {};
+                    snapshot.forEach(doc => {
+                        fetchedEvents[doc.id] = doc.data();
+                    });
+                    window.appState.carlosEvents = fetchedEvents;
+                    localStorage.setItem('ceut_carlos_events', JSON.stringify(fetchedEvents));
+                    if (window.appState.currentUser) {
+                        window.renderMainApp();
+                    }
+                });
+
+                // 6. Sincronización de Chat de Equipo
+                const chatCol = collection(database, 'artifacts', appId, 'public', 'data', 'chat_messages');
+                onSnapshot(chatCol, (snapshot) => {
+                    if (!auth.currentUser) return;
+                    const fetchedMsgs = [];
+                    snapshot.forEach(doc => {
+                        fetchedMsgs.push(doc.data());
+                    });
+                    fetchedMsgs.sort((a, b) => a.timestamp - b.timestamp);
+                    window.appState.chatMessages = fetchedMsgs;
+                    localStorage.setItem('ceut_chat_messages', JSON.stringify(fetchedMsgs));
+                    if (window.appState.currentUser) {
+                        window.renderMainApp();
+                        if (window.appState.viewMode === 'chat' && window.scrollChatToBottom) {
+                            window.scrollChatToBottom();
+                        }
+                    }
                 });
             }
 
@@ -2474,7 +3080,7 @@
                 try {
                     await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'appointments', aptId), aptData);
                 } catch (error) {
-                    console.warn("Fallo al escribir cita en Firestore:", error);
+                    console.warn("Error de guardado asíncrono en Firestore:", error);
                 }
             };
 
@@ -2486,7 +3092,7 @@
                 try {
                     await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'appointments', aptId));
                 } catch (error) {
-                    console.warn("Fallo al remover cita de Firestore:", error);
+                    console.warn("Error de eliminación asíncrona en Firestore:", error);
                 }
             };
 
@@ -2506,7 +3112,7 @@
                         await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'blocked_hours', blockKey));
                     }
                 } catch (error) {
-                    console.warn("Error de escritura de hora inhabilitada en la nube:", error);
+                    console.warn("Error de escritura de hora inhabilitada en Firestore:", error);
                 }
             };
 
@@ -2526,7 +3132,7 @@
                         await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'blocked_days', dateStr));
                     }
                 } catch (error) {
-                    console.warn("Error de escritura de jornada bloqueada en la nube:", error);
+                    console.warn("Error de escritura de jornada bloqueada en Firestore:", error);
                 }
             };
 
@@ -2538,7 +3144,59 @@
                 try {
                     await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'pins', userKey), { pin: newPin });
                 } catch (error) {
-                    console.warn("Error de escritura de PIN de acceso en la nube:", error);
+                    console.warn("Error de escritura de PIN de acceso en Firestore:", error);
+                }
+            };
+
+            window.saveCarlosEventToFirestore = async function(eventKey, eventData) {
+                window.appState.carlosEvents[eventKey] = eventData;
+                localStorage.setItem('ceut_carlos_events', JSON.stringify(window.appState.carlosEvents));
+                if (!auth.currentUser) return;
+                try {
+                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'carlos_events', eventKey), eventData);
+                } catch (error) {
+                    console.warn("Error de escritura de evento Carlos en Firestore:", error);
+                }
+            };
+
+            window.deleteCarlosEventFromFirestore = async function(eventKey) {
+                delete window.appState.carlosEvents[eventKey];
+                localStorage.setItem('ceut_carlos_events', JSON.stringify(window.appState.carlosEvents));
+                if (!auth.currentUser) return;
+                try {
+                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'carlos_events', eventKey));
+                } catch (error) {
+                    console.warn("Error al remover evento Carlos en Firestore:", error);
+                }
+            };
+
+            window.saveChatMessageToFirestore = async function(msgId, msgData) {
+                if (!auth.currentUser) {
+                    window.appState.chatMessages.push(msgData);
+                    localStorage.setItem('ceut_chat_messages', JSON.stringify(window.appState.chatMessages));
+                    window.renderMainApp();
+                    const feed = document.getElementById('chat-messages-feed');
+                    if (feed) feed.scrollTop = feed.scrollHeight;
+                    return;
+                }
+                try {
+                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'chat_messages', msgId), msgData);
+                } catch (error) {
+                    console.warn("Error de escritura de mensaje de chat:", error);
+                }
+            };
+
+            window.deleteChatMessageFromFirestore = async function(msgId) {
+                if (!auth.currentUser) {
+                    window.appState.chatMessages = window.appState.chatMessages.filter(m => m.id !== msgId);
+                    localStorage.setItem('ceut_chat_messages', JSON.stringify(window.appState.chatMessages));
+                    window.renderMainApp();
+                    return;
+                }
+                try {
+                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'chat_messages', msgId));
+                } catch (error) {
+                    console.warn("Error de borrado asíncrono de mensaje de chat:", error);
                 }
             };
 
@@ -2547,12 +3205,10 @@
             
             // Conexión asíncrona
             startFirebaseSync().catch(e => {
-                console.warn("Fallo de sincronización inicial:", e);
                 setupLocalMode();
             });
 
         } catch (err) {
-            console.warn("Error de inicio de base de datos Firebase. Modo Local activado.", err);
             setupLocalMode(err.message);
         }
 
@@ -2563,7 +3219,6 @@
             if (statusDetail) statusDetail.textContent = '🟡 Modo Local';
             if (diagnosticStatus) {
                 diagnosticStatus.textContent = 'Modo Local Activo';
-                diagnosticStatus.className = 'px-2.5 py-1 rounded-full text-[10px] font-black uppercase text-amber-500 bg-amber-500/10 border border-amber-500/20';
             }
             if (diagnosticUid) diagnosticUid.textContent = "CONEXION_LOCAL_ACTIVA";
             if (diagnosticChannel) diagnosticChannel.textContent = appId;
@@ -2571,11 +3226,13 @@
             window.saveAptToFirestore = function(aptId, aptData) {
                 window.appState.agendaData[aptId] = aptData;
                 localStorage.setItem('ceut_agenda_data', JSON.stringify(window.appState.agendaData));
+                window.renderMainApp();
             };
 
             window.deleteAptFromFirestore = function(aptId) {
                 delete window.appState.agendaData[aptId];
                 localStorage.setItem('ceut_agenda_data', JSON.stringify(window.appState.agendaData));
+                window.renderMainApp();
             };
 
             window.saveHourBlockToFirestore = function(blockKey, blockState) {
@@ -2585,6 +3242,7 @@
                     delete window.appState.blockedHours[blockKey];
                 }
                 localStorage.setItem('ceut_blocked_hours', JSON.stringify(window.appState.blockedHours));
+                window.renderMainApp();
             };
 
             window.saveDayBlockToFirestore = function(dateStr, reason) {
@@ -2594,11 +3252,39 @@
                     delete window.appState.blockedDays[dateStr];
                 }
                 localStorage.setItem('ceut_blocked_days', JSON.stringify(window.appState.blockedDays));
+                window.renderMainApp();
             };
 
             window.savePinToFirestore = function(userKey, newPin) {
                 window.appState.users[userKey].pin = newPin;
                 localStorage.setItem('ceut_users', JSON.stringify(window.appState.users));
+                window.renderMainApp();
+            };
+
+            window.saveCarlosEventToFirestore = function(eventKey, eventData) {
+                window.appState.carlosEvents[eventKey] = eventData;
+                localStorage.setItem('ceut_carlos_events', JSON.stringify(window.appState.carlosEvents));
+                window.renderMainApp();
+            };
+
+            window.deleteCarlosEventFromFirestore = function(eventKey) {
+                delete window.appState.carlosEvents[eventKey];
+                localStorage.setItem('ceut_carlos_events', JSON.stringify(window.appState.carlosEvents));
+                window.renderMainApp();
+            };
+
+            window.saveChatMessageToFirestore = function(msgId, msgData) {
+                window.appState.chatMessages.push(msgData);
+                localStorage.setItem('ceut_chat_messages', JSON.stringify(window.appState.chatMessages));
+                window.renderMainApp();
+                const feed = document.getElementById('chat-messages-feed');
+                if (feed) feed.scrollTop = feed.scrollHeight;
+            };
+
+            window.deleteChatMessageFromFirestore = function(msgId) {
+                window.appState.chatMessages = window.appState.chatMessages.filter(m => m.id !== msgId);
+                localStorage.setItem('ceut_chat_messages', JSON.stringify(window.appState.chatMessages));
+                window.renderMainApp();
             };
 
             window.renderLogin();
