@@ -90,7 +90,7 @@
                 background: #ffffff !important;
                 color: #000000 !important;
             }
-            #app, #toast, #alarm-modal, #ai-modal, #confirm-modal, #block-day-modal, #change-pin-modal, #appointment-form-modal, #appointment-details-modal, #report-preview-modal, .no-print, header, nav, button, aside {
+            #app, #toast, #alarm-modal, #ai-modal, #confirm-modal, #block-day-modal, #change-pin-modal, #network-modal, #appointment-form-modal, #appointment-details-modal, #report-preview-modal, .no-print, header, nav, button, aside {
                 display: none !important;
             }
             #academic-report-print-area {
@@ -204,6 +204,59 @@
                         <span>Aplicar Observaciones</span>
                     </button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Consola de Diagnóstico de Red y Conexión Manual -->
+    <div id="network-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[110] hidden items-center justify-center p-4">
+        <div class="bg-clinical-900 border-2 border-brandGold-500 rounded-3xl w-full max-w-lg shadow-2xl animate-fade-up flex flex-col overflow-hidden">
+            <div class="bg-clinical-950 p-6 border-b border-clinical-800/80 flex justify-between items-center shrink-0">
+                <div class="flex items-center gap-2">
+                    <div class="p-1.5 rounded-lg bg-brandGold-500/10 border border-brandGold-500/30">
+                        <i data-lucide="activity" class="w-5 h-5 text-brandGold-500"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-outfit font-black text-white text-base tracking-wide flex flex-col">
+                            <span class="text-white text-base font-black">Consola de Conectividad</span>
+                            <span class="text-[10px] text-brandGold-500 font-bold uppercase tracking-widest">Sincronización en la Nube</span>
+                        </h4>
+                    </div>
+                </div>
+                <button onclick="document.getElementById('network-modal').classList.add('hidden');" class="p-1.5 hover:bg-clinical-800 rounded-lg text-slate-400 hover:text-white transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="p-6 space-y-4 text-xs">
+                <div class="bg-clinical-950/80 border border-clinical-800/60 rounded-2xl p-4 space-y-2.5">
+                    <div class="flex justify-between items-center">
+                        <span class="text-slate-400 font-bold uppercase">Estado de Red</span>
+                        <span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase text-amber-400 bg-amber-500/10 border border-amber-500/20" id="diagnostic-status">Verificando...</span>
+                    </div>
+                    <div class="border-t border-clinical-800/60 pt-2.5 flex justify-between">
+                        <span class="text-slate-400 font-bold uppercase">Identificador de Canal</span>
+                        <span class="text-white font-mono" id="diagnostic-channel-id">-</span>
+                    </div>
+                    <div class="border-t border-clinical-800/60 pt-2.5 flex justify-between">
+                        <span class="text-slate-400 font-bold uppercase">ID Técnico Sesión</span>
+                        <span class="text-brandGold-500 font-mono break-all text-right max-w-[200px]" id="diagnostic-uid">-</span>
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <div class="flex justify-between items-center">
+                        <label for="manual-config-input" class="block font-bold text-slate-300 uppercase tracking-wider font-sans">Conectar a tu Propia Base de Datos (Firebase)</label>
+                        <button onclick="window.resetCustomFirebaseConfig()" class="text-rose-400 hover:text-rose-300 hover:underline font-bold text-[10px] uppercase">Restablecer Config</button>
+                    </div>
+                    <p class="text-slate-400 text-[10px] leading-relaxed">
+                        Si tu entorno está en "Modo Local", puedes pegar la configuración web de tu propio proyecto de Firebase para habilitar sincronización total en tiempo real entre tus dispositivos.
+                    </p>
+                    <textarea id="manual-config-input" placeholder='{\n  "apiKey": "AIzaSy...",\n  "authDomain": "...",\n  "projectId": "...",\n  "appId": "..."\n}' class="w-full bg-clinical-950 border border-clinical-800 rounded-xl p-3 font-mono text-[10px] text-brandGold-500 focus:outline-none focus:ring-2 focus:ring-brandGold-500/50" rows="5"></textarea>
+                </div>
+
+                <button onclick="window.saveCustomFirebaseConfig()" class="w-full bg-brandGold-500 hover:bg-brandGold-600 text-clinical-950 font-black py-3 rounded-xl uppercase transition-colors">
+                    Guardar y Conectar Base de Datos
+                </button>
             </div>
         </div>
     </div>
@@ -356,7 +409,7 @@
             scheduleConfig: { startHour: 8, endHour: 21 },
             lastCheckedAlarmTime: null,
             isSynced: false,
-            appId: 'ceut-agenda-pp-global',
+            appId: 'agenda-ceut',
             userId: null,
             confirmCallback: null
         };
@@ -1091,10 +1144,10 @@
                                 08:00:00 AM
                             </div>
                         </div>
-                        <div class="flex items-center gap-3.5">
+                        <div class="flex items-center gap-3.5 font-sans">
                             
                             <!-- Indicador de canal activo para comprobar visibilidad compartida -->
-                            <div class="text-[10px] font-mono font-bold flex flex-col items-end gap-1 px-3 py-1.5 rounded-xl bg-clinical-900 border border-clinical-800 leading-none">
+                            <div onclick="document.getElementById('network-modal').classList.remove('hidden');" class="text-[10px] font-mono font-bold flex flex-col items-end gap-1 px-3 py-1.5 rounded-xl bg-clinical-900 hover:bg-clinical-850 cursor-pointer border border-clinical-800 leading-none transition-colors">
                                 <div class="flex items-center gap-1.5">
                                     <span class="w-2.5 h-2.5 rounded-full ${window.appState.isSynced ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}"></span>
                                     <span class="${window.appState.isSynced ? 'text-emerald-400' : 'text-amber-400'}">
@@ -1105,7 +1158,7 @@
                                 <span class="text-[9px] text-slate-500">Canal: ${window.appState.appId}</span>
                             </div>
 
-                            <div class="bg-clinical-900 border border-clinical-800 rounded-2xl p-1 flex items-center shadow-lg font-sans">
+                            <div class="bg-clinical-900 border border-clinical-800 rounded-2xl p-1 flex items-center shadow-lg">
                                 <button onclick="window.changeDate(-1)" class="p-2 hover:bg-clinical-850 rounded-xl text-brandGold-500 transition-colors"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
                                 <button onclick="window.goToday()" class="px-3 py-1.5 hover:bg-clinical-850 rounded-xl text-xs font-bold text-white transition-colors">Hoy</button>
                                 <button onclick="window.changeDate(1)" class="p-2 hover:bg-clinical-850 rounded-xl text-brandGold-500 transition-colors"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
@@ -1513,7 +1566,7 @@
                     
                     <form onsubmit="window.updateAppointmentDetails(event, '${apt.id}')" class="p-6 space-y-4 overflow-y-auto flex-1 text-xs text-slate-300">
                         ${isReadOnly ? `
-                            <div class="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 text-amber-500 font-bold">
+                            <div class="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 text-amber-500 font-bold font-sans">
                                 ⚠️ Perfil Restringido: Solo puedes editar consultas creadas por ti.
                             </div>
                         ` : ''}
@@ -1593,7 +1646,7 @@
 
                         <div class="space-y-2">
                             <div class="flex justify-between items-center">
-                                <label class="block font-bold uppercase">Observaciones / Tratamiento</label>
+                                <label class="block font-bold uppercase font-sans">Observaciones / Tratamiento</label>
                                 ${!isReadOnly ? `
                                     <button type="button" onclick="window.askGeminiForObservations()" class="flex items-center gap-1.5 px-3 py-1.5 bg-brandGold-500/15 border border-brandGold-500/35 hover:border-brandGold-500 hover:bg-brandGold-500/30 text-brandGold-500 hover:text-white rounded-lg font-bold font-outfit uppercase text-[10px]">
                                         <i data-lucide="sparkles" class="w-3.5 h-3.5 animate-pulse text-brandGold-500"></i> Redactar con IA
@@ -1690,7 +1743,7 @@
                             <p class="text-[8px] uppercase font-bold tracking-widest text-clinical-600 mt-1">Coordinación y Departamento Psicopedagógico</p>
                         </div>
                     </div>
-                    <div class="text-right shrink-0">
+                    <div class="text-right shrink-0 font-sans">
                         <p class="text-[8px] font-bold text-slate-500 uppercase tracking-widest">Folio de Control</p>
                         <p class="text-xs sm:text-sm font-outfit font-black text-brandGold-600 leading-none mt-1">${folioCode}</p>
                     </div>
@@ -1721,7 +1774,7 @@
                 <div class="relative z-10 space-y-6 text-slate-800 font-sans">
                     <div class="text-center">
                         <h2 class="text-sm font-outfit font-black uppercase tracking-wider text-clinical-900">Expediente Clínico de Intervención</h2>
-                        <p class="text-[10px] text-slate-500 mt-0.5">Expediente confidencial protegido por leyes de privacidad institucional</p>
+                        <p class="text-[10px] text-slate-500 mt-0.5 font-sans">Expediente confidencial protegido por leyes de privacidad institucional</p>
                     </div>
 
                     <table class="w-full border-collapse border border-slate-300 text-[10px] text-left">
@@ -1767,7 +1820,7 @@
                         </div>
                         <div class="text-center flex flex-col items-center justify-center relative">
                             <div class="w-20 h-20 rounded-full border-2 border-double border-brandGold-500 flex flex-col items-center justify-center text-brandGold-700 select-none pointer-events-none opacity-80 rotate-12">
-                                <span class="text-[6px] font-bold uppercase tracking-widest text-center leading-none font-sans">PSICOPEDAGOGÍA<br><strong class="text-[8px] text-clinical-800">CEUT</strong><br>TEHUACÁN</span>
+                                <span class="text-[6px] font-bold uppercase tracking-widest text-center leading-none font-sans">PSICOPEDAGOGÍA<br><strong class="text-[8px] text-clinical-800 font-bold">CEUT</strong><br>TEHUACÁN</span>
                             </div>
                             <p class="text-[9px] text-slate-400 mt-2">Sello del Departamento</p>
                         </div>
@@ -1887,7 +1940,7 @@
                         </div>
                         <div class="text-center flex flex-col items-center justify-center">
                             <div class="w-20 h-20 rounded-full border-2 border-double border-brandGold-500 flex flex-col items-center justify-center text-brandGold-700 select-none pointer-events-none opacity-80 rotate-12 animate-fade-up">
-                                <span class="text-[6px] font-bold uppercase tracking-widest text-center leading-none font-sans">PSICOPEDAGOGÍA<br><strong class="text-[8px] text-clinical-800">CEUT</strong><br>TEHUACÁN</span>
+                                <span class="text-[6px] font-bold uppercase tracking-widest text-center leading-none font-sans">PSICOPEDAGOGÍA<br><strong class="text-[8px] text-clinical-800 font-bold">CEUT</strong><br>TEHUACÁN</span>
                             </div>
                             <p class="text-[9px] text-slate-400 mt-2">Sello del Departamento</p>
                         </div>
@@ -1969,7 +2022,7 @@
             if (aiBody && detailsInput && aiBody.textContent) {
                 detailsInput.value = detailsInput.value + "\n\n-- Recomendaciones de IA --\n" + aiBody.textContent;
                 window.closeAiModal();
-                window.showToast("Sugerencias añadidas al expediente", "success");
+                window.showToast("Sugerencias añadidias al expediente", "success");
             }
         };
 
@@ -2275,241 +2328,245 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, deleteDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // RULE 1: Configurar estrictamente la ruta raíz
-        const appId = (typeof __app_id !== 'undefined' && __app_id) ? String(__app_id).trim() : 'ceut-agenda-pp-global';
-        window.appState.appId = appId;
+        // Canal de conexión de la Agenda
+        window.appState.appId = 'agenda-ceut';
+        const appId = 'agenda-ceut';
         
-        let firebaseConfig = null;
+        // Configuración oficial y permanente proporcionada por el usuario
+        const firebaseConfig = {
+            apiKey: "AIzaSyAgBfvz5S4u2qCACCzUBz4TLxNO4E9lZOc",
+            authDomain: "agenda-ceut.firebaseapp.com",
+            projectId: "agenda-ceut",
+            storageBucket: "agenda-ceut.firebasestorage.app",
+            messagingSenderId: "640007933110",
+            appId: "1:640007933110:web:4d1dd511761bb4ac5d6a17"
+        };
+
+        let app, db, auth;
+        const statusDetail = document.getElementById('sync-status-details');
+        const diagnosticStatus = document.getElementById('diagnostic-status');
+        const diagnosticChannel = document.getElementById('diagnostic-channel-id');
+        const diagnosticUid = document.getElementById('diagnostic-uid');
+        const manualConfigInput = document.getElementById('manual-config-input');
+
+        if (diagnosticChannel) diagnosticChannel.textContent = appId;
+        if (manualConfigInput) manualConfigInput.value = JSON.stringify(firebaseConfig, null, 2);
+
         try {
-            firebaseConfig = typeof __firebase_config !== 'undefined' ? (typeof __firebase_config === 'string' ? JSON.parse(__firebase_config) : __firebase_config) : null;
-        } catch (e) {
-            console.error("Error al parsear configuración de Firebase:", e);
-        }
+            app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
 
-        const isConfigValid = firebaseConfig && firebaseConfig.apiKey;
+            async function startFirebaseSync() {
+                try {
+                    if (statusDetail) {
+                        statusDetail.textContent = 'Autenticando...';
+                        if (diagnosticStatus) {
+                            diagnosticStatus.textContent = 'Autenticando...';
+                            diagnosticStatus.className = 'px-2.5 py-1 rounded-full text-[10px] font-black uppercase text-amber-400 bg-amber-500/10 border border-amber-500/20';
+                        }
+                    }
 
-        if (isConfigValid) {
-            let app, db, auth;
-            const statusDetail = document.getElementById('sync-status-details');
-            try {
-                app = initializeApp(firebaseConfig);
-                db = getFirestore(app);
-                auth = getAuth(app);
-                const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+                    const userCredential = await signInAnonymously(auth);
 
-                async function startFirebaseSync() {
-                    try {
-                        let userCredential = null;
+                    if (userCredential && userCredential.user) {
+                        window.appState.isSynced = true;
+                        window.appState.userId = userCredential.user.uid;
                         
-                        // RULE 3 - Auth Before Queries: ALWAYS sign in first and await it
-                        if (initialAuthToken) {
-                            if (statusDetail) statusDetail.textContent = 'Autenticando Token...';
-                            try {
-                                userCredential = await signInWithCustomToken(auth, initialAuthToken);
-                            } catch (tokenErr) {
-                                console.warn("Fallo de Custom Token, reintentando con sesión anónima:", tokenErr);
-                                userCredential = await signInAnonymously(auth);
-                            }
-                        } else {
-                            if (statusDetail) statusDetail.textContent = 'Autenticando Anónimo...';
-                            userCredential = await signInAnonymously(auth);
+                        if (statusDetail) statusDetail.textContent = '🟢 En Línea';
+                        if (diagnosticStatus) {
+                            diagnosticStatus.textContent = 'Sincronizado';
+                            diagnosticStatus.className = 'px-2.5 py-1 rounded-full text-[10px] font-black uppercase text-emerald-400 bg-emerald-500/10 border border-emerald-500/20';
                         }
-
-                        if (userCredential && userCredential.user) {
-                            window.appState.isSynced = true;
-                            window.appState.userId = userCredential.user.uid;
-                            if (statusDetail) statusDetail.textContent = 'Conectado a la Nube';
-                            
-                            // RULE 3: Guard firestore listeners
-                            bindFirestoreRealtimeListeners(db, userCredential.user);
-                        } else {
-                            window.appState.isSynced = false;
-                            if (statusDetail) statusDetail.textContent = 'Error de Firma';
-                            setupLocalMode();
-                        }
-                    } catch (error) {
-                        console.warn("Fallo de autenticación Firebase. Ejecutando de modo Local.", error);
-                        window.appState.isSynced = false;
-                        if (statusDetail) statusDetail.textContent = 'Error: ' + (error.message || 'Sin Conexión');
+                        if (diagnosticUid) diagnosticUid.textContent = userCredential.user.uid;
+                        
+                        bindFirestoreRealtimeListeners(db, userCredential.user);
+                    } else {
                         setupLocalMode();
                     }
+                } catch (error) {
+                    console.warn("Fallo de conexión Firebase. Utilizando Modo Local de contingencia.", error);
+                    setupLocalMode(error.message);
                 }
+            }
 
-                function bindFirestoreRealtimeListeners(database, firebaseUser) {
-                    if (!firebaseUser) return;
+            function bindFirestoreRealtimeListeners(database, firebaseUser) {
+                if (!firebaseUser) return;
 
-                    // 1. Sincronización compartida de Consultas en tiempo real (Rule 2: simple collection query)
-                    const appointmentsCol = collection(database, 'artifacts', appId, 'public', 'data', 'appointments');
-                    onSnapshot(appointmentsCol, (snapshot) => {
-                        if (!auth.currentUser) return; // Guard
-                        const fetchedApts = {};
-                        snapshot.forEach(doc => {
-                            fetchedApts[doc.id] = doc.data();
-                        });
-                        window.appState.agendaData = fetchedApts;
-                        localStorage.setItem('ceut_agenda_data', JSON.stringify(fetchedApts));
-                        if (window.appState.currentUser) {
-                            window.renderMainApp();
-                        }
-                    }, (error) => {
-                        console.warn("Fallo temporal de lectura en la nube:", error);
-                        if (statusDetail) statusDetail.textContent = 'Error de lectura';
+                // 1. Sincronización de citas
+                const appointmentsCol = collection(database, 'artifacts', appId, 'public', 'data', 'appointments');
+                onSnapshot(appointmentsCol, (snapshot) => {
+                    if (!auth.currentUser) return; 
+                    const fetchedApts = {};
+                    snapshot.forEach(doc => {
+                        fetchedApts[doc.id] = doc.data();
                     });
-
-                    // 2. Sincronización compartida de Horas Bloqueadas (Rule 2)
-                    const hoursCol = collection(database, 'artifacts', appId, 'public', 'data', 'blocked_hours');
-                    onSnapshot(hoursCol, (snapshot) => {
-                        if (!auth.currentUser) return; // Guard
-                        const fetchedHours = {};
-                        snapshot.forEach(doc => {
-                            fetchedHours[doc.id] = true;
-                        });
-                        window.appState.blockedHours = fetchedHours;
-                        localStorage.setItem('ceut_blocked_hours', JSON.stringify(fetchedHours));
-                        if (window.appState.currentUser) {
-                            window.renderMainApp();
-                        }
-                    }, (error) => {
-                        console.warn("Fallo temporal de lectura de bloqueos de horas:", error);
-                    });
-
-                    // 3. Sincronización compartida de Días Bloqueados (Rule 2)
-                    const daysCol = collection(database, 'artifacts', appId, 'public', 'data', 'blocked_days');
-                    onSnapshot(daysCol, (snapshot) => {
-                        if (!auth.currentUser) return; // Guard
-                        const fetchedDays = {};
-                        snapshot.forEach(doc => {
-                            fetchedDays[doc.id] = doc.data().reason || true;
-                        });
-                        window.appState.blockedDays = fetchedDays;
-                        localStorage.setItem('ceut_blocked_days', JSON.stringify(fetchedDays));
-                        if (window.appState.currentUser) {
-                            window.renderMainApp();
-                        }
-                    }, (error) => {
-                        console.warn("Fallo temporal de lectura de días bloqueados:", error);
-                    });
-
-                    // 4. Sincronización compartida de PINs de acceso para Carlos (Rule 2)
-                    const pinsCol = collection(database, 'artifacts', appId, 'public', 'data', 'pins');
-                    onSnapshot(pinsCol, (snapshot) => {
-                        if (!auth.currentUser) return; // Guard
-                        snapshot.forEach(doc => {
-                            const userKey = doc.id;
-                            if (window.appState.users[userKey]) {
-                                window.appState.users[userKey].pin = doc.data().pin;
-                            }
-                        });
-                        localStorage.setItem('ceut_users', JSON.stringify(window.appState.users));
-                        if (window.appState.currentUser) {
-                            window.renderMainApp();
-                        }
-                    }, (error) => {
-                        console.warn("Fallo temporal de lectura de PINs:", error);
-                    });
-                }
-
-                // Writers configured with auth guards (Rule 3)
-                window.saveAptToFirestore = async function(aptId, aptData) {
-                    window.appState.agendaData[aptId] = aptData;
-                    localStorage.setItem('ceut_agenda_data', JSON.stringify(window.appState.agendaData));
-
-                    if (!auth.currentUser) return; // Guard
-                    try {
-                        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'appointments', aptId), aptData);
-                    } catch (error) {
-                        console.warn("Error guardando en la nube:", error);
+                    window.appState.agendaData = fetchedApts;
+                    localStorage.setItem('ceut_agenda_data', JSON.stringify(fetchedApts));
+                    if (window.appState.currentUser) {
+                        window.renderMainApp();
                     }
-                };
-
-                window.deleteAptFromFirestore = async function(aptId) {
-                    delete window.appState.agendaData[aptId];
-                    localStorage.setItem('ceut_agenda_data', JSON.stringify(window.appState.agendaData));
-
-                    if (!auth.currentUser) return; // Guard
-                    try {
-                        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'appointments', aptId));
-                    } catch (error) {
-                        console.warn("Error eliminando en la nube:", error);
-                    }
-                };
-
-                window.saveHourBlockToFirestore = async function(blockKey, blockState) {
-                    if (blockState) {
-                        window.appState.blockedHours[blockKey] = true;
-                    } else {
-                        delete window.appState.blockedHours[blockKey];
-                    }
-                    localStorage.setItem('ceut_blocked_hours', JSON.stringify(window.appState.blockedHours));
-
-                    if (!auth.currentUser) return; // Guard
-                    try {
-                        if (blockState) {
-                            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'blocked_hours', blockKey), { blocked: true });
-                        } else {
-                            await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'blocked_hours', blockKey));
-                        }
-                    } catch (error) {
-                        console.warn("Error inhabilitando hora en la nube:", error);
-                    }
-                };
-
-                window.saveDayBlockToFirestore = async function(dateStr, reason) {
-                    if (reason) {
-                        window.appState.blockedDays[dateStr] = reason;
-                    } else {
-                        delete window.appState.blockedDays[dateStr];
-                    }
-                    localStorage.setItem('ceut_blocked_days', JSON.stringify(window.appState.blockedDays));
-
-                    if (!auth.currentUser) return; // Guard
-                    try {
-                        if (reason) {
-                            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'blocked_days', dateStr), { reason });
-                        } else {
-                            await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'blocked_days', dateStr));
-                        }
-                    } catch (error) {
-                        console.warn("Error inhabilitando día en la nube:", error);
-                    }
-                };
-
-                window.savePinToFirestore = async function(userKey, newPin) {
-                    window.appState.users[userKey].pin = newPin;
-                    localStorage.setItem('ceut_users', JSON.stringify(window.appState.users));
-
-                    if (!auth.currentUser) return; // Guard
-                    try {
-                        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'pins', userKey), { pin: newPin });
-                    } catch (error) {
-                        console.warn("Error de PIN en la nube:", error);
-                    }
-                };
-
-                // Bootstrap síncrono inicial de login
-                window.renderLogin();
-                // Sincronización en segundo plano sin bloquear interfaz
-                startFirebaseSync().catch(e => {
-                    console.warn("Fallo de arranque de sincronización:", e);
-                    setupLocalMode();
+                }, (error) => {
+                    console.warn("Retraso o bloqueo de lectura en tiempo real:", error);
                 });
 
-            } catch (err) {
-                console.warn("Error de inicialización de Firebase. Iniciando en Modo Local.", err);
-                setupLocalMode();
+                // 2. Sincronización de horas bloqueadas
+                const hoursCol = collection(database, 'artifacts', appId, 'public', 'data', 'blocked_hours');
+                onSnapshot(hoursCol, (snapshot) => {
+                    if (!auth.currentUser) return; 
+                    const fetchedHours = {};
+                    snapshot.forEach(doc => {
+                        fetchedHours[doc.id] = true;
+                    });
+                    window.appState.blockedHours = fetchedHours;
+                    localStorage.setItem('ceut_blocked_hours', JSON.stringify(fetchedHours));
+                    if (window.appState.currentUser) {
+                        window.renderMainApp();
+                    }
+                }, (error) => {
+                    console.warn("Fallo temporal de lectura de horas bloqueadas:", error);
+                });
+
+                // 3. Sincronización de días bloqueados
+                const daysCol = collection(database, 'artifacts', appId, 'public', 'data', 'blocked_days');
+                onSnapshot(daysCol, (snapshot) => {
+                    if (!auth.currentUser) return; 
+                    const fetchedDays = {};
+                    snapshot.forEach(doc => {
+                        fetchedDays[doc.id] = doc.data().reason || true;
+                    });
+                    window.appState.blockedDays = fetchedDays;
+                    localStorage.setItem('ceut_blocked_days', JSON.stringify(fetchedDays));
+                    if (window.appState.currentUser) {
+                        window.renderMainApp();
+                    }
+                }, (error) => {
+                    console.warn("Fallo temporal de lectura de días bloqueados:", error);
+                });
+
+                // 4. Sincronización de pines
+                const pinsCol = collection(database, 'artifacts', appId, 'public', 'data', 'pins');
+                onSnapshot(pinsCol, (snapshot) => {
+                    if (!auth.currentUser) return; 
+                    snapshot.forEach(doc => {
+                        const userKey = doc.id;
+                        if (window.appState.users[userKey]) {
+                            window.appState.users[userKey].pin = doc.data().pin;
+                        }
+                    });
+                    localStorage.setItem('ceut_users', JSON.stringify(window.appState.users));
+                    if (window.appState.currentUser) {
+                        window.renderMainApp();
+                    }
+                }, (error) => {
+                    console.warn("Fallo temporal de lectura de PINs de acceso:", error);
+                });
             }
-        } else {
-            setupLocalMode();
+
+            window.saveAptToFirestore = async function(aptId, aptData) {
+                window.appState.agendaData[aptId] = aptData;
+                localStorage.setItem('ceut_agenda_data', JSON.stringify(window.appState.agendaData));
+
+                if (!auth.currentUser) return; 
+                try {
+                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'appointments', aptId), aptData);
+                } catch (error) {
+                    console.warn("Fallo al escribir cita en Firestore:", error);
+                }
+            };
+
+            window.deleteAptFromFirestore = async function(aptId) {
+                delete window.appState.agendaData[aptId];
+                localStorage.setItem('ceut_agenda_data', JSON.stringify(window.appState.agendaData));
+
+                if (!auth.currentUser) return; 
+                try {
+                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'appointments', aptId));
+                } catch (error) {
+                    console.warn("Fallo al remover cita de Firestore:", error);
+                }
+            };
+
+            window.saveHourBlockToFirestore = async function(blockKey, blockState) {
+                if (blockState) {
+                    window.appState.blockedHours[blockKey] = true;
+                } else {
+                    delete window.appState.blockedHours[blockKey];
+                }
+                localStorage.setItem('ceut_blocked_hours', JSON.stringify(window.appState.blockedHours));
+
+                if (!auth.currentUser) return; 
+                try {
+                    if (blockState) {
+                        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'blocked_hours', blockKey), { blocked: true });
+                    } else {
+                        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'blocked_hours', blockKey));
+                    }
+                } catch (error) {
+                    console.warn("Error de escritura de hora inhabilitada en la nube:", error);
+                }
+            };
+
+            window.saveDayBlockToFirestore = async function(dateStr, reason) {
+                if (reason) {
+                    window.appState.blockedDays[dateStr] = reason;
+                } else {
+                    delete window.appState.blockedDays[dateStr];
+                }
+                localStorage.setItem('ceut_blocked_days', JSON.stringify(window.appState.blockedDays));
+
+                if (!auth.currentUser) return; 
+                try {
+                    if (reason) {
+                        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'blocked_days', dateStr), { reason });
+                    } else {
+                        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'blocked_days', dateStr));
+                    }
+                } catch (error) {
+                    console.warn("Error de escritura de jornada bloqueada en la nube:", error);
+                }
+            };
+
+            window.savePinToFirestore = async function(userKey, newPin) {
+                window.appState.users[userKey].pin = newPin;
+                localStorage.setItem('ceut_users', JSON.stringify(window.appState.users));
+
+                if (!auth.currentUser) return; 
+                try {
+                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'pins', userKey), { pin: newPin });
+                } catch (error) {
+                    console.warn("Error de escritura de PIN de acceso en la nube:", error);
+                }
+            };
+
+            // Arranque de la aplicación
+            window.renderLogin();
+            
+            // Conexión asíncrona
+            startFirebaseSync().catch(e => {
+                console.warn("Fallo de sincronización inicial:", e);
+                setupLocalMode();
+            });
+
+        } catch (err) {
+            console.warn("Error de inicio de base de datos Firebase. Modo Local activado.", err);
+            setupLocalMode(err.message);
         }
 
-        function setupLocalMode() {
+        function setupLocalMode(reason = "") {
             window.appState.isSynced = false;
             window.appState.userId = "MODO_LOCAL";
-            const statusDetail = document.getElementById('sync-status-details');
-            if (statusDetail) statusDetail.textContent = 'Modo Local Activo';
+            
+            if (statusDetail) statusDetail.textContent = '🟡 Modo Local';
+            if (diagnosticStatus) {
+                diagnosticStatus.textContent = 'Modo Local Activo';
+                diagnosticStatus.className = 'px-2.5 py-1 rounded-full text-[10px] font-black uppercase text-amber-500 bg-amber-500/10 border border-amber-500/20';
+            }
+            if (diagnosticUid) diagnosticUid.textContent = "CONEXION_LOCAL_ACTIVA";
+            if (diagnosticChannel) diagnosticChannel.textContent = appId;
 
             window.saveAptToFirestore = function(aptId, aptData) {
                 window.appState.agendaData[aptId] = aptData;
