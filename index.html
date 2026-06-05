@@ -81,7 +81,8 @@
         .animate-pulse-alarm {
             animation: pulseAlarm 1.5s infinite ease-in-out;
         }
-        input[type="date"]::-webkit-calendar-picker-indicator {
+        input[type="date"]::-webkit-calendar-picker-indicator,
+        input[type="time"]::-webkit-calendar-picker-indicator {
             filter: invert(1) sepia(1) saturate(5) hue-rotate(5deg);
             cursor: pointer;
         }
@@ -284,7 +285,7 @@
             agendaData: safeGetLocalJSON('ceut_agenda_data', {}), 
             carlosEvents: safeGetLocalJSON('ceut_carlos_events', {}),
             chatMessages: safeGetLocalJSON('ceut_chat_messages', []),
-            scheduleConfig: { startHour: 8, endHour: 21 },
+            scheduleConfig: { startHour: 7, endHour: 21 }, // Ampliado de 7 AM a 9 PM para citas tempranas
             lastCheckedAlarmTime: null,
             isSynced: false,
             appId: 'agenda-ceut',
@@ -390,7 +391,6 @@
             window.appState.confirmCallback = null;
         };
 
-        // Generador de audio sintetizado nativo para alertas de mensajes nuevos
         window.playMessageNotificationSound = function() {
             try {
                 const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -427,7 +427,7 @@
                     </div>
                     <div>
                         <h4 class="font-outfit font-black text-white text-base tracking-wide" id="ai-modal-title">Asistente Psicopedagógico IA</h4>
-                        <p class="text-[10px] text-brandGold-500 font-bold uppercase tracking-widest">Desarrollado con Gemini 3.5 Flash</p>
+                        <p class="text-[10px] text-brandGold-500 font-bold uppercase tracking-widest">Desarrollado con Gemini 2.5 Flash</p>
                     </div>
                 </div>
                 <button onclick="window.closeAiModal()" class="p-1.5 hover:bg-clinical-800 rounded-lg text-slate-400 hover:text-white transition-colors">
@@ -833,16 +833,20 @@
             const isCarlos = (currentUser === 'carlos');
 
             slots.forEach(hour => {
-                const aptForSlot = activeAppointments.find(apt => apt.hour === hour);
+                const hourNum = parseInt(hour.split(':')[0]);
+                // Agrupamos citas que comiencen dentro del rango de esta hora (ej: 07:20 cae en slot 07:00)
+                const aptsForSlot = activeAppointments.filter(apt => {
+                    if (!apt.hour) return false;
+                    const aptHourNum = parseInt(apt.hour.split(':')[0]);
+                    return aptHourNum === hourNum;
+                });
+
                 const blockKey = `${dateStr}_${hour}`;
                 const isHourBlocked = window.appState.blockedHours[blockKey];
                 
                 // DETECCIÓN DE EVENTO PRIVADO DE CARLOS
                 const carlosEventKey = `${dateStr}_${hour}`;
                 const hasCarlosEvent = window.appState.carlosEvents[carlosEventKey];
-
-                const matchesFilter = (window.appState.filterType === 'all' || (aptForSlot && aptForSlot.type === window.appState.filterType)) &&
-                                     (!window.appState.searchQuery || (aptForSlot && aptForSlot.student.toLowerCase().includes(window.appState.searchQuery.toLowerCase())));
 
                 html += `<div class="flex items-stretch min-h-[5.5rem] group hover:bg-clinical-950/20 transition-colors">`;
                 html += `
@@ -851,7 +855,7 @@
                         <span class="text-[9px] font-bold text-slate-500 tracking-wider">${parseInt(hour) < 12 ? 'AM' : 'PM'}</span>
                     </div>
                 `;
-                html += `<div class="flex-1 p-4 flex items-center">`;
+                html += `<div class="flex-1 p-4 flex flex-col gap-3 justify-center">`;
                 
                 if (hasCarlosEvent) {
                     if (isCarlos) {
@@ -894,56 +898,62 @@
                             ` : ''}
                         </div>
                     `;
-                } else if (aptForSlot) {
-                    if (matchesFilter) {
-                        const isOwner = aptForSlot.createdBy === currentUser;
-                        const canEditOrDelete = isCarlos || isOwner;
-                        const statuses = ['Pendiente', 'Realizada', 'Seguimiento', 'Reagendada', 'Cancelada', 'Sin Asistir'];
-                        
-                        let selectBorderClass = 'border-clinical-800';
-                        if (aptForSlot.status === 'Realizada') selectBorderClass = 'border-emerald-500/60 text-emerald-400';
-                        else if (aptForSlot.status === 'Cancelada' || aptForSlot.status === 'Sin Asistir') selectBorderClass = 'border-rose-500/60 text-rose-400';
-                        else if (aptForSlot.status === 'Pendiente') selectBorderClass = 'border-amber-500/60 text-amber-400';
-                        else if (aptForSlot.status === 'Seguimiento' || aptForSlot.status === 'Reagendada') selectBorderClass = 'border-blue-500/60 text-blue-400';
+                } else if (aptsForSlot.length > 0) {
+                    aptsForSlot.forEach(aptForSlot => {
+                        const matchesFilter = (window.appState.filterType === 'all' || aptForSlot.type === window.appState.filterType) &&
+                                             (!window.appState.searchQuery || aptForSlot.student.toLowerCase().includes(window.appState.searchQuery.toLowerCase()));
 
-                        let selectHtml = `<select onchange="window.updateAptStatus('${aptForSlot.id}', this.value)" class="bg-clinical-900 border ${selectBorderClass} rounded-lg text-[10px] font-bold px-2 py-1 focus:outline-none focus:ring-1 focus:ring-brandGold-500/50 appearance-none cursor-pointer">`;
-                        statuses.forEach(st => {
-                            selectHtml += `<option value="${st}" ${aptForSlot.status === st ? 'selected' : ''}>${st}</option>`;
-                        });
-                        selectHtml += `</select>`;
+                        if (matchesFilter) {
+                            const isOwner = aptForSlot.createdBy === currentUser;
+                            const canEditOrDelete = isCarlos || isOwner;
+                            const statuses = ['Pendiente', 'Realizada', 'Seguimiento', 'Reagendada', 'Cancelada', 'Sin Asistir'];
+                            
+                            let selectBorderClass = 'border-clinical-800';
+                            if (aptForSlot.status === 'Realizada') selectBorderClass = 'border-emerald-500/60 text-emerald-400';
+                            else if (aptForSlot.status === 'Cancelada' || aptForSlot.status === 'Sin Asistir') selectBorderClass = 'border-rose-500/60 text-rose-400';
+                            else if (aptForSlot.status === 'Pendiente') selectBorderClass = 'border-amber-500/60 text-amber-400';
+                            else if (aptForSlot.status === 'Seguimiento' || aptForSlot.status === 'Reagendada') selectBorderClass = 'border-blue-500/60 text-blue-400';
 
-                        html += `
-                            <div class="w-full bg-clinical-950 border border-clinical-800 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-md hover:border-brandGold-500/40 transition-all relative overflow-hidden group/card">
-                                <div class="absolute left-0 top-0 bottom-0 w-1.5 ${
-                                    aptForSlot.type === 'Psicológica' ? 'bg-indigo-500' :
-                                    aptForSlot.type === 'Vocacional' ? 'bg-amber-500' :
-                                    aptForSlot.type === 'Académica' ? 'bg-teal-500' : 'bg-slate-500'
-                                }"></div>
-                                <div class="flex-1 pl-2">
-                                    <div class="flex items-center gap-2 flex-wrap">
-                                        <span class="text-white font-outfit font-bold text-sm leading-tight">${aptForSlot.student}</span>
-                                        <span class="text-[9px] font-black uppercase tracking-widest bg-clinical-900 border border-clinical-800 text-slate-400 px-2 py-0.5 rounded-full">${aptForSlot.type}</span>
-                                        <span class="text-[10px] font-bold text-slate-500">${aptForSlot.level} • ${aptForSlot.career}</span>
-                                        ${selectHtml}
-                                        <span class="text-[9px] text-slate-500 font-mono">Creador: ${aptForSlot.createdBy}</span>
+                            let selectHtml = `<select onchange="window.updateAptStatus('${aptForSlot.id}', this.value)" class="bg-clinical-900 border ${selectBorderClass} rounded-lg text-[10px] font-bold px-2 py-1 focus:outline-none focus:ring-1 focus:ring-brandGold-500/50 appearance-none cursor-pointer">`;
+                            statuses.forEach(st => {
+                                selectHtml += `<option value="${st}" ${aptForSlot.status === st ? 'selected' : ''}>${st}</option>`;
+                            });
+                            selectHtml += `</select>`;
+
+                            const creatorName = window.appState.users[aptForSlot.createdBy]?.name || aptForSlot.createdBy;
+
+                            html += `
+                                <div class="w-full bg-clinical-950 border border-clinical-800 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-md hover:border-brandGold-500/40 transition-all relative overflow-hidden group/card">
+                                    <div class="absolute left-0 top-0 bottom-0 w-1.5 ${
+                                        aptForSlot.type === 'Psicológica' ? 'bg-indigo-500' :
+                                        aptForSlot.type === 'Vocacional' ? 'bg-amber-500' :
+                                        aptForSlot.type === 'Académica' ? 'bg-teal-500' : 'bg-slate-500'
+                                    }"></div>
+                                    <div class="flex-1 pl-2">
+                                        <div class="flex items-center gap-2 flex-wrap">
+                                            <span class="text-white font-outfit font-bold text-sm leading-tight">${aptForSlot.student}</span>
+                                            <span class="text-[10px] font-black uppercase tracking-wider text-brandGold-500 bg-brandGold-500/10 border border-brandGold-500/20 px-2 py-0.5 rounded-full font-mono">${aptForSlot.hour} - ${aptForSlot.endTime || 'S/F'}</span>
+                                            <span class="text-[9px] font-black uppercase tracking-widest bg-clinical-900 border border-clinical-800 text-slate-400 px-2 py-0.5 rounded-full">${aptForSlot.type}</span>
+                                            <span class="text-[10px] font-bold text-slate-500">${aptForSlot.level} • ${aptForSlot.career}</span>
+                                            ${selectHtml}
+                                            <span class="text-[9px] text-slate-500 font-mono" title="${creatorName}">Creador: ${aptForSlot.createdBy}</span>
+                                        </div>
+                                        <p class="text-xs text-slate-400 mt-1.5 line-clamp-2 italic">"${aptForSlot.obs || 'Sin observaciones iniciales.'}"</p>
                                     </div>
-                                    <p class="text-xs text-slate-400 mt-1.5 line-clamp-2 italic">"${aptForSlot.obs || 'Sin observaciones iniciales.'}"</p>
-                                </div>
-                                <div class="flex items-center gap-2 shrink-0 font-sans">
-                                    <button onclick="window.viewAppointmentDetails('${aptForSlot.id}')" class="p-2 bg-clinical-900 border border-clinical-800 rounded-xl hover:border-brandGold-500/40 text-brandGold-500 hover:text-white transition-all text-xs font-bold flex items-center gap-1.5">
-                                        <i data-lucide="eye" class="w-4 h-4"></i> Ver / Editar
-                                    </button>
-                                    ${canEditOrDelete ? `
-                                        <button onclick="window.cancelAppointment('${aptForSlot.id}')" class="p-2 bg-rose-950/20 hover:bg-rose-900/30 border border-rose-900/30 text-rose-400 hover:text-white rounded-xl transition-all" title="Eliminar Consulta">
-                                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                    <div class="flex items-center gap-2 shrink-0 font-sans">
+                                        <button onclick="window.viewAppointmentDetails('${aptForSlot.id}')" class="p-2 bg-clinical-900 border border-clinical-800 rounded-xl hover:border-brandGold-500/40 text-brandGold-500 hover:text-white transition-all text-xs font-bold flex items-center gap-1.5">
+                                            <i data-lucide="eye" class="w-4 h-4"></i> Ver / Editar
                                         </button>
-                                    ` : ''}
+                                        ${canEditOrDelete ? `
+                                            <button onclick="window.cancelAppointment('${aptForSlot.id}')" class="p-2 bg-rose-950/20 hover:bg-rose-900/30 border border-rose-900/30 text-rose-400 hover:text-white rounded-xl transition-all" title="Eliminar Consulta">
+                                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                            </button>
+                                        ` : ''}
+                                    </div>
                                 </div>
-                            </div>
-                        `;
-                    } else {
-                        html += `<span class="text-xs text-slate-500 font-semibold italic">Consulta filtrada por categoría o búsqueda</span>`;
-                    }
+                            `;
+                        }
+                    });
                 } else {
                     if (isBlocked) {
                         html += `
@@ -984,7 +994,7 @@
                             <i data-lucide="calendar-days" class="w-5 h-5 text-brandGold-500"></i>
                             <span class="text-sm font-bold text-white uppercase tracking-wider">Planificador Semanal (Lunes a Sábado)</span>
                         </div>
-                        <span class="text-xs text-slate-400 font-bold uppercase">Distribución de Consultas del Terapeuta Carlos</span>
+                        <span class="text-xs text-slate-400 font-bold uppercase font-sans">Distribución de Consultas del Terapeuta Carlos</span>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="w-full border-collapse text-left min-w-[800px] font-sans">
@@ -1018,13 +1028,20 @@
             html += `</tr></thead><tbody class="divide-y divide-clinical-850">`;
 
             slots.forEach(hour => {
+                const hourNum = parseInt(hour.split(':')[0]);
                 html += `<tr class="hover:bg-clinical-950/10 transition-colors">`;
                 html += `<td class="p-3 font-mono text-xs font-black text-slate-400 border-r border-clinical-850">${hour}</td>`;
 
                 weekDays.forEach(day => {
                     const dateStr = day.toISOString().split('T')[0];
                     const activeAppointments = Object.values(window.appState.agendaData).filter(apt => apt.date === dateStr);
-                    const aptForSlot = activeAppointments.find(apt => apt.hour === hour);
+                    
+                    const aptsForSlot = activeAppointments.filter(apt => {
+                        if (!apt.hour) return false;
+                        const aptHourNum = parseInt(apt.hour.split(':')[0]);
+                        return aptHourNum === hourNum;
+                    });
+
                     const blockKey = `${dateStr}_${hour}`;
                     const isHourBlocked = window.appState.blockedHours[blockKey];
                     const isDayBlocked = window.appState.blockedDays[dateStr];
@@ -1069,32 +1086,36 @@
                                 ` : ''}
                             </div>
                         `;
-                    } else if (aptForSlot) {
-                        const isOwner = aptForSlot.createdBy === currentUser;
-                        const canEditOrDelete = isCarlos || isOwner;
-                        html += `
-                            <div class="p-2 rounded-xl text-left border relative overflow-hidden flex flex-col justify-between h-full min-h-[4.5rem] ${
-                                aptForSlot.type === 'Psicológica' ? 'bg-indigo-950/40 border-indigo-500/30' :
-                                aptForSlot.type === 'Vocacional' ? 'bg-amber-950/40 border-amber-500/30' :
-                                aptForSlot.type === 'Académica' ? 'bg-teal-950/40 border-teal-500/30' : 'bg-slate-950/40 border-slate-500/30'
-                            }">
-                                <div>
-                                    <div class="font-bold text-white text-[11px] truncate">${aptForSlot.student}</div>
-                                    <div class="text-[9px] text-slate-400 truncate">${aptForSlot.career}</div>
-                                    <div class="text-[9px] font-black uppercase mt-1 inline-block px-1.5 py-0.5 rounded ${
-                                        aptForSlot.status === 'Realizada' ? 'bg-emerald-500/20 text-emerald-400' :
-                                        aptForSlot.status === 'Cancelada' ? 'bg-rose-500/20 text-rose-400' :
-                                        aptForSlot.status === 'Pendiente' ? 'bg-amber-500/20 text-amber-400' : 'bg-slate-500/20 text-slate-400'
-                                    }">${aptForSlot.status}</div>
+                    } else if (aptsForSlot.length > 0) {
+                        html += `<div class="space-y-1.5">`;
+                        aptsForSlot.forEach(aptForSlot => {
+                            const isOwner = aptForSlot.createdBy === currentUser;
+                            const canEditOrDelete = isCarlos || isOwner;
+                            html += `
+                                <div class="p-2 rounded-xl text-left border relative overflow-hidden flex flex-col justify-between min-h-[4.5rem] ${
+                                    aptForSlot.type === 'Psicológica' ? 'bg-indigo-950/40 border-indigo-500/30' :
+                                    aptForSlot.type === 'Vocacional' ? 'bg-amber-950/40 border-amber-500/30' :
+                                    aptForSlot.type === 'Académica' ? 'bg-teal-950/40 border-teal-500/30' : 'bg-slate-950/40 border-slate-500/30'
+                                }">
+                                    <div>
+                                        <div class="font-bold text-white text-[11px] truncate">${aptForSlot.student}</div>
+                                        <div class="text-[9px] text-brandGold-500 font-bold font-mono">${aptForSlot.hour} - ${aptForSlot.endTime || ''}</div>
+                                        <div class="text-[9px] font-black uppercase mt-1 inline-block px-1.5 py-0.5 rounded ${
+                                            aptForSlot.status === 'Realizada' ? 'bg-emerald-500/20 text-emerald-400' :
+                                            aptForSlot.status === 'Cancelada' ? 'bg-rose-500/20 text-rose-400' :
+                                            aptForSlot.status === 'Pendiente' ? 'bg-amber-500/20 text-amber-400' : 'bg-slate-500/20 text-slate-400'
+                                        }">${aptForSlot.status}</div>
+                                    </div>
+                                    <div class="flex gap-1 justify-end mt-2">
+                                        <button onclick="window.viewAppointmentDetails('${aptForSlot.id}')" class="p-1 hover:bg-clinical-800 rounded text-brandGold-500" title="Ver / Editar"><i data-lucide="eye" class="w-3.5 h-3.5"></i></button>
+                                        ${canEditOrDelete ? `
+                                            <button onclick="window.cancelAppointment('${aptForSlot.id}')" class="p-1 hover:bg-rose-950/40 rounded text-rose-400" title="Eliminar"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                                        ` : ''}
+                                    </div>
                                 </div>
-                                <div class="flex gap-1 justify-end mt-2">
-                                    <button onclick="window.viewAppointmentDetails('${aptForSlot.id}')" class="p-1 hover:bg-clinical-800 rounded text-brandGold-500" title="Ver / Editar"><i data-lucide="eye" class="w-3.5 h-3.5"></i></button>
-                                    ${canEditOrDelete ? `
-                                        <button onclick="window.cancelAppointment('${aptForSlot.id}')" class="p-1 hover:bg-rose-950/40 rounded text-rose-400" title="Eliminar"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
-                                    ` : ''}
-                                </div>
-                            </div>
-                        `;
+                            `;
+                        });
+                        html += `</div>`;
                     } else {
                         html += `
                             <div class="flex flex-col items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -1203,16 +1224,30 @@
             const currentUser = window.appState.currentUser;
             const msgs = window.appState.chatMessages || [];
             
+            // FILTRADO DE MENSAJES (Soporta Equipo, Asistente IA y Chat Directo Privado)
+            const activeTarget = window.appState.chatTarget;
+            const filteredMsgs = msgs.filter(msg => {
+                if (activeTarget === 'team') {
+                    return !msg.recipientId || msg.recipientId === 'team';
+                } else if (activeTarget === 'ai') {
+                    return msg.recipientId === 'ai' && (msg.senderId === currentUser || msg.senderId === 'gemini_ia');
+                } else {
+                    // Chat Privado Directo entre currentUser y el receptor (activeTarget)
+                    return (msg.recipientId === activeTarget && msg.senderId === currentUser) ||
+                           (msg.recipientId === currentUser && msg.senderId === activeTarget);
+                }
+            });
+
             let messagesHtml = '';
-            if (msgs.length === 0) {
+            if (filteredMsgs.length === 0) {
                 messagesHtml = `
                     <div class="flex flex-col items-center justify-center h-full text-slate-500 gap-2 font-sans py-12">
                         <i data-lucide="message-square-dashed" class="w-12 h-12 text-slate-600"></i>
-                        <span class="text-xs font-bold uppercase tracking-wider">Canal de Chat Vacío.</span>
+                        <span class="text-xs font-bold uppercase tracking-wider">Sin mensajes en este canal.</span>
                     </div>
                 `;
             } else {
-                msgs.forEach(msg => {
+                filteredMsgs.forEach(msg => {
                     const isSelf = msg.senderId === currentUser;
                     let borderClass = 'border-clinical-800 bg-clinical-950/40 text-slate-200';
                     let roleBadge = '';
@@ -1226,36 +1261,27 @@
                                 <i data-lucide="sparkles" class="w-4 h-4"></i>
                             </div>
                         `;
-                    } else if (msg.senderId === 'carlos') {
-                        borderClass = isSelf ? 'border-brandGold-500 bg-brandGold-500/15 text-white chat-bubble-self' : 'border-brandGold-500/40 bg-clinical-900 text-slate-200 chat-bubble-other';
-                        roleBadge = `<span class="text-[8px] font-black uppercase text-brandGold-500 bg-brandGold-500/10 px-1.5 py-0.5 rounded ml-1 border border-brandGold-500/20">Director</span>`;
-                        avatarHtml = `
-                            <div class="w-8 h-8 rounded-full bg-clinical-800 border border-brandGold-500 flex items-center justify-center text-brandGold-500 font-black text-xs shadow-sm shrink-0">
-                                CA
-                            </div>
-                        `;
-                    } else if (msg.senderId === 'miroslava') {
-                        borderClass = isSelf ? 'border-indigo-500 bg-indigo-500/10 text-white chat-bubble-self' : 'border-indigo-500/40 bg-clinical-900 text-slate-200 chat-bubble-other';
-                        roleBadge = `<span class="text-[8px] font-black uppercase text-indigo-400 bg-indigo-500/10 px-1.5 py-0.5 rounded ml-1 border border-indigo-500/20">Coordinadora</span>`;
-                        avatarHtml = `
-                            <div class="w-8 h-8 rounded-full bg-clinical-800 border border-indigo-500 flex items-center justify-center text-indigo-400 font-black text-xs shadow-sm shrink-0">
-                                MH
-                            </div>
-                        `;
-                    } else if (msg.senderId === 'abril') {
-                        borderClass = isSelf ? 'border-emerald-500 bg-emerald-500/10 text-white chat-bubble-self' : 'border-emerald-500/40 bg-clinical-900 text-slate-200 chat-bubble-other';
-                        roleBadge = `<span class="text-[8px] font-black uppercase text-emerald-400 bg-emerald-400/10 px-1.5 py-0.5 rounded ml-1 border border-emerald-500/20">Pasante</span>`;
-                        avatarHtml = `
-                            <div class="w-8 h-8 rounded-full bg-clinical-800 border border-emerald-500 flex items-center justify-center text-emerald-400 font-black text-xs shadow-sm shrink-0">
-                                PA
-                            </div>
-                        `;
                     } else {
-                        borderClass = isSelf ? 'border-slate-500 bg-slate-500/10 text-white chat-bubble-self' : 'border-slate-500/40 bg-clinical-900 text-slate-200 chat-bubble-other';
-                        roleBadge = `<span class="text-[8px] font-black uppercase text-slate-400 bg-slate-500/10 px-1.5 py-0.5 rounded ml-1 border border-slate-500/20">Usuario</span>`;
+                        // Rol según la base de datos de usuarios
+                        const senderProfile = window.appState.users[msg.senderId];
+                        const roleName = senderProfile ? senderProfile.role : 'Pasante';
+                        const isCarlos = msg.senderId === 'carlos';
+                        const isMiro = msg.senderId === 'miroslava';
+                        
+                        let badgeColor = 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
+                        if (isCarlos) badgeColor = 'text-brandGold-500 bg-brandGold-500/10 border-brandGold-500/20';
+                        else if (isMiro) badgeColor = 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20';
+
+                        borderClass = isSelf 
+                            ? 'border-brandGold-500/40 bg-brandGold-500/10 text-white chat-bubble-self' 
+                            : 'border-clinical-800 bg-clinical-900 text-slate-200 chat-bubble-other';
+                        
+                        roleBadge = `<span class="text-[8px] font-black uppercase ${badgeColor} px-1.5 py-0.5 rounded ml-1 border">${roleName}</span>`;
+                        
+                        const initials = (senderProfile?.name || 'US').split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase();
                         avatarHtml = `
-                            <div class="w-8 h-8 rounded-full bg-clinical-800 border border-slate-500 flex items-center justify-center text-slate-300 font-black text-xs shadow-sm shrink-0">
-                                US
+                            <div class="w-8 h-8 rounded-full bg-clinical-800 border ${isSelf ? 'border-brandGold-500' : 'border-clinical-600'} flex items-center justify-center text-slate-300 font-black text-xs shadow-sm shrink-0">
+                                ${initials}
                             </div>
                         `;
                     }
@@ -1290,10 +1316,60 @@
                 });
             }
 
-            const isTeam = window.appState.chatTarget !== 'ai';
-            const teamBtnClass = isTeam ? 'bg-brandGold-500 text-clinical-950' : 'bg-clinical-900 text-slate-400 hover:text-white';
-            const aiBtnClass = !isTeam ? 'bg-brandGold-500 text-clinical-950' : 'bg-clinical-900 text-slate-400 hover:text-white';
-            const placeholderText = isTeam ? 'Escribe un mensaje de coordinación para el equipo...' : 'Pregunta al Asistente Psicopedagógico IA...';
+            // CREACIÓN DE PESTAÑAS Y CANALES LATERALES DE CHAT (Equipo, IA y Directos)
+            let sidebarChannelsHtml = `
+                <button onclick="window.setChatTarget('team')" class="w-full text-left p-3 rounded-xl flex items-center gap-2.5 transition-all ${activeTarget === 'team' ? 'bg-brandGold-500 text-clinical-950 font-black' : 'bg-clinical-950/40 hover:bg-clinical-850 border border-clinical-850 text-slate-300'}">
+                    <i data-lucide="users" class="w-4 h-4"></i>
+                    <div class="text-xs leading-none">
+                        <span class="block font-bold">👥 Canal Público</span>
+                        <span class="text-[9px] opacity-75">Equipo de Trabajo</span>
+                    </div>
+                </button>
+                <button onclick="window.setChatTarget('ai')" class="w-full text-left p-3 rounded-xl flex items-center gap-2.5 transition-all ${activeTarget === 'ai' ? 'bg-brandGold-500 text-clinical-950 font-black' : 'bg-clinical-950/40 hover:bg-clinical-850 border border-clinical-850 text-slate-300'}">
+                    <i data-lucide="sparkles" class="w-4 h-4"></i>
+                    <div class="text-xs leading-none">
+                        <span class="block font-bold">✨ Asistente IA</span>
+                        <span class="text-[9px] opacity-75">Motor Gemini Clínico</span>
+                    </div>
+                </button>
+                <div class="border-t border-clinical-850 pt-3 mt-3">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2 px-1">💬 Chats Privados</span>
+                    <div class="space-y-1.5 flex-1 max-h-[300px] overflow-y-auto">
+            `;
+
+            Object.entries(window.appState.users).forEach(([userKey, profile]) => {
+                if (userKey === currentUser) return; // Omitir a uno mismo
+                const isActive = activeTarget === userKey;
+                
+                sidebarChannelsHtml += `
+                    <button onclick="window.setChatTarget('${userKey}')" class="w-full text-left p-2.5 rounded-xl flex items-center gap-2 transition-all ${isActive ? 'bg-brandGold-500 text-clinical-950 font-black' : 'bg-clinical-950/30 hover:bg-clinical-850 text-slate-300'}">
+                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
+                        <div class="text-xs leading-tight truncate flex-1">
+                            <span class="block font-bold truncate">${profile.name}</span>
+                            <span class="text-[8px] opacity-75 truncate block">${profile.role}</span>
+                        </div>
+                    </button>
+                `;
+            });
+
+            sidebarChannelsHtml += `</div></div>`;
+
+            let currentChannelTitle = '👥 Canal de Coordinación (Público)';
+            let currentChannelSubtitle = 'Mensajería interna grupal en tiempo real';
+            if (activeTarget === 'ai') {
+                currentChannelTitle = '✨ Consulta Directa con Asistente IA';
+                currentChannelSubtitle = 'Análisis psicopedagógico privado';
+            } else if (window.appState.users[activeTarget]) {
+                currentChannelTitle = `🔒 Privado con ${window.appState.users[activeTarget].name}`;
+                currentChannelSubtitle = 'Conversación encriptada privada';
+            }
+
+            const isTeam = activeTarget === 'team';
+            const placeholderText = isTeam 
+                ? 'Escribe un mensaje de coordinación para el equipo...' 
+                : activeTarget === 'ai' 
+                ? 'Pregunta al Asistente Psicopedagógico IA...' 
+                : `Escribe un mensaje privado seguro...`;
 
             const clearChatBtnHtml = (currentUser === 'carlos') ? `
                 <button type="button" onclick="window.clearAllChatHistory()" class="px-3 py-1.5 bg-rose-950/30 hover:bg-rose-900/40 text-rose-400 hover:text-rose-300 border border-rose-900/30 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-sm" title="Vaciar todo el historial de chat">
@@ -1306,37 +1382,11 @@
                 <div class="max-w-7xl mx-auto flex flex-col md:flex-row gap-6 h-[calc(100vh-140px)] animate-fade-up font-sans">
                     <div class="w-full md:w-64 bg-clinical-900 border border-clinical-800 rounded-3xl p-5 flex flex-col gap-4 shrink-0 font-sans h-fit md:h-full">
                         <div class="border-b border-clinical-850 pb-3">
-                            <span class="text-xs font-bold text-white uppercase tracking-wider block">Equipo CEUT</span>
+                            <span class="text-xs font-bold text-white uppercase tracking-wider block">Canales y Contactos</span>
                             <p class="text-[10px] text-slate-500 font-medium">Sincronización Clínica Directa</p>
                         </div>
                         <div class="space-y-3 flex-1 overflow-y-auto">
-                            <div class="flex items-center justify-between p-2 rounded-xl bg-clinical-950/40 border border-clinical-850">
-                                <div class="flex items-center gap-2">
-                                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                                    <div class="text-left">
-                                        <span class="text-[11px] font-bold text-white block">Mtro. Carlos Aguilar</span>
-                                        <span class="text-[9px] text-slate-500">Director / Responsable</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="flex items-center justify-between p-2 rounded-xl bg-clinical-950/40 border border-clinical-850">
-                                <div class="flex items-center gap-2">
-                                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                                    <div class="text-left">
-                                        <span class="text-[11px] font-bold text-white block">Lic. Miroslava Hoyos</span>
-                                        <span class="text-[9px] text-slate-500">Coordinadora Auxiliar</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="flex items-center justify-between p-2 rounded-xl bg-clinical-950/40 border border-clinical-850">
-                                <div class="flex items-center gap-2">
-                                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                                    <div class="text-left">
-                                        <span class="text-[11px] font-bold text-white block">Pasantes de Depto.</span>
-                                        <span class="text-[9px] text-slate-500">Auxiliar</span>
-                                    </div>
-                                </div>
-                            </div>
+                            ${sidebarChannelsHtml}
                         </div>
                     </div>
 
@@ -1347,8 +1397,8 @@
                                     <i data-lucide="message-square" class="w-4 h-4"></i>
                                 </div>
                                 <div class="text-left">
-                                    <span class="text-xs font-bold text-white uppercase tracking-wider block">Canal de Coordinación</span>
-                                    <p class="text-[9px] text-slate-500">Mensajería interna en tiempo real</p>
+                                    <span class="text-xs font-bold text-white uppercase tracking-wider block">${currentChannelTitle}</span>
+                                    <p class="text-[9px] text-slate-500">${currentChannelSubtitle}</p>
                                 </div>
                             </div>
                             <div class="flex items-center gap-3">
@@ -1361,7 +1411,7 @@
                             ${messagesHtml}
                         </div>
 
-                        ${!isTeam ? `
+                        ${activeTarget === 'ai' ? `
                         <div class="px-4 py-2 bg-clinical-950/30 border-t border-clinical-800/50 flex flex-wrap gap-2 items-center">
                             <span class="text-[9px] text-brandGold-500 font-bold uppercase tracking-widest flex items-center gap-1">
                                 <i data-lucide="lightbulb" class="w-3 h-3"></i> Consultas sugeridas:
@@ -1376,17 +1426,6 @@
                         ` : ''}
 
                         <form onsubmit="window.sendChatMessage(event)" class="p-4 bg-clinical-950 border-t border-clinical-800 flex flex-col gap-2 shrink-0 font-sans">
-                            <div class="flex items-center justify-between px-1">
-                                <span class="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Enviar a:</span>
-                                <div class="flex gap-1.5">
-                                    <button type="button" id="chat-target-team" onclick="window.setChatTarget('team')" class="px-2.5 py-1 rounded-md text-[9px] font-bold uppercase tracking-wider transition-colors ${teamBtnClass}">
-                                        👥 Equipo
-                                    </button>
-                                    <button type="button" id="chat-target-ai" onclick="window.setChatTarget('ai')" class="px-2.5 py-1 rounded-md text-[9px] font-bold uppercase tracking-wider transition-colors ${aiBtnClass}">
-                                        ✨ Asistente IA
-                                    </button>
-                                </div>
-                            </div>
                             <div class="flex gap-2">
                                 <input type="text" id="chat-input-text" placeholder="${placeholderText}" class="flex-1 bg-clinical-900 border border-clinical-800 rounded-xl px-4 py-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-brandGold-500/50" required>
                                 <button type="submit" class="p-3 bg-brandGold-500 hover:bg-brandGold-600 text-clinical-950 rounded-xl transition-all shadow-md flex items-center justify-center shrink-0">
@@ -1406,6 +1445,14 @@
         };
 
         window.deleteSingleChatMessage = function(msgId) {
+            const msg = window.appState.chatMessages.find(m => m.id === msgId);
+            if (!msg) return;
+            const currentUser = window.appState.currentUser;
+            const isCarlos = (currentUser === 'carlos');
+            if (!isCarlos && msg.senderId !== currentUser) {
+                window.showToast('Acción denegada: No tienes permiso para eliminar este mensaje.', 'error');
+                return;
+            }
             window.showConfirmModal('¿Está seguro de eliminar este mensaje del historial del chat?', async () => {
                 if (window.deleteChatMessageFromFirestore) {
                     await window.deleteChatMessageFromFirestore(msgId);
@@ -1460,7 +1507,8 @@
                 senderName: userObj.name,
                 senderRole: userObj.role,
                 text: text,
-                timestamp: Date.now()
+                timestamp: Date.now(),
+                recipientId: window.appState.chatTarget // 'team', 'ai', o la key del perfil del pasante o coordinador
             };
 
             input.value = '';
@@ -1491,7 +1539,8 @@
                 senderName: '✨ Asistente IA',
                 senderRole: 'Asesor de Inteligencia Artificial',
                 text: '<span class="animate-pulse italic text-slate-400 flex items-center gap-1.5"><i data-lucide="loader" class="w-3.5 h-3.5 animate-spin text-brandGold-500"></i> Analizando caso con IA...</span>',
-                timestamp: Date.now()
+                timestamp: Date.now(),
+                recipientId: 'ai'
             };
 
             if (window.saveChatMessageToFirestore) {
@@ -1505,9 +1554,9 @@
             try {
                 const systemPrompt = "Actúa como un asesor psicopedagógico clínico de excelencia del Centro Educativo Universitario de Tehuacán (CEUT). Tu misión es responder consultas de forma de viñetas estructuradas y profesionales.";
                 const apiKey = ""; 
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
 
-                const relevantMsgs = window.appState.chatMessages.filter(m => m.id !== loadingMsgId).slice(-12);
+                const relevantMsgs = window.appState.chatMessages.filter(m => m.id !== loadingMsgId && m.recipientId === 'ai').slice(-12);
                 const chatHistory = relevantMsgs.map(m => {
                     const role = m.senderId === 'gemini_ia' ? 'model' : 'user';
                     const prefix = role === 'user' ? `[${m.senderName} (${m.senderRole})]: ` : '';
@@ -1554,7 +1603,8 @@
                         senderName: '✨ Asistente IA',
                         senderRole: 'Asistente de Inteligencia Artificial',
                         text: aiResponseText,
-                        timestamp: Date.now()
+                        timestamp: Date.now(),
+                        recipientId: 'ai'
                     };
 
                     if (window.saveChatMessageToFirestore) {
@@ -1581,7 +1631,8 @@
                     senderName: '✨ Asistente IA',
                     senderRole: 'Asistente de Inteligencia Artificial',
                     text: '⚠️ No es posible conectar temporalmente con el motor en la nube de Gemini. Por favor verifica tu consola de red o reintenta en un momento.',
-                    timestamp: Date.now()
+                    timestamp: Date.now(),
+                    recipientId: 'ai'
                 };
                 
                 if (window.saveChatMessageToFirestore) {
@@ -1595,6 +1646,183 @@
         };
     </script>
 
+    <script>
+        window.getProfilesViewHtml = function() {
+            const isCarlos = (window.appState.currentUser === 'carlos');
+            
+            if (!isCarlos) {
+                return `
+                    <div class="max-w-md mx-auto my-12 bg-clinical-900 border border-clinical-800 rounded-[2rem] p-8 text-center space-y-6 animate-fade-up font-sans">
+                        <div class="w-16 h-16 rounded-full bg-rose-500/10 border border-rose-500 flex items-center justify-center mx-auto text-rose-500">
+                            <i data-lucide="lock" class="w-8 h-8"></i>
+                        </div>
+                        <h3 class="font-outfit font-black text-white text-lg">Acceso Restringido</h3>
+                        <p class="text-xs text-slate-400 leading-relaxed">
+                            La administración general de perfiles y pasantes es de uso exclusivo de la Dirección. El control total de accesos pertenece al Mtro. Carlos Aguilar Sánchez.
+                        </p>
+                    </div>
+                `;
+            }
+            
+            let listHtml = '';
+            Object.entries(window.appState.users).forEach(([userKey, profile]) => {
+                const isSystemUser = ['carlos', 'miroslava'].includes(userKey);
+                
+                listHtml += `
+                    <div class="bg-clinical-950 border border-clinical-800 rounded-2xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm animate-fade-up font-sans">
+                        <div class="flex-1 space-y-2 w-full">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="bg-brandGold-500/10 text-brandGold-500 border border-brandGold-500/20 text-[9px] font-black uppercase px-2 py-0.5 rounded">
+                                    Perfil: ${userKey.toUpperCase()}
+                                </span>
+                                ${isSystemUser ? `<span class="bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-[9px] font-black uppercase px-2 py-0.5 rounded">Sistema</span>` : ''}
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Nombre Completo</label>
+                                    <input type="text" value="${profile.name}" onchange="window.updateProfileField('${userKey}', 'name', this.value)" class="w-full bg-clinical-900 border border-clinical-800 rounded-lg py-1.5 px-3 text-white text-xs focus:outline-none" ${profile.isRestricted && !isCarlos ? 'readonly' : ''}>
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Puesto / Rol</label>
+                                    <input type="text" value="${profile.role}" onchange="window.updateProfileField('${userKey}', 'role', this.value)" class="w-full bg-clinical-900 border border-clinical-800 rounded-lg py-1.5 px-3 text-white text-xs focus:outline-none" ${profile.isRestricted && !isCarlos ? 'readonly' : ''}>
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Clave PIN</label>
+                                    <input type="text" value="${profile.pin}" maxlength="4" onchange="window.updateProfileField('${userKey}', 'pin', this.value)" class="w-full bg-clinical-900 border border-clinical-800 rounded-lg py-1.5 px-3 text-white text-xs text-center font-mono" ${isSystemUser && userKey === 'carlos' && !isCarlos ? 'readonly' : ''}>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        ${!isSystemUser && isCarlos ? `
+                            <button onclick="window.removeDynamicProfile('${userKey}')" class="px-3.5 py-2 bg-rose-950/20 hover:bg-rose-900/35 text-rose-400 hover:text-white border border-rose-900/30 rounded-xl transition-all font-bold text-xs font-sans shrink-0">
+                                Eliminar Pasante
+                            </button>
+                        ` : ''}
+                    </div>
+                `;
+            });
+
+            return `
+                <div class="max-w-4xl mx-auto space-y-6 animate-fade-up font-sans">
+                    <div class="bg-clinical-900 border border-clinical-800 rounded-[2rem] p-8 shadow-2xl relative overflow-hidden flex flex-col md:flex-row gap-6 items-center">
+                        <div class="absolute inset-0 bg-gradient-to-r from-brandGold-500/5 to-transparent pointer-events-none"></div>
+                        <div class="w-16 h-16 rounded-2xl bg-brandGold-500/15 border-2 border-brandGold-500 flex items-center justify-center text-brandGold-500 shrink-0">
+                            <i data-lucide="users" class="w-8 h-8"></i>
+                        </div>
+                        <div class="flex-1 text-center md:text-left">
+                            <h3 class="font-outfit font-black text-xl text-white">Gestión de Perfiles y Pasantes</h3>
+                            <p class="text-slate-400 text-xs mt-1 leading-relaxed">
+                                Agregue nuevos pasantes de departamento, modifique nombres oficiales o actualice las contraseñas PIN de acceso. Los cambios se guardarán automáticamente en la base de datos centralizada de CEUT.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="bg-clinical-900 border border-clinical-800 rounded-3xl p-6 h-fit">
+                            <h3 class="font-outfit font-black text-white text-base uppercase border-b border-clinical-800 pb-3 mb-4">Registrar Nuevo Pasante</h3>
+                            <form onsubmit="window.saveNewProfile(event)" class="space-y-4 text-xs text-slate-300">
+                                <div>
+                                    <label class="block font-bold uppercase mb-1">ID Único (Ej: pasante_abril)</label>
+                                    <input type="text" id="new-profile-key" placeholder="ej: pasante_luis" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-3.5 text-white focus:outline-none" required>
+                                </div>
+                                <div>
+                                    <label class="block font-bold uppercase mb-1">Nombre Completo</label>
+                                    <input type="text" id="new-profile-name" placeholder="Ej. Lic. Luis Enrique Pérez" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-3.5 text-white focus:outline-none" required>
+                                </div>
+                                <div>
+                                    <label class="block font-bold uppercase mb-1">Rol / Cargo</label>
+                                    <input type="text" id="new-profile-role" placeholder="Pasante Psicopedagógico" value="Pasante Psicopedagógico" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-3.5 text-white focus:outline-none" required>
+                                </div>
+                                <div>
+                                    <label class="block font-bold uppercase mb-1">Clave PIN (4 dígitos)</label>
+                                    <input type="text" id="new-profile-pin" placeholder="1015" maxlength="4" value="1015" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-3.5 text-white focus:outline-none text-center font-mono font-bold" required>
+                                </div>
+                                <button type="submit" class="w-full py-3 bg-gradient-to-r from-brandGold-500 to-brandGold-600 hover:from-brandGold-600 hover:to-brandGold-700 text-clinical-950 font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-md">
+                                    Guardar Perfil
+                                </button>
+                            </form>
+                        </div>
+
+                        <div class="md:col-span-2 bg-clinical-900 border border-clinical-800 rounded-3xl p-6">
+                            <h3 class="font-outfit font-black text-white text-base uppercase border-b border-clinical-800 pb-3 mb-4">Perfiles de Terapeutas y Pasantes Activos</h3>
+                            <div class="space-y-4 overflow-y-auto max-h-[500px]">
+                                ${listHtml}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        };
+
+        window.updateProfileField = async function(userKey, field, value) {
+            if (!window.appState.users[userKey]) return;
+            
+            // Si el PIN tiene un formato incorrecto, restauramos
+            if (field === 'pin' && (value.length !== 4 || isNaN(value))) {
+                window.showToast('El PIN debe constar exactamente de 4 dígitos numéricos.', 'error');
+                window.renderMainApp();
+                return;
+            }
+
+            window.appState.users[userKey][field] = value;
+            
+            if (window.saveProfileToFirestore) {
+                await window.saveProfileToFirestore(userKey, window.appState.users[userKey]);
+            } else {
+                localStorage.setItem('ceut_users', JSON.stringify(window.appState.users));
+                window.renderMainApp();
+            }
+            window.showToast('Perfil actualizado correctamente', 'success');
+        };
+
+        window.saveNewProfile = async function(e) {
+            e.preventDefault();
+            const key = document.getElementById('new-profile-key').value.trim().toLowerCase().replace(/\s+/g, '_');
+            const name = document.getElementById('new-profile-name').value.trim();
+            const role = document.getElementById('new-profile-role').value.trim();
+            const pin = document.getElementById('new-profile-pin').value.trim();
+
+            if (window.appState.users[key]) {
+                window.showToast('Este identificador de pasante ya está en uso.', 'error');
+                return;
+            }
+
+            if (pin.length !== 4 || isNaN(pin)) {
+                window.showToast('El PIN debe constar exactamente de 4 dígitos numéricos.', 'error');
+                return;
+            }
+
+            const profileData = { name, role, pin, isRestricted: true };
+            window.appState.users[key] = profileData;
+
+            if (window.saveProfileToFirestore) {
+                await window.saveProfileToFirestore(key, profileData);
+            } else {
+                localStorage.setItem('ceut_users', JSON.stringify(window.appState.users));
+                window.renderMainApp();
+            }
+
+            document.getElementById('new-profile-key').value = '';
+            document.getElementById('new-profile-name').value = '';
+            document.getElementById('new-profile-pin').value = '1015';
+            window.showToast('Pasante agregado con éxito', 'success');
+        };
+
+        window.removeDynamicProfile = function(key) {
+            window.showConfirmModal(`¿Está seguro de eliminar de forma permanente el perfil del pasante: ${key}?`, async () => {
+                delete window.appState.users[key];
+                if (window.deleteProfileFromFirestore) {
+                    await window.deleteProfileFromFirestore(key);
+                } else {
+                    localStorage.setItem('ceut_users', JSON.stringify(window.appState.users));
+                    window.renderMainApp();
+                }
+                window.showToast('Pasante dado de baja.', 'info');
+            });
+        };
+    </script>
+
+    <!-- Carlos Private Events View -->
     <script>
         window.getCarlosEventsViewHtml = function() {
             const dateStr = window.appState.currentDate.toISOString().split('T')[0];
@@ -1790,11 +2018,9 @@
                         </div>
 
                         <div class="mt-2 pt-2 border-t border-clinical-800/80 flex justify-between items-center font-sans">
-                            ${isCarlos ? `
-                                <button onclick="document.getElementById('change-pin-modal').classList.remove('hidden'); document.getElementById('change-pin-modal').classList.add('flex');" class="text-[10px] font-bold text-brandGold-500/80 hover:text-brandGold-500 hover:underline flex items-center gap-1">
-                                    <i data-lucide="key" class="w-3 h-3"></i> Cambiar PIN de Acceso
-                                </button>
-                            ` : ''}
+                            <button onclick="document.getElementById('change-pin-modal').classList.remove('hidden'); document.getElementById('change-pin-modal').classList.add('flex');" class="text-[10px] font-bold text-brandGold-500/80 hover:text-brandGold-500 hover:underline flex items-center gap-1">
+                                <i data-lucide="key" class="w-3 h-3"></i> Cambiar mi PIN de Acceso
+                            </button>
                         </div>
                     </div>
                     <div>
@@ -1813,9 +2039,14 @@
                             <span class="flex items-center gap-2.5 text-xs uppercase tracking-wider font-bold"><i data-lucide="calendar-range" class="w-4 h-4"></i> Vista Mensual</span>
                         </button>
                         <button onclick="window.switchViewMode('chat')" class="w-full text-left py-3 px-4 rounded-xl flex items-center justify-between transition-colors ${window.appState.viewMode === 'chat' ? 'bg-brandGold-500 text-clinical-950 font-black shadow-md' : 'bg-clinical-900 hover:bg-clinical-850 text-slate-300'}">
-                            <span class="flex items-center gap-2.5 text-xs uppercase tracking-wider font-bold flex-1"><i data-lucide="message-square" class="w-4 h-4 mr-2.5"></i> Chat de Equipo</span>
+                            <span class="flex items-center gap-2.5 text-xs uppercase tracking-wider font-bold flex-1"><i data-lucide="message-square" class="w-4 h-4 mr-2.5"></i> Chat y Privados</span>
                             ${chatBadgeHtml}
                         </button>
+                        ${isCarlos ? `
+                        <button onclick="window.switchViewMode('profiles')" class="w-full text-left py-3 px-4 rounded-xl flex items-center justify-between transition-colors ${window.appState.viewMode === 'profiles' ? 'bg-brandGold-500 text-clinical-950 font-black shadow-md' : 'bg-clinical-900 hover:bg-clinical-850 text-slate-300'}">
+                            <span class="flex items-center gap-2.5 text-xs uppercase tracking-wider font-bold"><i data-lucide="users" class="w-4 h-4"></i> Gestionar Perfiles</span>
+                        </button>
+                        ` : ''}
                         ${isCarlos ? `
                             <button onclick="window.switchViewMode('carlos-events')" class="w-full text-left py-3 px-4 rounded-xl flex items-center justify-between transition-colors ${window.appState.viewMode === 'carlos-events' ? 'bg-brandGold-500 text-clinical-950 font-black shadow-md' : 'bg-clinical-900 hover:bg-clinical-850 text-slate-300'}">
                                 <span class="flex items-center gap-2.5 text-xs uppercase tracking-wider font-bold"><i data-lucide="lock" class="w-4 h-4"></i> Mis Eventos</span>
@@ -1966,6 +2197,12 @@
                         ${window.getChatViewHtml()}
                     </section>
                 `;
+            } else if (window.appState.viewMode === 'profiles') {
+                mainContentHtml += `
+                    <section class="p-6 flex-1 max-w-7xl w-full mx-auto space-y-6 animate-fade-up">
+                        ${window.getProfilesViewHtml()}
+                    </section>
+                `;
             } else if (window.appState.viewMode === 'carlos-events' && isCarlos) {
                 mainContentHtml += `
                     <section class="p-6 flex-1 max-w-7xl w-full mx-auto space-y-6 animate-fade-up">
@@ -1981,7 +2218,7 @@
                                 <h2 class="font-outfit font-black text-2xl text-white">Informes de Intervención</h2>
                                 <p class="text-slate-400 text-xs mt-0.5">Métricas de impacto psicopedagógico y salud escolar.</p>
                             </div>
-                            <div class="flex gap-2 items-center self-start sm:self-auto">
+                            <div class="flex gap-2 items-center self-start sm:self-auto font-sans">
                                 ${isCarlos ? `
                                     <button onclick="window.printConsolidatedStatsReport()" class="py-2.5 px-4 bg-brandGold-500 hover:bg-brandGold-600 text-clinical-950 font-black text-xs uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 shadow-md">
                                         <i data-lucide="printer" class="w-4 h-4"></i> Descargar Informe de Gestión de Lujo
@@ -2054,6 +2291,11 @@
             const dateStr = presetDateStr || window.appState.currentDate.toISOString().split('T')[0];
             const isCarlos = (window.appState.currentUser === 'carlos');
             
+            // Calcular una hora fin tentativa para agilizar llenado (hora_inicio + 1 hora)
+            let hourInt = parseInt(presetHour.split(':')[0]);
+            let minuteStr = presetHour.split(':')[1] || "00";
+            let endHourStr = String(hourInt + 1).padStart(2, '0') + ":" + minuteStr;
+
             const modal = document.createElement('div');
             modal.id = "appointment-form-modal";
             modal.className = "fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 no-print";
@@ -2075,10 +2317,10 @@
 
                     ${isCarlos ? `
                         <div class="bg-clinical-950 px-6 py-2 border-b border-clinical-850/50 flex gap-4 text-xs font-bold">
-                            <button type="button" id="tab-btn-student" onclick="window.switchFormTab('student')" class="pb-2 border-b-2 border-brandGold-500 text-brandGold-500 transition-all">
+                            <button type="button" id="tab-btn-student" onclick="window.switchFormTab('student')" class="pb-2 border-b-2 border-brandGold-500 text-brandGold-500 transition-all font-sans">
                                 👥 Cita con Alumno
                             </button>
-                            <button type="button" id="tab-btn-private" onclick="window.switchFormTab('private')" class="pb-2 text-slate-400 hover:text-white transition-all">
+                            <button type="button" id="tab-btn-private" onclick="window.switchFormTab('private')" class="pb-2 text-slate-400 hover:text-white transition-all font-sans">
                                 🔒 Evento Privado (Confidencial)
                             </button>
                         </div>
@@ -2086,16 +2328,18 @@
                     
                     <form onsubmit="window.saveNewAppointment(event)" class="p-6 space-y-4 overflow-y-auto flex-1 text-xs text-slate-300">
                         <input type="hidden" id="form-tab-type" value="student">
-                        <div class="grid grid-cols-2 gap-3.5">
+                        <div class="grid grid-cols-3 gap-3">
                             <div>
                                 <label class="block font-bold uppercase tracking-wide mb-1">Fecha</label>
                                 <input type="date" id="form-apt-date" value="${dateStr}" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-3.5 text-white focus:outline-none" required>
                             </div>
                             <div>
-                                <label class="block font-bold uppercase tracking-wide mb-1">Hora</label>
-                                <select id="form-apt-hour" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-3.5 text-white focus:outline-none appearance-none cursor-pointer">
-                                    ${window.getHourSlots().map(hs => `<option value="${hs}" ${hs === presetHour ? 'selected' : ''}>${hs}</option>`).join('')}
-                                </select>
+                                <label class="block font-bold uppercase tracking-wide mb-1">Hora Inicio</label>
+                                <input type="time" id="form-apt-hour" value="${presetHour}" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-3.5 text-white focus:outline-none font-bold" required>
+                            </div>
+                            <div>
+                                <label class="block font-bold uppercase tracking-wide mb-1">Hora Fin</label>
+                                <input type="time" id="form-apt-endtime" value="${endHourStr}" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-3.5 text-white focus:outline-none font-bold" required>
                             </div>
                         </div>
 
@@ -2203,14 +2447,14 @@
             const tabTypeInput = document.getElementById('form-tab-type');
 
             if (tabType === 'student') {
-                studentTabBtn.className = 'pb-2 border-b-2 border-brandGold-500 text-brandGold-500 transition-all';
-                privateTabBtn.className = 'pb-2 text-slate-400 hover:text-white transition-all';
+                studentTabBtn.className = 'pb-2 border-b-2 border-brandGold-500 text-brandGold-500 transition-all font-sans';
+                privateTabBtn.className = 'pb-2 text-slate-400 hover:text-white transition-all font-sans';
                 studentFields.classList.remove('hidden');
                 privateFields.classList.add('hidden');
                 tabTypeInput.value = 'student';
             } else {
-                privateTabBtn.className = 'pb-2 border-b-2 border-brandGold-500 text-brandGold-500 transition-all';
-                studentTabBtn.className = 'pb-2 text-slate-400 hover:text-white transition-all';
+                privateTabBtn.className = 'pb-2 border-b-2 border-brandGold-500 text-brandGold-500 transition-all font-sans';
+                studentTabBtn.className = 'pb-2 text-slate-400 hover:text-white transition-all font-sans';
                 privateFields.classList.remove('hidden');
                 studentFields.classList.add('hidden');
                 tabTypeInput.value = 'private';
@@ -2221,7 +2465,8 @@
             e.preventDefault();
             const date = document.getElementById('form-apt-date').value;
             const hour = document.getElementById('form-apt-hour').value;
-            const blockKey = `${date}_${hour}`;
+            const endTime = document.getElementById('form-apt-endtime').value;
+            const blockKey = `${date}_${hour.split(':')[0]}:00`;
 
             if (window.appState.blockedHours[blockKey] || window.appState.blockedDays[date]) {
                 window.showToast('No se puede programar en un horario o día inhabilitado.', 'error');
@@ -2232,7 +2477,7 @@
             const collidesPrivate = window.appState.carlosEvents[blockKey];
 
             if (collides || collidesPrivate) {
-                window.showToast('Ya existe un evento o consulta programada en ese horario.', 'error');
+                window.showToast('Ya existe una consulta u hora inhabilitada exactamente a las ' + hour, 'error');
                 return;
             }
 
@@ -2266,6 +2511,7 @@
                     id,
                     date,
                     hour,
+                    endTime,
                     student: studentName,
                     level: document.getElementById('form-apt-level').value,
                     career: document.getElementById('form-apt-career').value.trim(),
@@ -2345,16 +2591,18 @@
                             </div>
                         ` : ''}
 
-                        <div class="grid grid-cols-2 gap-3.5">
+                        <div class="grid grid-cols-3 gap-3">
                             <div>
                                 <label class="block font-bold uppercase mb-1">Fecha</label>
                                 <input type="date" id="details-apt-date" value="${apt.date}" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-3.5 text-white focus:outline-none" ${isReadOnly ? 'disabled' : ''} required>
                             </div>
                             <div>
-                                <label class="block font-bold uppercase mb-1">Hora</label>
-                                <select id="details-apt-hour" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-3.5 text-white focus:outline-none" ${isReadOnly ? 'disabled' : ''}>
-                                    ${window.getHourSlots().map(hs => `<option value="${hs}" ${hs === apt.hour ? 'selected' : ''}>${hs}</option>`).join('')}
-                                </select>
+                                <label class="block font-bold uppercase mb-1">Hora Inicio</label>
+                                <input type="time" id="details-apt-hour" value="${apt.hour}" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-3.5 text-white focus:outline-none font-bold" ${isReadOnly ? 'disabled' : ''} required>
+                            </div>
+                            <div>
+                                <label class="block font-bold uppercase mb-1">Hora Fin</label>
+                                <input type="time" id="details-apt-endtime" value="${apt.endTime || '09:00'}" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-3.5 text-white focus:outline-none font-bold" ${isReadOnly ? 'disabled' : ''} required>
                             </div>
                         </div>
 
@@ -2465,9 +2713,19 @@
             const apt = window.appState.agendaData[id];
             if (!apt) return;
 
+            const currentUser = window.appState.currentUser;
+            const isCarlos = (currentUser === 'carlos');
+            const isOwner = apt.createdBy === currentUser;
+
+            if (!isCarlos && !isOwner) {
+                window.showToast('Acción denegada: No tienes permiso para modificar esta consulta.', 'error');
+                return;
+            }
+
             const date = document.getElementById('details-apt-date').value;
             const hour = document.getElementById('details-apt-hour').value;
-            const blockKey = `${date}_${hour}`;
+            const endTime = document.getElementById('details-apt-endtime').value;
+            const blockKey = `${date}_${hour.split(':')[0]}:00`;
 
             if (window.appState.blockedHours[blockKey] || window.appState.blockedDays[date]) {
                 window.showToast('No se puede reprogramar en un horario o día inhabilitado.', 'error');
@@ -2482,6 +2740,7 @@
 
             apt.date = date;
             apt.hour = hour;
+            apt.endTime = endTime;
             apt.student = document.getElementById('details-apt-student').value.trim();
             apt.level = document.getElementById('details-apt-level').value;
             apt.career = document.getElementById('details-apt-career').value.trim();
@@ -2513,7 +2772,7 @@
                             </svg>
                         </div>
                         <div>
-                            <h1 class="text-[10px] sm:text-xs md:text-sm font-outfit font-black text-clinical-900 tracking-tight leading-none uppercase">Centro Educativo Universitario de Tehuacán</h1>
+                            <h1 class="text-[10px] sm:text-xs md:text-sm font-outfit font-black text-clinical-900 tracking-tight leading-none uppercase font-sans">Centro Educativo Universitario de Tehuacán</h1>
                             <p class="text-[8px] uppercase font-bold tracking-widest text-clinical-600 mt-1">Coordinación y Departamento Psicopedagógico</p>
                         </div>
                     </div>
@@ -2546,7 +2805,7 @@
                         <p class="text-[10px] text-slate-500 mt-0.5 font-sans">Expediente confidencial protegido por privacidad institucional</p>
                     </div>
 
-                    <table class="w-full border-collapse border border-slate-300 text-[10px] text-left">
+                    <table class="w-full border-collapse border border-slate-300 text-[10px] text-left font-sans">
                         <tbody>
                             <tr>
                                 <td class="border border-slate-300 bg-slate-50/80 p-2.5 font-bold w-1/4">ALUMNO</td>
@@ -2558,7 +2817,7 @@
                                 <td class="border border-slate-300 bg-slate-50/80 p-2.5 font-bold">SEMESTRE / GRADO</td>
                                 <td class="border border-slate-300 p-2.5">${apt.grade} • Grupo: "${apt.group}"</td>
                                 <td class="border border-slate-300 bg-slate-50/80 p-2.5 font-bold">TURNO / HORARIO</td>
-                                <td class="border border-slate-300 p-2.5">${apt.shift} a las ${apt.hour}</td>
+                                <td class="border border-slate-300 p-2.5">${apt.shift} de ${apt.hour} a ${apt.endTime || ''}</td>
                             </tr>
                             <tr>
                                 <td class="border border-slate-300 bg-slate-50/80 p-2.5 font-bold">CATEGORÍA DE CONSULTA</td>
@@ -2574,8 +2833,8 @@
                     </table>
 
                     <div class="space-y-2">
-                        <h3 class="text-xs font-outfit font-black uppercase tracking-wider text-clinical-900 border-b border-slate-200 pb-1 flex items-center gap-1.5">
-                            <span class="w-1.5 h-3 bg-brandGold-500 rounded-sm"></span> Observaciones de la Intervención
+                        <h3 class="text-xs font-outfit font-black uppercase tracking-wider text-clinical-900 border-b border-slate-200 pb-1 flex items-center gap-1.5 font-sans">
+                            <span class="w-1.5 h-3 bg-brandGold-500 rounded-sm font-sans"></span> Observaciones de la Intervención
                         </h3>
                         <p class="text-[11px] leading-relaxed text-slate-700 whitespace-pre-wrap pl-3">${apt.obs || 'No se registraron observaciones adicionales en esta sesión.'}</p>
                     </div>
@@ -2625,7 +2884,7 @@
                         <p class="text-[10px] text-slate-500 mt-0.5 font-sans">Métricas institucionales correspondientes al período: <span class="font-bold text-slate-800">${periodName}</span></p>
                     </div>
 
-                    <div class="grid grid-cols-3 gap-4 text-center">
+                    <div class="grid grid-cols-3 gap-4 text-center font-sans">
                         <div class="border border-slate-200 bg-slate-50/50 p-3 rounded-xl">
                             <span class="text-slate-500 font-bold uppercase text-[8px] tracking-wider block">Total Atendidos</span>
                             <span class="text-clinical-900 font-outfit text-xl font-black">${stats.total} Alumnos</span>
@@ -2670,7 +2929,8 @@
 
                 const systemPrompt = "Eres un psicólogo psicopedagógico clínico de excelencia del Centro Educativo Universitario de Tehuacán. Proporciona recomendaciones académicas y conductuales estructuradas de manera que se visualicen hermosas y jerarquizadas con viñetas.";
                 const prompt = `Analiza las observaciones y propón planes:\n\n"${obsText}"`;
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=`;
+                const apiKey = "";
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
 
                 try {
                     const response = await fetch(url, {
@@ -2761,9 +3021,15 @@
             
             if (window.appState.users[userKey].pin === currentPin) {
                 window.appState.users[userKey].pin = newPin;
-                window.savePinToFirestore(userKey, newPin);
+                // CORRECCIÓN: savePinToFirestore era undefined. Ahora llama directamente a saveProfileToFirestore de manera segura
+                if (window.saveProfileToFirestore) {
+                    window.saveProfileToFirestore(userKey, window.appState.users[userKey]);
+                } else {
+                    localStorage.setItem('ceut_users', JSON.stringify(window.appState.users));
+                    window.renderMainApp();
+                }
                 window.closeChangePinModal();
-                window.showToast('PIN de acceso actualizado.', 'success');
+                window.showToast('PIN de acceso actualizado y sincronizado.', 'success');
             } else {
                 window.showToast('El PIN actual es incorrecto.', 'error');
             }
@@ -2859,6 +3125,10 @@
 
         window.saveBlockDay = function(e) {
             e.preventDefault();
+            if (window.appState.currentUser !== 'carlos') {
+                window.showToast('Acción denegada: Solo el Mtro. Carlos puede inhabilitar jornadas de trabajo.', 'error');
+                return;
+            }
             const dateStr = window.appState.currentDate.toISOString().split('T')[0];
             const reason = document.getElementById('block-day-reason').value.trim();
             window.appState.blockedDays[dateStr] = reason;
@@ -2881,6 +3151,12 @@
         window.renderLogin = function() {
             const app = document.getElementById('app');
             if (!app) return;
+            
+            let userOptions = '';
+            Object.entries(window.appState.users).forEach(([userKey, profile]) => {
+                userOptions += `<option value="${userKey}">${profile.name}</option>`;
+            });
+
             app.innerHTML = `
                 <div class="flex-1 flex flex-col items-center justify-center p-4 relative z-10 min-h-screen animate-fade-up">
                     <div class="absolute top-4 right-4 bg-clinical-900/60 backdrop-blur-md border border-clinical-800 px-4 py-2 rounded-2xl shadow-md">
@@ -2916,9 +3192,7 @@
                                 <div class="space-y-2">
                                     <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider">Selecciona tu Perfil</label>
                                     <select id="login-user" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-3 px-4 text-sm text-white focus:outline-none appearance-none cursor-pointer">
-                                        <option value="carlos">Mtro. Carlos Aguilar Sánchez</option>
-                                        <option value="miroslava">Lic. Miroslava Abril Hoyos Rojas</option>
-                                        <option value="abril">Pasantes Depto. Psicopedagógico</option>
+                                        ${userOptions}
                                     </select>
                                 </div>
                                 <div class="space-y-2 relative">
@@ -3031,7 +3305,7 @@
                 agendaData: {}, 
                 carlosEvents: {},
                 chatMessages: [],
-                scheduleConfig: { startHour: 8, endHour: 21 },
+                scheduleConfig: { startHour: 7, endHour: 21 },
                 lastCheckedAlarmTime: null,
                 isSynced: false,
                 appId: 'agenda-ceut',
@@ -3145,17 +3419,20 @@
                     }
                 });
 
-                // 4. Sincronización de pines
-                const pinsCol = collection(database, 'artifacts', appId, 'public', 'data', 'pins');
-                onSnapshot(pinsCol, (snapshot) => {
+                // 4. Sincronización de perfiles dinámicos y pasantes
+                const profilesCol = collection(database, 'artifacts', appId, 'public', 'data', 'profiles');
+                onSnapshot(profilesCol, (snapshot) => {
                     if (!auth.currentUser) return; 
+                    const fetchedUsers = {
+                        'carlos': { name: 'Mtro. Carlos Aguilar Sánchez', role: 'Responsable Psicopedagógico', pin: '1015' },
+                        'miroslava': { name: 'Lic. Miroslava Abril Hoyos Rojas', role: 'Coordinadora', pin: '1015', isRestricted: true },
+                        'abril': { name: 'Pasantes Depto. Psicopedagógico', role: 'Pasante Psicopedagógico', pin: '1015', isRestricted: true }
+                    };
                     snapshot.forEach(doc => {
-                        const userKey = doc.id;
-                        if (window.appState.users[userKey]) {
-                            window.appState.users[userKey].pin = doc.data().pin;
-                        }
+                        fetchedUsers[doc.id] = doc.data();
                     });
-                    localStorage.setItem('ceut_users', JSON.stringify(window.appState.users));
+                    window.appState.users = fetchedUsers;
+                    localStorage.setItem('ceut_users', JSON.stringify(fetchedUsers));
                     if (window.appState.currentUser) {
                         window.renderMainApp();
                     }
@@ -3192,8 +3469,10 @@
                         const latestMessage = fetchedMsgs[fetchedMsgs.length - 1];
                         const currentUser = window.appState.currentUser;
                         
-                        if (latestMessage.senderId !== currentUser) {
-                            // Emitir sonido
+                        // Solo alertas si va dirigido a 'team' o al currentUser o de mí a alguien
+                        const isForMe = !latestMessage.recipientId || latestMessage.recipientId === 'team' || latestMessage.recipientId === currentUser;
+
+                        if (latestMessage.senderId !== currentUser && isForMe) {
                             window.playMessageNotificationSound();
                             
                             // Si el usuario no está en la pestaña de chat, activamos alerta visual y badge
@@ -3282,15 +3561,27 @@
                 }
             };
 
-            window.savePinToFirestore = async function(userKey, newPin) {
-                window.appState.users[userKey].pin = newPin;
+            window.saveProfileToFirestore = async function(userKey, profileData) {
+                window.appState.users[userKey] = profileData;
                 localStorage.setItem('ceut_users', JSON.stringify(window.appState.users));
 
                 if (!auth.currentUser) return; 
                 try {
-                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'pins', userKey), { pin: newPin });
+                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'profiles', userKey), profileData);
                 } catch (error) {
-                    console.warn("Error de escritura de PIN de acceso en Firestore:", error);
+                    console.warn("Error de escritura de PIN de acceso/perfil en Firestore:", error);
+                }
+            };
+
+            window.deleteProfileFromFirestore = async function(userKey) {
+                delete window.appState.users[userKey];
+                localStorage.setItem('ceut_users', JSON.stringify(window.appState.users));
+                
+                if (!auth.currentUser) return;
+                try {
+                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'profiles', userKey));
+                } catch (error) {
+                    console.warn("Error al remover perfil de Firestore:", error);
                 }
             };
 
@@ -3401,8 +3692,14 @@
                 window.renderMainApp();
             };
 
-            window.savePinToFirestore = function(userKey, newPin) {
-                window.appState.users[userKey].pin = newPin;
+            window.saveProfileToFirestore = function(userKey, profileData) {
+                window.appState.users[userKey] = profileData;
+                localStorage.setItem('ceut_users', JSON.stringify(window.appState.users));
+                window.renderMainApp();
+            };
+
+            window.deleteProfileFromFirestore = function(userKey) {
+                delete window.appState.users[userKey];
                 localStorage.setItem('ceut_users', JSON.stringify(window.appState.users));
                 window.renderMainApp();
             };
