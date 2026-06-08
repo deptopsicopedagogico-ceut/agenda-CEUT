@@ -137,7 +137,7 @@
     <div id="app" class="min-h-screen flex flex-col transition-opacity duration-350"></div>
 
     <!-- Contenedor oculto para la impresión física de hojas membretadas -->
-    <div id="academic-report-print-area" class="hidden"></div>
+    <div id="academic-report-print-area" class="hidden font-sans"></div>
 
     <!-- Alerta de voz activa (Uso exclusivo de Carlos) -->
     <div id="alarm-modal" class="fixed inset-0 z-50 overflow-y-auto bg-slate-950/90 backdrop-blur-md hidden items-center justify-center p-4">
@@ -202,7 +202,7 @@
                 <div class="w-12 h-12 border-4 border-brandGold-500 border-t-transparent rounded-full animate-spin"></div>
                 <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">Procesando observaciones con IA...</p>
             </div>
-            <div class="p-6 overflow-y-auto flex-1 space-y-4 text-sm leading-relaxed text-slate-300 animate-fade-up" id="ai-modal-body"></div>
+            <div class="p-6 overflow-y-auto flex-1 space-y-4 text-sm leading-relaxed text-slate-300 animate-fade-up font-sans" id="ai-modal-body"></div>
             <div class="p-6 bg-clinical-950 border-t border-clinical-800/85 flex flex-col sm:flex-row gap-3 items-center justify-between shrink-0">
                 <span class="text-xs text-slate-400 font-medium">¿Deseas aplicar estos datos a las observaciones actuales?</span>
                 <div class="flex gap-2 w-full sm:w-auto">
@@ -220,7 +220,7 @@
     </div>
 
     <!-- Consola de Diagnóstico de Red y Conexión Manual -->
-    <div id="network-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[110] hidden items-center justify-center p-4">
+    <div id="network-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[110] hidden items-center justify-center p-4 font-sans">
         <div class="bg-clinical-900 border-2 border-brandGold-500 rounded-3xl w-full max-w-lg shadow-2xl animate-fade-up flex flex-col overflow-hidden">
             <div class="bg-clinical-950 p-6 border-b border-clinical-800/80 flex justify-between items-center shrink-0">
                 <div class="flex items-center gap-2">
@@ -256,7 +256,7 @@
 
                 <div class="space-y-2">
                     <div class="flex justify-between items-center">
-                        <label for="manual-config-input" class="block font-bold text-slate-300 uppercase tracking-wider font-sans">Conectar a tu Propia Base de Datos</label>
+                        <label for="manual-config-input" class="block font-bold text-slate-300 uppercase tracking-wider">Conectar a tu Propia Base de Datos</label>
                         <button onclick="window.resetCustomFirebaseConfig()" class="text-rose-400 hover:text-rose-300 hover:underline font-bold text-[10px] uppercase">Restablecer Config</button>
                     </div>
                     <textarea id="manual-config-input" placeholder='{\n  "apiKey": "AIzaSy...",\n  "authDomain": "...",\n  "projectId": "...",\n  "appId": "..."\n}' class="w-full bg-clinical-950 border border-clinical-800 rounded-xl p-3 font-mono text-[10px] text-brandGold-500 focus:outline-none focus:ring-2 focus:ring-brandGold-500/50" rows="5"></textarea>
@@ -341,7 +341,7 @@
 
     <!-- Confirmación corporativa sin alert/confirm -->
     <div id="confirm-modal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-[150] hidden items-center justify-center p-4">
-        <div class="bg-clinical-900 border-2 border-brandGold-500 rounded-3xl w-full max-w-sm shadow-2xl p-6 text-center space-y-4 animate-fade-up">
+        <div class="bg-clinical-900 border-2 border-brandGold-500 rounded-3xl w-full max-w-sm shadow-2xl p-6 text-center space-y-4 animate-fade-up font-sans">
             <div class="w-16 h-16 rounded-full bg-brandGold-500/10 border border-brandGold-500 flex items-center justify-center mx-auto text-brandGold-500">
                 <i data-lucide="help-circle" class="w-8 h-8"></i>
             </div>
@@ -361,7 +361,7 @@
     <!-- Previsualización de Hojas Membretadas en Pantalla -->
     <div id="report-preview-modal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[120] hidden items-center justify-center p-4 overflow-y-auto no-print">
         <div class="bg-white text-slate-900 rounded-[2rem] w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl animate-fade-up">
-            <div class="bg-slate-900 p-4 flex justify-between items-center shrink-0 border-b border-slate-800">
+            <div class="bg-slate-900 p-4 flex justify-between items-center shrink-0 border-b border-slate-800 font-sans">
                 <div class="flex items-center gap-2">
                     <div class="p-1.5 rounded-lg bg-brandGold-500/10 border border-brandGold-500/30">
                         <i data-lucide="printer" class="w-5 h-5 text-brandGold-500"></i>
@@ -377,10 +377,10 @@
                     </button>
                 </div>
             </div>
-            <div class="flex-1 overflow-y-auto p-4 sm:p-8 bg-slate-100 flex justify-center">
+            <div class="flex-1 overflow-y-auto p-4 sm:p-8 bg-slate-100 flex justify-center font-sans">
                 <div class="bg-white w-full max-w-[100%] md:max-w-[180mm] min-h-[250mm] md:min-h-[297mm] shadow-2xl p-6 sm:p-12 relative overflow-hidden border-[8px] md:border-[16px] border-double border-clinical-800 leading-relaxed text-slate-800 text-xs" id="report-preview-content"></div>
             </div>
-            <div class="bg-slate-900 p-4 border-t border-slate-800 flex justify-end gap-3 shrink-0">
+            <div class="bg-slate-900 p-4 border-t border-slate-800 flex justify-end gap-3 shrink-0 font-sans">
                 <button onclick="document.getElementById('report-preview-modal').classList.add('hidden'); document.getElementById('report-preview-modal').classList.remove('flex');" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all">
                     Cerrar Previsualización
                 </button>
@@ -859,7 +859,7 @@
                 const blockKey = `${dateStr}_${hour}`;
                 const isHourBlocked = window.appState.blockedHours[blockKey];
                 
-                // Mapeo dinámico de eventos privados con minutos exactos (ej: de 3:20 PM a 5:20 PM)
+                // Mapeo dinámico de eventos privados con minutos exactos
                 const eventsForDate = Object.values(window.appState.carlosEvents).filter(ev => ev.date === dateStr);
                 const hasCarlosEvent = eventsForDate.find(ev => window.isEventOverlappingSlot(ev, hour));
 
@@ -926,15 +926,15 @@
                         
                         if (!hasAccess) {
                             html += `
-                                <div class="w-full bg-brandGold-500/5 border border-brandGold-500/20 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-inner animate-fade-up">
-                                    <div class="flex items-center gap-2.5 text-brandGold-500 font-sans">
+                                <div class="w-full bg-brandGold-500/5 border border-brandGold-500/20 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-inner animate-fade-up font-sans">
+                                    <div class="flex items-center gap-2.5 text-brandGold-500">
                                         <i data-lucide="lock" class="w-4.5 h-4.5 animate-pulse shrink-0"></i>
                                         <div>
                                             <span class="text-xs font-black uppercase tracking-wider block">Horario Reservado por Dirección</span>
                                             <span class="text-[10px] text-slate-400 font-medium font-mono">${window.format12h(aptForSlot.hour)} a ${window.format12h(aptForSlot.endTime)}</span>
                                         </div>
                                     </div>
-                                    <span class="text-[9px] bg-brandGold-500/15 text-brandGold-500 border border-brandGold-500/20 px-2.5 py-1 rounded-full font-bold uppercase tracking-widest shrink-0 font-sans">Privado / Ocupado</span>
+                                    <span class="text-[9px] bg-brandGold-500/15 text-brandGold-500 border border-brandGold-500/20 px-2.5 py-1 rounded-full font-bold uppercase tracking-widest shrink-0">Privado / Ocupado</span>
                                 </div>
                             `;
                         } else {
@@ -987,11 +987,9 @@
                                     </div>
                                 `;
                             } else {
-                                // CORRECCIÓN CLAVE: Si la cita no cumple con el filtro de búsqueda/tipo activo, se muestra este indicador 
-                                // para evitar que el horario parezca libre o que cause errores invisibles al agendar.
                                 html += `
                                     <div class="w-full bg-clinical-950/40 border border-clinical-850/50 rounded-2xl p-4 flex items-center justify-between opacity-50 animate-fade-up">
-                                        <div class="flex items-center gap-2 text-slate-500">
+                                        <div class="flex items-center gap-2 text-slate-500 font-sans">
                                             <i data-lucide="info" class="w-4.5 h-4.5"></i>
                                             <span class="text-xs font-semibold">Horario Ocupado (${aptForSlot.type} - Oculto por filtros activos)</span>
                                         </div>
@@ -1039,7 +1037,7 @@
                     <div class="flex justify-between items-center pb-4 border-b border-clinical-800 font-sans">
                         <div class="flex items-center gap-2">
                             <i data-lucide="calendar-days" class="w-5 h-5 text-brandGold-500"></i>
-                            <span class="text-sm font-bold text-white uppercase tracking-wider">Planificador Semanal (Lunes a Sábado)</span>
+                            <span class="text-sm font-bold text-white uppercase tracking-wider font-sans">Planificador Semanal (Lunes a Sábado)</span>
                         </div>
                         <span class="text-xs text-slate-400 font-bold uppercase font-sans">Distribución de Consultas</span>
                     </div>
@@ -1123,7 +1121,7 @@
                         `;
                     } else if (isHourBlocked) {
                         html += `
-                            <div class="bg-rose-950/30 text-rose-400 text-[10px] p-2 rounded-xl border border-rose-900/30 flex flex-col justify-center items-center">
+                            <div class="bg-rose-950/30 text-rose-400 text-[10px] p-2 rounded-xl border border-rose-900/30 flex flex-col justify-center items-center font-sans">
                                 <span class="font-bold">Inhabilitado</span>
                                 ${isCarlos ? `
                                     <button onclick="window.toggleHourBlock('${dateStr}', '${hour}')" class="text-[9px] hover:underline font-bold mt-1 text-white">Habilitar</button>
@@ -1173,11 +1171,11 @@
                     } else {
                         html += `
                             <div class="flex flex-col items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button onclick="window.openNewAppointmentModal('${hour}', '${dateStr}')" class="p-1.5 bg-clinical-950 border border-clinical-800 text-brandGold-500 hover:text-white rounded-lg text-[10px] font-bold flex items-center gap-1">
+                                <button onclick="window.openNewAppointmentModal('${hour}', '${dateStr}')" class="p-1.5 bg-clinical-950 border border-clinical-800 text-brandGold-500 hover:text-white rounded-lg text-[10px] font-bold flex items-center gap-1 font-sans">
                                     <i data-lucide="plus-circle" class="w-3 h-3"></i> Agendar
                                 </button>
                                 ${isCarlos ? `
-                                    <button onclick="window.toggleHourBlock('${dateStr}', '${hour}')" class="text-[9px] text-slate-500 hover:text-rose-400 font-semibold">
+                                    <button onclick="window.toggleHourBlock('${dateStr}', '${hour}')" class="text-[9px] text-slate-500 hover:text-rose-400 font-semibold font-sans">
                                         Inhabilitar
                                     </button>
                                 ` : ''}
@@ -1205,7 +1203,7 @@
                     <div class="flex justify-between items-center pb-4 border-b border-clinical-800 font-sans">
                         <div class="flex items-center gap-2">
                             <i data-lucide="calendar" class="w-5 h-5 text-brandGold-500"></i>
-                            <span class="text-sm font-bold text-white uppercase tracking-wider">Planificador Mensual</span>
+                            <span class="text-sm font-bold text-white uppercase tracking-wider font-sans">Planificador Mensual</span>
                         </div>
                         <div class="flex items-center gap-2">
                             <button onclick="window.navigateMiniCalendar(-1)" class="p-1 hover:bg-clinical-850 rounded-lg text-slate-400 hover:text-brandGold-500 transition-colors"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
@@ -1368,14 +1366,14 @@
             }
 
             let sidebarChannelsHtml = `
-                <button onclick="window.setChatTarget('team')" class="w-full text-left p-3 rounded-xl flex items-center gap-2.5 transition-all ${activeTarget === 'team' ? 'bg-brandGold-500 text-clinical-950 font-black' : 'bg-clinical-950/40 hover:bg-clinical-850 border border-clinical-850 text-slate-300'}">
+                <button onclick="window.setChatTarget('team')" class="w-full text-left p-3 rounded-xl flex items-center gap-2.5 transition-all ${activeTarget === 'team' ? 'bg-brandGold-500 text-clinical-950 font-black' : 'bg-clinical-950/40 hover:bg-clinical-850 border border-clinical-850 text-slate-300'} font-sans">
                     <i data-lucide="users" class="w-4 h-4"></i>
                     <div class="text-xs leading-none">
                         <span class="block font-bold">👥 Canal Público</span>
                         <span class="text-[9px] opacity-75">Equipo de Trabajo</span>
                     </div>
                 </button>
-                <button onclick="window.setChatTarget('ai')" class="w-full text-left p-3 rounded-xl flex items-center gap-2.5 transition-all ${activeTarget === 'ai' ? 'bg-brandGold-500 text-clinical-950 font-black' : 'bg-clinical-950/40 hover:bg-clinical-850 border border-clinical-850 text-slate-300'}">
+                <button onclick="window.setChatTarget('ai')" class="w-full text-left p-3 rounded-xl flex items-center gap-2.5 transition-all ${activeTarget === 'ai' ? 'bg-brandGold-500 text-clinical-950 font-black' : 'bg-clinical-950/40 hover:bg-clinical-850 border border-clinical-850 text-slate-300'} font-sans">
                     <i data-lucide="sparkles" class="w-4 h-4"></i>
                     <div class="text-xs leading-none">
                         <span class="block font-bold">✨ Asistente IA</span>
@@ -1392,7 +1390,7 @@
                 const isActive = activeTarget === userKey;
                 
                 sidebarChannelsHtml += `
-                    <button onclick="window.setChatTarget('${userKey}')" class="w-full text-left p-2.5 rounded-xl flex items-center gap-2 transition-all ${isActive ? 'bg-brandGold-500 text-clinical-950 font-black' : 'bg-clinical-950/30 hover:bg-clinical-850 text-slate-300'}">
+                    <button onclick="window.setChatTarget('${userKey}')" class="w-full text-left p-2.5 rounded-xl flex items-center gap-2 transition-all ${isActive ? 'bg-brandGold-500 text-clinical-950 font-black' : 'bg-clinical-950/30 hover:bg-clinical-850 text-slate-300'} font-sans">
                         <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
                         <div class="text-xs leading-tight truncate flex-1">
                             <span class="block font-bold truncate">${profile.name}</span>
@@ -1416,7 +1414,7 @@
 
             const isTeam = activeTarget === 'team';
             const placeholderText = isTeam 
-                ? 'Escribe un mensaje de coordinación para el equipo...' 
+                ? 'Escribe un mensaje de coordination para el equipo...' 
                 : activeTarget === 'ai' 
                 ? 'Pregunta al Asistente Psicopedagógico IA...' 
                 : `Escribe un mensaje privado seguro...`;
@@ -1430,7 +1428,7 @@
 
             return `
                 <div class="max-w-7xl mx-auto flex flex-col md:flex-row gap-6 h-[calc(100vh-140px)] animate-fade-up font-sans">
-                    <div class="w-full md:w-64 bg-clinical-900 border border-clinical-800 rounded-3xl p-5 flex flex-col gap-4 shrink-0 font-sans h-fit md:h-full">
+                    <div class="w-full md:w-64 bg-clinical-900 border border-clinical-800 rounded-3xl p-5 flex flex-col gap-4 shrink-0 h-fit md:h-full">
                         <div class="border-b border-clinical-850 pb-3">
                             <span class="text-xs font-bold text-white uppercase tracking-wider block">Canales y Contactos</span>
                             <p class="text-[10px] text-slate-500 font-medium">Sincronización Clínica Directa</p>
@@ -1446,7 +1444,7 @@
                                 <div class="w-8 h-8 rounded-lg bg-brandGold-500/10 border border-brandGold-500/30 flex items-center justify-center text-brandGold-500">
                                     <i data-lucide="message-square" class="w-4 h-4"></i>
                                 </div>
-                                <div class="text-left">
+                                <div class="text-left font-sans">
                                     <span class="text-xs font-bold text-white uppercase tracking-wider block">${currentChannelTitle}</span>
                                     <p class="text-[9px] text-slate-500">${currentChannelSubtitle}</p>
                                 </div>
@@ -1462,14 +1460,14 @@
                         </div>
 
                         ${activeTarget === 'ai' ? `
-                        <div class="px-4 py-2 bg-clinical-950/30 border-t border-clinical-800/50 flex flex-wrap gap-2 items-center">
+                        <div class="px-4 py-2 bg-clinical-950/30 border-t border-clinical-800/50 flex flex-wrap gap-2 items-center font-sans">
                             <span class="text-[9px] text-brandGold-500 font-bold uppercase tracking-widest flex items-center gap-1">
                                 <i data-lucide="lightbulb" class="w-3 h-3"></i> Consultas sugeridas:
                             </span>
-                            <button onclick="window.useQuickChatSuggestion('¿Qué estrategias aplicar para un alumno con déficit de atención?')" class="bg-clinical-900 hover:bg-clinical-800 text-[10px] text-slate-300 py-1 px-2.5 rounded-full border border-clinical-800 hover:border-brandGold-500/30 transition-all font-sans font-bold">
+                            <button onclick="window.useQuickChatSuggestion('¿Qué estrategias aplicar para un alumno con déficit de atención?')" class="bg-clinical-900 hover:bg-clinical-800 text-[10px] text-slate-300 py-1 px-2.5 rounded-full border border-clinical-800 hover:border-brandGold-500/30 transition-all font-bold">
                                 💡 Déficit de Atención
                             </button>
-                            <button onclick="window.useQuickChatSuggestion('Generar pautas para orientar a un estudiante con alta ansiedad ante exámenes.')" class="bg-clinical-900 hover:bg-clinical-800 text-[10px] text-slate-300 py-1 px-2.5 rounded-full border border-clinical-800 hover:border-brandGold-500/30 transition-all font-sans font-bold">
+                            <button onclick="window.useQuickChatSuggestion('Generar pautas para orientar a un estudiante con alta ansiedad ante exámenes.')" class="bg-clinical-900 hover:bg-clinical-800 text-[10px] text-slate-300 py-1 px-2.5 rounded-full border border-clinical-800 hover:border-brandGold-500/30 transition-all font-bold">
                                 💡 Ansiedad
                             </button>
                         </div>
@@ -1538,7 +1536,7 @@
                         </div>
                         
                         ${!isSystemUser && isCarlos ? `
-                            <button onclick="window.removeDynamicProfile('${userKey}')" class="px-3.5 py-2 bg-rose-950/20 hover:bg-rose-900/35 text-rose-400 hover:text-white border border-rose-900/30 rounded-xl transition-all font-bold text-xs font-sans shrink-0">
+                            <button onclick="window.removeDynamicProfile('${userKey}')" class="px-3.5 py-2 bg-rose-950/20 hover:bg-rose-900/35 text-rose-400 hover:text-white border border-rose-900/30 rounded-xl transition-all font-bold text-xs shrink-0">
                                 Eliminar Pasante
                             </button>
                         ` : ''}
@@ -1597,6 +1595,79 @@
                 </div>
             `;
         };
+
+        window.saveNewProfile = function(e) {
+            e.preventDefault();
+            const keyEl = document.getElementById('new-profile-key');
+            const nameEl = document.getElementById('new-profile-name');
+            const roleEl = document.getElementById('new-profile-role');
+            const pinEl = document.getElementById('new-profile-pin');
+
+            if (!keyEl || !nameEl || !roleEl || !pinEl) return;
+
+            const key = keyEl.value.trim().toLowerCase().replace(/\s+/g, '_');
+            const name = nameEl.value.trim();
+            const role = roleEl.value.trim();
+            const pin = pinEl.value.trim();
+
+            if (!key || !name || !role || !pin) {
+                window.showToast('Por favor completa todos los campos del perfil.', 'error');
+                return;
+            }
+
+            if (window.appState.users[key]) {
+                window.showToast('El ID de este pasante ya existe.', 'error');
+                return;
+            }
+
+            const profileData = { name, role, pin, isRestricted: true };
+            window.appState.users[key] = profileData;
+
+            if (window.saveProfileToFirestore) {
+                window.saveProfileToFirestore(key, profileData);
+            } else {
+                localStorage.setItem('ceut_users', JSON.stringify(window.appState.users));
+                window.renderMainApp();
+            }
+
+            window.showToast('Perfil de pasante guardado con éxito.', 'success');
+            
+            keyEl.value = '';
+            nameEl.value = '';
+            roleEl.value = 'Pasante Psicopedagógico';
+            pinEl.value = '1015';
+            window.renderMainApp();
+        };
+
+        window.removeDynamicProfile = function(userKey) {
+            const profile = window.appState.users[userKey];
+            if (!profile) return;
+
+            window.showConfirmModal(`¿Está seguro de eliminar al pasante "${profile.name}"? Esta acción no se puede deshacer.`, () => {
+                delete window.appState.users[userKey];
+                if (window.deleteProfileFromFirestore) {
+                    window.deleteProfileFromFirestore(userKey);
+                } else {
+                    localStorage.setItem('ceut_users', JSON.stringify(window.appState.users));
+                    window.renderMainApp();
+                }
+                window.showToast('Pasante eliminado de la base de datos', 'info');
+                window.renderMainApp();
+            });
+        };
+
+        window.updateProfileField = function(userKey, field, value) {
+            if (!window.appState.users[userKey]) return;
+            
+            window.appState.users[userKey][field] = value;
+            if (window.saveProfileToFirestore) {
+                window.saveProfileToFirestore(userKey, window.appState.users[userKey]);
+            } else {
+                localStorage.setItem('ceut_users', JSON.stringify(window.appState.users));
+                window.renderMainApp();
+            }
+            window.showToast('Campo de perfil actualizado', 'success');
+        };
     </script>
 
     <!-- Módulo de Eventos de Dirección (Mtro. Carlos) -->
@@ -1630,7 +1701,7 @@
                                 <h4 class="font-outfit font-black text-white text-base mt-2">${ev.title}</h4>
                                 <p class="text-slate-400 text-xs mt-1 italic">"${ev.description || 'Sin notas.'}"</p>
                             </div>
-                            <button onclick="window.deleteCarlosEvent('${ev.key}')" class="px-3.5 py-2 bg-rose-950/20 hover:bg-rose-900/35 text-rose-400 hover:text-white border border-rose-900/30 rounded-xl transition-all font-bold text-xs font-sans">
+                            <button onclick="window.deleteCarlosEvent('${ev.key}')" class="px-3.5 py-2 bg-rose-950/20 hover:bg-rose-900/35 text-rose-400 hover:text-white border border-rose-900/30 rounded-xl transition-all font-bold text-xs">
                                 Eliminar Evento
                             </button>
                         </div>
@@ -1755,7 +1826,7 @@
                             ID Usuario:<br><span class="text-brandGold-500/80">${window.appState.userId || 'Modo Local Activo'}</span>
                         </div>
 
-                        <div class="mt-2 pt-2 border-t border-clinical-800/80 flex justify-between items-center font-sans">
+                        <div class="mt-2 pt-2 border-t border-clinical-800/80 flex justify-between items-center">
                             <button onclick="document.getElementById('change-pin-modal').classList.remove('hidden'); document.getElementById('change-pin-modal').classList.add('flex');" class="text-[10px] font-bold text-brandGold-500/80 hover:text-brandGold-500 hover:underline flex items-center gap-1">
                                 <i data-lucide="key" class="w-3 h-3"></i> Cambiar PIN
                             </button>
@@ -1765,7 +1836,7 @@
                         <span class="text-slate-400 font-bold uppercase tracking-wider text-[10px] block mb-2.5">Agenda Interactiva</span>
                         <div id="mini-calendar-container" class="bg-clinical-900 border border-clinical-800/80 rounded-2xl p-3.5 shadow-md"></div>
                     </div>
-                    <div class="space-y-1.5 font-sans">
+                    <div class="space-y-1.5">
                         <button onclick="window.switchViewMode('day')" class="w-full text-left py-3 px-4 rounded-xl flex items-center justify-between transition-colors ${window.appState.viewMode === 'day' ? 'bg-brandGold-500 text-clinical-950 font-black shadow-md' : 'bg-clinical-900 hover:bg-clinical-850 text-slate-300'}">
                             <span class="flex items-center gap-2.5 text-xs uppercase tracking-wider font-bold"><i data-lucide="calendar" class="w-4 h-4"></i> Tablero Diario</span>
                             <span class="text-xs font-bold">${activeAppointments.length}</span>
@@ -1796,9 +1867,9 @@
                             </button>
                         ` : ''}
                     </div>
-                    <div class="space-y-2.5 font-sans">
+                    <div class="space-y-2.5">
                         <span class="text-slate-400 font-bold uppercase tracking-wider text-[10px] block mb-2.5">Categorías</span>
-                        <div class="grid grid-cols-2 gap-1.5 text-[11px] font-bold">
+                        <div class="grid grid-cols-2 gap-1.5 text-[11px] font-bold font-sans">
                             <button onclick="window.setFilter('all')" class="py-2.5 px-3 rounded-xl flex items-center gap-1.5 transition-colors ${window.appState.filterType === 'all' ? 'bg-brandGold-500 text-clinical-950 shadow-md' : 'bg-clinical-900 text-slate-300 hover:bg-clinical-850'}">
                                 <i data-lucide="layout-grid" class="w-4 h-4"></i> Todas
                             </button>
@@ -1871,7 +1942,7 @@
                                     </div>
                                     <div>
                                         <h3 class="font-outfit font-black text-lg text-white">Jornada Inhabilitada</h3>
-                                        <p class="text-rose-400 text-xs mt-0.5 font-bold uppercase tracking-wider">Motivo: "${isBlocked}"</p>
+                                        <p class="text-rose-400 text-xs mt-0.5 font-bold uppercase tracking-wider font-sans">Motivo: "${isBlocked}"</p>
                                     </div>
                                 </div>
                                 ${isCarlos ? `
@@ -1909,9 +1980,9 @@
                             <div class="bg-clinical-950 p-4 border-b border-clinical-800 flex items-center justify-between font-sans">
                                 <div class="flex items-center gap-2">
                                     <i data-lucide="clock" class="w-4 h-4 text-brandGold-500"></i>
-                                    <span class="text-xs font-bold text-white uppercase tracking-wider font-sans">Cronograma Diario</span>
+                                    <span class="text-xs font-bold text-white uppercase tracking-wider">Cronograma Diario</span>
                                 </div>
-                                <span class="text-[10px] text-slate-500 font-semibold uppercase font-sans">Zona Horaria: Tehuacán MX</span>
+                                <span class="text-[10px] text-slate-500 font-semibold uppercase">Zona Horaria: Tehuacán MX</span>
                             </div>
                             <div class="divide-y divide-clinical-850">
                                 ${window.renderHoursGridHtml(activeAppointments, isBlocked, dateStr)}
@@ -1950,53 +2021,189 @@
                     </section>
                 `;
             } else {
-                const stats = window.getStatsData();
-                mainContentHtml += `
-                    <section class="p-6 flex-1 max-w-7xl w-full mx-auto space-y-6 animate-fade-up">
-                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 font-sans">
-                            <div>
-                                <h2 class="font-outfit font-black text-2xl text-white">Informes de Intervención</h2>
-                                <p class="text-slate-400 text-xs mt-0.5">Métricas de impacto psicopedagógico y salud escolar.</p>
+                if (!isCarlos) {
+                    mainContentHtml += `
+                        <section class="p-6 flex-1 max-w-md mx-auto my-12 text-center space-y-6 animate-fade-up font-sans">
+                            <div class="w-16 h-16 rounded-full bg-rose-500/10 border border-rose-500 flex items-center justify-center mx-auto text-rose-500">
+                                <i data-lucide="lock" class="w-8 h-8"></i>
                             </div>
-                            <div class="flex gap-2 items-center self-start sm:self-auto font-sans">
-                                ${isCarlos ? `
+                            <h3 class="font-outfit font-black text-white text-lg">Acceso Restringido</h3>
+                            <p class="text-slate-400 text-xs">
+                                El módulo de Estadísticas y Reportes Consolidados es de uso exclusivo de Dirección.
+                            </p>
+                        </section>
+                    `;
+                } else {
+                    const stats = window.getStatsData();
+                    
+                    // Cálculo de tasas y proporciones para visualizaciones personalizadas
+                    const totalSaves = stats.total || 1;
+                    const efRate = Math.round((stats.realizadas / totalSaves) * 100);
+                    const canRate = Math.round(((stats.canceladas + stats.reagendadas) / totalSaves) * 100);
+
+                    const psicP = Math.round((stats.psicológicas / totalSaves) * 100);
+                    const vocP = Math.round((stats.vocacionales / totalSaves) * 100);
+                    const acadP = Math.round((stats.académicas / totalSaves) * 100);
+                    const segP = Math.round((stats.seguimiento / totalSaves) * 100);
+
+                    mainContentHtml += `
+                        <section class="p-6 flex-1 max-w-7xl w-full mx-auto space-y-6 animate-fade-up font-sans">
+                            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                                <div>
+                                    <h2 class="font-outfit font-black text-2xl text-white">Informes de Intervención Clínico-Académica</h2>
+                                    <p class="text-slate-400 text-xs mt-0.5">Control exclusivo para Dirección • Mtro. Carlos Aguilar Sánchez.</p>
+                                </div>
+                                <div class="flex gap-2 items-center self-start sm:self-auto">
                                     <button onclick="window.downloadFormalAcademicPDF()" class="py-2.5 px-4 bg-brandGold-500 hover:bg-brandGold-600 text-clinical-950 font-black text-xs uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 shadow-md">
                                         <i data-lucide="printer" class="w-4 h-4"></i> Descargar Informe de Gestión de Lujo
                                     </button>
-                                ` : ''}
-                                <div class="bg-clinical-900 border border-clinical-800 rounded-2xl p-1 flex items-center">
-                                    <button onclick="window.setStatsPeriod('semana')" class="px-4 py-2 rounded-xl text-xs font-bold uppercase transition-colors ${window.appState.activeStatsPeriod === 'semana' ? 'bg-brandGold-500 text-clinical-950 font-black' : 'text-slate-400 hover:text-white'}">Semanal</button>
-                                    <button onclick="window.setStatsPeriod('mes')" class="px-4 py-2 rounded-xl text-xs font-bold uppercase transition-colors ${window.appState.activeStatsPeriod === 'mes' ? 'bg-brandGold-500 text-clinical-950 font-black' : 'text-slate-400 hover:text-white'}">Mensual</button>
-                                    <button onclick="window.setStatsPeriod('ano')" class="px-4 py-2 rounded-xl text-xs font-bold uppercase transition-colors ${window.appState.activeStatsPeriod === 'ano' ? 'bg-brandGold-500 text-clinical-950 font-black' : 'text-slate-400 hover:text-white'}">Anual</button>
+                                    <div class="bg-clinical-900 border border-clinical-800 rounded-2xl p-1 flex items-center shadow-md">
+                                        <button onclick="window.setStatsPeriod('semana')" class="px-4 py-2 rounded-xl text-xs font-bold uppercase transition-colors ${window.appState.activeStatsPeriod === 'semana' ? 'bg-brandGold-500 text-clinical-950 font-black' : 'text-slate-400 hover:text-white'}">Semanal</button>
+                                        <button onclick="window.setStatsPeriod('mes')" class="px-4 py-2 rounded-xl text-xs font-bold uppercase transition-colors ${window.appState.activeStatsPeriod === 'mes' ? 'bg-brandGold-500 text-clinical-950 font-black' : 'text-slate-400 hover:text-white'}">Mensual</button>
+                                        <button onclick="window.setStatsPeriod('ano')" class="px-4 py-2 rounded-xl text-xs font-bold uppercase transition-colors ${window.appState.activeStatsPeriod === 'ano' ? 'bg-brandGold-500 text-clinical-950 font-black' : 'text-slate-400 hover:text-white'}">Anual</button>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 font-sans">
-                            <div class="bg-clinical-900 border border-clinical-800 p-6 rounded-3xl flex items-center gap-4 relative overflow-hidden">
-                                <div class="w-12 h-12 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl flex items-center justify-center text-indigo-400"><i data-lucide="bar-chart-2" class="w-6 h-6"></i></div>
-                                <div>
-                                    <span class="text-slate-500 font-bold uppercase text-[9px] tracking-wider block font-sans">Total Consultas (${window.appState.activeStatsPeriod.toUpperCase()})</span>
-                                    <span class="text-white font-outfit text-3xl font-black">${stats.total}</span>
+                            <!-- Cartas de Rendimiento Clave -->
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                                <div class="bg-clinical-900 border border-clinical-800 p-6 rounded-3xl flex items-center gap-4 relative overflow-hidden shadow-lg">
+                                    <div class="w-12 h-12 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl flex items-center justify-center text-indigo-400 shrink-0"><i data-lucide="bar-chart-2" class="w-6 h-6"></i></div>
+                                    <div>
+                                        <span class="text-slate-500 font-bold uppercase text-[9px] tracking-wider block">Consultas en el Periodo</span>
+                                        <span class="text-white font-outfit text-3xl font-black">${stats.total}</span>
+                                    </div>
+                                </div>
+                                <div class="bg-clinical-900 border border-clinical-800 p-6 rounded-3xl flex items-center gap-4 relative overflow-hidden shadow-lg">
+                                    <div class="w-12 h-12 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center justify-center text-emerald-400 shrink-0"><i data-lucide="check-circle" class="w-6 h-6"></i></div>
+                                    <div>
+                                        <span class="text-slate-500 font-bold uppercase text-[9px] tracking-wider block">Sesiones Realizadas</span>
+                                        <span class="text-white font-outfit text-3xl font-black">${stats.realizadas}</span>
+                                        <span class="text-[10px] text-emerald-400 font-bold block mt-0.5">${efRate}% de efectividad</span>
+                                    </div>
+                                </div>
+                                <div class="bg-clinical-900 border border-clinical-800 p-6 rounded-3xl flex items-center gap-4 relative overflow-hidden shadow-lg">
+                                    <div class="w-12 h-12 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-center justify-center text-amber-400 shrink-0"><i data-lucide="clock" class="w-6 h-6"></i></div>
+                                    <div>
+                                        <span class="text-slate-500 font-bold uppercase text-[9px] tracking-wider block">Sesiones Pendientes</span>
+                                        <span class="text-white font-outfit text-3xl font-black">${stats.pendientes}</span>
+                                    </div>
+                                </div>
+                                <div class="bg-clinical-900 border border-clinical-800 p-6 rounded-3xl flex items-center gap-4 relative overflow-hidden shadow-lg">
+                                    <div class="w-12 h-12 bg-rose-500/10 border border-rose-500/20 rounded-2xl flex items-center justify-center text-rose-400 shrink-0"><i data-lucide="alert-triangle" class="w-6 h-6"></i></div>
+                                    <div>
+                                        <span class="text-slate-500 font-bold uppercase text-[9px] tracking-wider block">Canceladas / Reagendadas</span>
+                                        <span class="text-white font-outfit text-3xl font-black">${stats.canceladas + stats.reagendadas}</span>
+                                        <span class="text-[10px] text-rose-400 font-bold block mt-0.5">${canRate}% de incidencias</span>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="bg-clinical-900 border border-clinical-800 p-6 rounded-3xl flex items-center gap-4 relative overflow-hidden">
-                                <div class="w-12 h-12 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center justify-center text-emerald-400"><i data-lucide="check-circle" class="w-6 h-6"></i></div>
-                                <div>
-                                    <span class="text-slate-500 font-bold uppercase text-[9px] tracking-wider block font-sans">Realizadas</span>
-                                    <span class="text-white font-outfit text-3xl font-black">${stats.realizadas}</span>
+
+                            <!-- Distribución Visual y Gráfica por Categorías -->
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                <div class="bg-clinical-900 border border-clinical-800 p-6 rounded-3xl space-y-4 shadow-xl">
+                                    <h3 class="font-outfit font-black text-white text-base uppercase border-b border-clinical-800 pb-3">Distribución por Categoría de Consulta</h3>
+                                    <div class="space-y-3.5 pt-2">
+                                        <div>
+                                            <div class="flex justify-between text-xs font-bold text-slate-300 mb-1">
+                                                <span>🧠 Apoyo Psicológico</span>
+                                                <span class="text-brandGold-500">${stats.psicológicas} (${psicP}%)</span>
+                                            </div>
+                                            <div class="w-full bg-clinical-950 h-2.5 rounded-full overflow-hidden">
+                                                <div class="bg-indigo-500 h-full rounded-full" style="width: ${psicP}%"></div>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div class="flex justify-between text-xs font-bold text-slate-300 mb-1">
+                                                <span>🎯 Orientación Vocacional</span>
+                                                <span class="text-brandGold-500">${stats.vocacionales} (${vocP}%)</span>
+                                            </div>
+                                            <div class="w-full bg-clinical-950 h-2.5 rounded-full overflow-hidden">
+                                                <div class="bg-amber-500 h-full rounded-full" style="width: ${vocP}%"></div>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div class="flex justify-between text-xs font-bold text-slate-300 mb-1">
+                                                <span>📚 Tutoría Académica</span>
+                                                <span class="text-brandGold-500">${stats.académicas} (${acadP}%)</span>
+                                            </div>
+                                            <div class="w-full bg-clinical-950 h-2.5 rounded-full overflow-hidden">
+                                                <div class="bg-teal-500 h-full rounded-full" style="width: ${acadP}%"></div>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div class="flex justify-between text-xs font-bold text-slate-300 mb-1">
+                                                <span>🔄 Seguimiento Continuo</span>
+                                                <span class="text-brandGold-500">${stats.seguimiento} (${segP}%)</span>
+                                            </div>
+                                            <div class="w-full bg-clinical-950 h-2.5 rounded-full overflow-hidden">
+                                                <div class="bg-slate-500 h-full rounded-full" style="width: ${segP}%"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="bg-clinical-900 border border-clinical-800 p-6 rounded-3xl space-y-4 shadow-xl flex flex-col justify-between">
+                                    <div>
+                                        <h3 class="font-outfit font-black text-white text-base uppercase border-b border-clinical-800 pb-3">Distribución por Nivel Académico</h3>
+                                        <div class="grid grid-cols-2 gap-4 pt-6 text-center">
+                                            <div class="bg-clinical-950/60 p-5 rounded-2xl border border-clinical-800">
+                                                <span class="text-xs font-bold text-slate-400 uppercase tracking-widest block">Preparatoria</span>
+                                                <span class="text-white font-outfit text-3xl font-black block mt-2">${stats.aptsList.filter(a => a.level === 'Preparatoria').length}</span>
+                                                <span class="text-[10px] text-slate-500 font-semibold block mt-1">Alumnos Atendidos</span>
+                                            </div>
+                                            <div class="bg-clinical-950/60 p-5 rounded-2xl border border-clinical-800">
+                                                <span class="text-xs font-bold text-slate-400 uppercase tracking-widest block">Universidad</span>
+                                                <span class="text-white font-outfit text-3xl font-black block mt-2">${stats.aptsList.filter(a => a.level === 'Licenciatura').length}</span>
+                                                <span class="text-[10px] text-slate-500 font-semibold block mt-1">Alumnos Atendidos</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <p class="text-[10px] text-slate-500 italic mt-4 text-center">
+                                        * Datos calculados en tiempo real según el periodo activo: ${window.appState.activeStatsPeriod.toUpperCase()}
+                                    </p>
                                 </div>
                             </div>
-                            <div class="bg-clinical-900 border border-clinical-800 p-6 rounded-3xl flex items-center gap-4 relative overflow-hidden">
-                                <div class="w-12 h-12 bg-rose-500/10 border border-rose-500/20 rounded-2xl flex items-center justify-center text-rose-400"><i data-lucide="alert-triangle" class="w-6 h-6"></i></div>
-                                <div>
-                                    <span class="text-slate-500 font-bold uppercase text-[9px] tracking-wider block font-sans">Canceladas / Reagendadas</span>
-                                    <span class="text-white font-outfit text-3xl font-black">${stats.canceladas + stats.reagendadas}</span>
+
+                            <!-- Bitácora y listado del periodo -->
+                            <div class="bg-clinical-900 border border-clinical-800 rounded-3xl p-6 shadow-xl space-y-4">
+                                <h3 class="font-outfit font-black text-white text-base uppercase border-b border-clinical-800 pb-3">Bitácora Detallada de Consultas</h3>
+                                <div class="overflow-x-auto">
+                                    <table class="w-full border-collapse text-left text-xs text-slate-300">
+                                        <thead>
+                                            <tr class="border-b border-clinical-800 text-slate-400 uppercase font-bold">
+                                                <th class="p-3">Folio</th>
+                                                <th class="p-3">Alumno</th>
+                                                <th class="p-3">Fecha</th>
+                                                <th class="p-3">Hora</th>
+                                                <th class="p-3">Nivel</th>
+                                                <th class="p-3">Tipo</th>
+                                                <th class="p-3">Estado</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-clinical-850">
+                                            ${stats.aptsList.length === 0 ? `
+                                                <tr>
+                                                    <td colspan="7" class="p-4 text-center text-slate-500 uppercase font-black tracking-wider">No hay consultas registradas para este periodo.</td>
+                                                </tr>
+                                            ` : stats.aptsList.map(apt => `
+                                                <tr class="hover:bg-clinical-950/20 transition-colors">
+                                                    <td class="p-3 font-mono font-bold text-brandGold-500">${window.generateFolioCode(apt)}</td>
+                                                    <td class="p-3 font-bold text-white">${apt.student}</td>
+                                                    <td class="p-3">${apt.date}</td>
+                                                    <td class="p-3">${window.format12h(apt.hour)}</td>
+                                                    <td class="p-3 text-[10px]">${apt.level} (${apt.career})</td>
+                                                    <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-clinical-950 border border-clinical-800">${apt.type}</span></td>
+                                                    <td class="p-3 font-bold">${apt.status}</td>
+                                                </tr>
+                                            `).join('')}
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
-                        </div>
-                    </section>
-                `;
+                        </section>
+                    `;
+                }
             }
 
             mainContentHtml += `</main>`;
@@ -2212,7 +2419,7 @@
                 return;
             }
 
-            // CORRECCIÓN CLAVE: Validación contra el motor inteligente de colisiones por minutos absolutos
+            // Validación contra el motor inteligente de colisiones por minutos absolutos
             const collisionResult = window.checkCollision(date, hour, endTime);
             if (collisionResult) {
                 const textCollision = collisionResult === 'event' ? 'un evento privado' : 'una consulta clínica';
@@ -2326,7 +2533,7 @@
                     
                     <form onsubmit="window.updateAppointmentDetails(event, '${apt.id}')" class="p-6 space-y-4 overflow-y-auto flex-1 text-xs text-slate-300">
                         ${isReadOnly ? `
-                            <div class="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 text-amber-500 font-bold font-sans">
+                            <div class="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 text-amber-500 font-bold">
                                 🔒 Perfil Restringido: Solo puedes editar consultas creadas por ti.
                             </div>
                         ` : ''}
@@ -2408,7 +2615,7 @@
 
                         <div class="space-y-2">
                             <div class="flex justify-between items-center">
-                                <label class="block font-bold uppercase font-sans">Observaciones / Tratamiento</label>
+                                <label class="block font-bold uppercase">Observaciones / Tratamiento</label>
                                 ${!isReadOnly ? `
                                     <button type="button" onclick="window.askGeminiForObservations()" class="flex items-center gap-1.5 px-3 py-1.5 bg-brandGold-500/15 border border-brandGold-500/35 hover:border-brandGold-500 hover:bg-brandGold-500/30 text-brandGold-500 hover:text-white rounded-lg font-bold font-outfit uppercase text-[10px]">
                                         <i data-lucide="sparkles" class="w-3.5 h-3.5 animate-pulse text-brandGold-500"></i> Redactar con IA
@@ -2472,7 +2679,7 @@
                 return;
             }
 
-            // CORRECCIÓN CLAVE: Validación contra el motor inteligente de colisiones por minutos absolutos
+            // Validación contra el motor inteligente de colisiones por minutos absolutos
             const collisionResult = window.checkCollision(date, hour, endTime, id);
             if (collisionResult) {
                 const textCollision = collisionResult === 'event' ? 'un evento privado' : 'una consulta clínica';
@@ -2515,11 +2722,11 @@
                             </svg>
                         </div>
                         <div>
-                            <h1 class="text-[10px] sm:text-xs md:text-sm font-outfit font-black text-clinical-900 tracking-tight leading-none uppercase font-sans">Centro Educativo Universitario de Tehuacán</h1>
+                            <h1 class="text-[10px] sm:text-xs md:text-sm font-outfit font-black text-clinical-900 tracking-tight leading-none uppercase">Centro Educativo Universitario de Tehuacán</h1>
                             <p class="text-[8px] uppercase font-bold tracking-widest text-clinical-600 mt-1">Coordinación y Departamento Psicopedagógico</p>
                         </div>
                     </div>
-                    <div class="text-right shrink-0 font-sans">
+                    <div class="text-right shrink-0">
                         <p class="text-[8px] font-bold text-slate-500 uppercase tracking-widest">Folio de Control</p>
                         <p class="text-xs sm:text-sm font-outfit font-black text-brandGold-600 leading-none mt-1">${folioCode}</p>
                     </div>
@@ -2545,10 +2752,10 @@
                 <div class="relative z-10 space-y-6 text-slate-800 font-sans">
                     <div class="text-center">
                         <h2 class="text-sm font-outfit font-black uppercase tracking-wider text-clinical-900">Expediente Clínico de Intervención</h2>
-                        <p class="text-[10px] text-slate-500 mt-0.5 font-sans">Expediente confidencial protegido por privacidad institucional</p>
+                        <p class="text-[10px] text-slate-500 mt-0.5">Expediente confidencial protegido por privacidad institucional</p>
                     </div>
 
-                    <table class="w-full border-collapse border border-slate-300 text-[10px] text-left font-sans">
+                    <table class="w-full border-collapse border border-slate-300 text-[10px] text-left">
                         <tbody>
                             <tr>
                                 <td class="border border-slate-300 bg-slate-50/80 p-2.5 font-bold w-1/4">ALUMNO</td>
@@ -2576,22 +2783,22 @@
                     </table>
 
                     <div class="space-y-2">
-                        <h3 class="text-xs font-outfit font-black uppercase tracking-wider text-clinical-900 border-b border-slate-200 pb-1 flex items-center gap-1.5 font-sans">
-                            <span class="w-1.5 h-3 bg-brandGold-500 rounded-sm font-sans"></span> Observaciones de la Intervención
+                        <h3 class="text-xs font-outfit font-black uppercase tracking-wider text-clinical-900 border-b border-slate-200 pb-1 flex items-center gap-1.5">
+                            <span class="w-1.5 h-3 bg-brandGold-500 rounded-sm"></span> Observaciones de la Intervención
                         </h3>
                         <p class="text-[11px] leading-relaxed text-slate-700 whitespace-pre-wrap pl-3">${apt.obs || 'No se registraron observaciones adicionales en esta sesión.'}</p>
                     </div>
 
-                    <div class="pt-12 grid grid-cols-2 gap-10 font-sans">
+                    <div class="pt-12 grid grid-cols-2 gap-10">
                         <div class="text-center flex flex-col justify-end items-center">
                             <div class="border-t border-slate-400 w-48 pt-2">
-                                <p class="text-[10px] font-bold uppercase text-slate-800 font-sans">Mtro. Carlos Aguilar Sánchez</p>
+                                <p class="text-[10px] font-bold uppercase text-slate-800">Mtro. Carlos Aguilar Sánchez</p>
                                 <p class="text-[9px] text-slate-500">Responsable Psicopedagógico CEUT</p>
                             </div>
                         </div>
                         <div class="text-center flex flex-col items-center justify-center relative">
                             <div class="w-20 h-20 rounded-full border-2 border-double border-brandGold-500 flex flex-col items-center justify-center text-brandGold-700 select-none pointer-events-none opacity-80 rotate-12">
-                                <span class="text-[6px] font-bold uppercase tracking-widest text-center leading-none font-sans">PSICOPEDAGOGÍA<br><strong class="text-[8px] text-clinical-800 font-bold">CEUT</strong><br>TEHUACÁN</span>
+                                <span class="text-[6px] font-bold uppercase tracking-widest text-center leading-none">PSICOPEDAGOGÍA<br><strong class="text-[8px] text-clinical-800 font-bold">CEUT</strong><br>TEHUACÁN</span>
                             </div>
                             <p class="text-[9px] text-slate-400 mt-2">Sello del Departamento</p>
                         </div>
@@ -2748,7 +2955,7 @@
                 try {
                     const response = await fetch(url, {
                         method: "POST",
-                        headers: { "Content-Type": "application/json" },
+                        headers: { "Content-Type": "https://generativelanguage.googleapis.com" },
                         body: JSON.stringify({
                             contents: [{ parts: [{ text: prompt }] }],
                             systemInstruction: { parts: [{ text: systemPrompt }] }
@@ -2891,9 +3098,9 @@
 
             if (period === 'semana') {
                 const startOfWeek = new Date(now);
-                startOfWeek.setDate(now.getDate() - now.getDay());
-                const endOfWeek = new Date(now);
-                endOfWeek.setDate(now.getDate() + (6 - now.getDay()));
+                startOfWeek.setDate(now.getDate() - now.getDay() + (now.getDay() === 0 ? -6 : 1)); // Forzar lunes
+                const endOfWeek = new Date(startOfWeek);
+                endOfWeek.setDate(startOfWeek.getDate() + 5); // Hasta Sábado
 
                 const startStr = startOfWeek.toISOString().split('T')[0];
                 const endStr = endOfWeek.toISOString().split('T')[0];
@@ -3031,7 +3238,7 @@
                                 Identidad y Excelencia Académica
                             </p>
                         </div>
-                        <div class="w-full md:w-1/2 space-y-5 font-sans">
+                        <div class="w-full md:w-1/2 space-y-5">
                             <div class="text-center md:text-left">
                                 <h1 class="font-outfit font-black text-2xl md:text-3xl text-white tracking-tight">
                                     Agenda Psicopedagógica
