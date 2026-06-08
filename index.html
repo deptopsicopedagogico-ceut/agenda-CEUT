@@ -13,6 +13,10 @@
     <!-- Google Fonts - Outfit & Plus Jakarta Sans -->
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght=300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght=300;400;500;600;700&display=swap" rel="stylesheet">
     
+    <!-- Librerías de PDF para Reportes Oficiales -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+
     <script>
         tailwind.config = {
             theme: {
@@ -176,246 +180,6 @@
             </div>
         </div>
     </div>
-
-    <script>
-        // ALGORITMO INTEGRADO DE DOM DIFFING (Previene por completo parpadeos y mantiene cursores activos)
-        function smartMorph(oldNode, newNode) {
-            if (oldNode.nodeType !== newNode.nodeType) {
-                oldNode.parentNode.replaceChild(newNode.cloneNode(true), oldNode);
-                return;
-            }
-            if (oldNode.nodeType === Node.TEXT_NODE) {
-                if (oldNode.nodeValue !== newNode.nodeValue) {
-                    oldNode.nodeValue = newNode.nodeValue;
-                }
-                return;
-            }
-            if (oldNode.nodeType === Node.ELEMENT_NODE) {
-                if (oldNode.tagName !== newNode.tagName) {
-                    oldNode.parentNode.replaceChild(newNode.cloneNode(true), oldNode);
-                    return;
-                }
-                
-                const isInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes(oldNode.tagName);
-                const isActive = (oldNode === document.activeElement);
-                
-                // Comparar Atributos
-                const oldAttrs = oldNode.attributes;
-                const newAttrs = newNode.attributes;
-                
-                for (let i = oldAttrs.length - 1; i >= 0; i--) {
-                    const attrName = oldAttrs[i].name;
-                    if (!newNode.hasAttribute(attrName)) {
-                        oldNode.removeAttribute(attrName);
-                    }
-                }
-                
-                for (let i = 0; i < newAttrs.length; i++) {
-                    const attrName = newAttrs[i].name;
-                    const attrValue = newAttrs[i].value;
-                    if (oldNode.getAttribute(attrName) !== attrValue) {
-                        oldNode.setAttribute(attrName, attrValue);
-                    }
-                }
-                
-                // Mantener los valores de los inputs y mantener el cursor/foco activo
-                if (isInput) {
-                    if (oldNode.value !== newNode.value) {
-                        if (isActive) {
-                            const start = oldNode.selectionStart;
-                            const end = oldNode.selectionEnd;
-                            oldNode.value = newNode.value;
-                            if (start !== null && end !== null) {
-                                oldNode.setSelectionRange(start, end);
-                            }
-                        } else {
-                            oldNode.value = newNode.value;
-                        }
-                    }
-                    if (oldNode.checked !== newNode.checked) {
-                        oldNode.checked = newNode.checked;
-                    }
-                }
-                
-                // Sincronizar nodos hijos recursivamente
-                const oldChildren = Array.from(oldNode.childNodes);
-                const newChildren = Array.from(newNode.childNodes);
-                const oldLen = oldChildren.length;
-                const newLen = newChildren.length;
-                const maxLen = Math.max(oldLen, newLen);
-                
-                for (let i = 0; i < maxLen; i++) {
-                    if (i >= oldLen) {
-                        oldNode.appendChild(newChildren[i].cloneNode(true));
-                    } else if (i >= newLen) {
-                        oldNode.removeChild(oldChildren[i]);
-                    } else {
-                        smartMorph(oldChildren[i], newChildren[i]);
-                    }
-                }
-            }
-        }
-
-        const safeGetLocalJSON = (key, fallback) => {
-            try {
-                const val = localStorage.getItem(key);
-                return val ? JSON.parse(val) : fallback;
-            } catch (e) {
-                return fallback;
-            }
-        };
-
-        window.appState = {
-            currentUser: null, 
-            currentDate: new Date(),
-            miniCalendarMonth: new Date(), 
-            activeStatsPeriod: 'semana', 
-            viewMode: 'day', 
-            searchQuery: '',
-            filterType: 'all', 
-            chatTarget: 'team',
-            unreadMessagesCount: 0, // Alerta visual de mensajes nuevos
-            blockedDays: safeGetLocalJSON('ceut_blocked_days', {}), 
-            blockedHours: safeGetLocalJSON('ceut_blocked_hours', {}), 
-            users: safeGetLocalJSON('ceut_users', {
-                'carlos': { name: 'Mtro. Carlos Aguilar Sánchez', role: 'Responsable Psicopedagógico', pin: '1015' },
-                'miroslava': { name: 'Lic. Miroslava Abril Hoyos Rojas', role: 'Coordinadora', pin: '1015', isRestricted: true },
-                'abril': { name: 'Pasantes Depto. Psicopedagógico', role: 'Pasante Psicopedagógico', pin: '1015', isRestricted: true }
-            }),
-            agendaData: safeGetLocalJSON('ceut_agenda_data', {}), 
-            carlosEvents: safeGetLocalJSON('ceut_carlos_events', {}),
-            chatMessages: safeGetLocalJSON('ceut_chat_messages', []),
-            scheduleConfig: { startHour: 7, endHour: 21 }, // Ampliado de 7 AM a 9 PM para citas tempranas
-            lastCheckedAlarmTime: null,
-            isSynced: false,
-            appId: 'agenda-ceut',
-            userId: null,
-            confirmCallback: null
-        };
-
-        window.safeCreateIcons = function() {
-            if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') {
-                try {
-                    lucide.createIcons();
-                } catch (e) {
-                    console.warn("Lucide render lag", e);
-                }
-            }
-        };
-
-        window.formatFullDateES = function(dateInput) {
-            if (!dateInput) return "";
-            const d = new Date(dateInput);
-            if (isNaN(d.getTime())) return String(dateInput);
-            const offset = d.getTimezoneOffset() * 60000;
-            const adjustedDate = new Date(d.getTime() + offset);
-            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-            const formatted = adjustedDate.toLocaleDateString('es-MX', options);
-            return formatted.charAt(0).toUpperCase() + formatted.slice(1);
-        };
-
-        window.scrollChatToBottom = function() {
-            setTimeout(() => {
-                const feed = document.getElementById('chat-messages-feed');
-                if (feed) {
-                    feed.scrollTop = feed.scrollHeight;
-                }
-            }, 80);
-        };
-
-        window.getHourSlots = function() {
-            const slots = [];
-            const { startHour, endHour } = window.appState.scheduleConfig;
-            for (let h = startHour; h < endHour; h++) {
-                slots.push(String(h).padStart(2, '0') + ':00');
-            }
-            return slots;
-        };
-
-        window.generateFolioCode = function(apt) {
-            if (!apt) return "CEUT-PP-00000";
-            const levelCode = apt.level === 'Preparatoria' ? 'PREP' : 'LIC';
-            const year = apt.date ? apt.date.split('-')[0] : new Date().getFullYear();
-            const numericHash = apt.id.replace(/[^0-9]/g, '');
-            const uniqueSeq = numericHash ? numericHash.slice(-5) : Math.floor(10000 + Math.random() * 90000);
-            return `CEUT-PP-${levelCode}-${year}-${uniqueSeq}`;
-        };
-
-        window.showToast = function(message, type = 'success') {
-            const toast = document.getElementById('toast');
-            const icon = document.getElementById('toast-icon');
-            const msg = document.getElementById('toast-message');
-            if (!toast) return;
-            
-            if (type === 'success') {
-                icon.innerHTML = '<i data-lucide="check-circle" class="w-5 h-5 text-emerald-400"></i>';
-                toast.firstElementChild.className = 'bg-clinical-950 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-3 border border-emerald-500/30';
-            } else if (type === 'error') {
-                icon.innerHTML = '<i data-lucide="alert-circle" class="w-5 h-5 text-rose-400"></i>';
-                toast.firstElementChild.className = 'bg-clinical-950 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-3 border border-rose-500/30';
-            } else {
-                icon.innerHTML = '<i data-lucide="info" class="w-5 h-5 text-brandGold-500"></i>';
-                toast.firstElementChild.className = 'bg-clinical-950 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-3 border border-brandGold-500/30';
-            }
-            msg.textContent = message;
-            window.safeCreateIcons();
-            
-            toast.classList.remove('translate-y-[-100px]', 'opacity-0', 'pointer-events-none');
-            toast.classList.add('translate-y-0', 'opacity-100');
-            
-            setTimeout(() => {
-                toast.classList.remove('translate-y-0', 'opacity-100');
-                toast.classList.add('translate-y-[-100px]', 'opacity-0', 'pointer-events-none');
-            }, 4000);
-        };
-
-        window.showConfirmModal = function(message, callback) {
-            const modal = document.getElementById('confirm-modal');
-            const msgEl = document.getElementById('confirm-message');
-            if (!modal || !msgEl) return;
-            msgEl.textContent = message;
-            window.appState.confirmCallback = callback;
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-        };
-
-        window.closeConfirmModal = function(accepted) {
-            const modal = document.getElementById('confirm-modal');
-            if (modal) {
-                modal.classList.add('hidden');
-                modal.classList.remove('flex');
-            }
-            if (accepted && typeof window.appState.confirmCallback === 'function') {
-                window.appState.confirmCallback();
-            }
-            window.appState.confirmCallback = null;
-        };
-
-        window.playMessageNotificationSound = function() {
-            try {
-                const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-                
-                osc.type = 'sine';
-                const now = ctx.currentTime;
-                // Notas dulces y profesionales (E5 entonces A5)
-                osc.frequency.setValueAtTime(659.25, now); 
-                osc.frequency.setValueAtTime(880.00, now + 0.12);
-                
-                gain.gain.setValueAtTime(0.12, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
-                
-                osc.connect(gain);
-                gain.connect(ctx.destination);
-                
-                osc.start(now);
-                osc.stop(now + 0.5);
-            } catch (e) {
-                console.warn("Fallo de reproducción por política de Autoplay", e);
-            }
-        };
-    </script>
 
     <!-- Asistente IA de Gemini -->
     <div id="ai-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[110] hidden items-center justify-center p-4">
@@ -624,68 +388,282 @@
         </div>
     </div>
 
+    <!-- Script Principal de Lógica y Procesamiento Dinámico -->
     <script>
-        window.speakCurrentAlarmText = function(student, hour) {
-            if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
-                const utter = new SpeechSynthesisUtterance(`Atención Carlos. Recordatorio de consulta psicopedagógica para el alumno ${student}, programada a las ${hour}. Por favor, preparar la sala de consulta.`);
-                utter.lang = 'es-MX';
-                utter.pitch = 1.15; 
-                utter.rate = 0.95;
-
-                const voices = window.speechSynthesis.getVoices();
-                let voiceSelected = voices.find(v => v.lang.toLowerCase().includes('es-mx'));
-                if (!voiceSelected) voiceSelected = voices.find(v => v.lang.toLowerCase().startsWith('es'));
+        function smartMorph(oldNode, newNode) {
+            if (oldNode.nodeType !== newNode.nodeType) {
+                oldNode.parentNode.replaceChild(newNode.cloneNode(true), oldNode);
+                return;
+            }
+            if (oldNode.nodeType === Node.TEXT_NODE) {
+                if (oldNode.nodeValue !== newNode.nodeValue) {
+                    oldNode.nodeValue = newNode.nodeValue;
+                }
+                return;
+            }
+            if (oldNode.nodeType === Node.ELEMENT_NODE) {
+                if (oldNode.tagName !== newNode.tagName) {
+                    oldNode.parentNode.replaceChild(newNode.cloneNode(true), oldNode);
+                    return;
+                }
                 
-                if (voiceSelected) utter.voice = voiceSelected;
-                window.speechSynthesis.speak(utter);
+                const isInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes(oldNode.tagName);
+                const isActive = (oldNode === document.activeElement);
+                
+                // Comparar Atributos
+                const oldAttrs = oldNode.attributes;
+                const newAttrs = newNode.attributes;
+                
+                for (let i = oldAttrs.length - 1; i >= 0; i--) {
+                    const attrName = oldAttrs[i].name;
+                    if (!newNode.hasAttribute(attrName)) {
+                        oldNode.removeAttribute(attrName);
+                    }
+                }
+                
+                for (let i = 0; i < newAttrs.length; i++) {
+                    const attrName = newAttrs[i].name;
+                    const attrValue = newAttrs[i].value;
+                    if (oldNode.getAttribute(attrName) !== attrValue) {
+                        oldNode.setAttribute(attrName, attrValue);
+                    }
+                }
+                
+                if (isInput) {
+                    if (oldNode.value !== newNode.value) {
+                        if (isActive) {
+                            const start = oldNode.selectionStart;
+                            const end = oldNode.selectionEnd;
+                            oldNode.value = newNode.value;
+                            if (start !== null && end !== null) {
+                                oldNode.setSelectionRange(start, end);
+                            }
+                        } else {
+                            oldNode.value = newNode.value;
+                        }
+                    }
+                    if (oldNode.checked !== newNode.checked) {
+                        oldNode.checked = newNode.checked;
+                    }
+                }
+                
+                const oldChildren = Array.from(oldNode.childNodes);
+                const newChildren = Array.from(newNode.childNodes);
+                const oldLen = oldChildren.length;
+                const newLen = newChildren.length;
+                const maxLen = Math.max(oldLen, newLen);
+                
+                for (let i = 0; i < maxLen; i++) {
+                    if (i >= oldLen) {
+                        oldNode.appendChild(newChildren[i].cloneNode(true));
+                    } else if (i >= newLen) {
+                        oldNode.removeChild(oldChildren[i]);
+                    } else {
+                        smartMorph(oldChildren[i], newChildren[i]);
+                    }
+                }
+            }
+        }
+
+        const safeGetLocalJSON = (key, fallback) => {
+            try {
+                const val = localStorage.getItem(key);
+                return val ? JSON.parse(val) : fallback;
+            } catch (e) {
+                return fallback;
             }
         };
 
-        // Monitoreo acústico de voz exclusivo para Carlos y actualización del reloj
-        setInterval(() => {
-            const now = new Date();
-            const currentHour = String(now.getHours()).padStart(2, '0');
-            const currentMinute = String(now.getMinutes()).padStart(2, '0');
-            const seconds = String(now.getSeconds()).padStart(2, '0');
-            const ampm = now.getHours() >= 12 ? 'PM' : 'AM';
-            let hour12 = now.getHours() % 12;
-            hour12 = hour12 ? hour12 : 12;
-            const clockStr = `${String(hour12).padStart(2, '0')}:${currentMinute}:${seconds} ${ampm}`;
+        window.appState = {
+            currentUser: null, 
+            currentDate: new Date(),
+            miniCalendarMonth: new Date(), 
+            activeStatsPeriod: 'semana', 
+            viewMode: 'day', 
+            searchQuery: '',
+            filterType: 'all', 
+            chatTarget: 'team',
+            unreadMessagesCount: 0,
+            blockedDays: safeGetLocalJSON('ceut_blocked_days', {}), 
+            blockedHours: safeGetLocalJSON('ceut_blocked_hours', {}), 
+            users: safeGetLocalJSON('ceut_users', {
+                'carlos': { name: 'Mtro. Carlos Aguilar Sánchez', role: 'Responsable Psicopedagógico', pin: '1015' },
+                'miroslava': { name: 'Lic. Miroslava Abril Hoyos Rojas', role: 'Coordinadora', pin: '1015', isRestricted: true },
+                'abril': { name: 'Pasantes Depto. Psicopedagógico', role: 'Pasante Psicopedagógico', pin: '1015', isRestricted: true }
+            }),
+            agendaData: safeGetLocalJSON('ceut_agenda_data', {}), 
+            carlosEvents: safeGetLocalJSON('ceut_carlos_events', {}),
+            chatMessages: safeGetLocalJSON('ceut_chat_messages', []),
+            scheduleConfig: { startHour: 7, endHour: 21 },
+            lastCheckedAlarmTime: null,
+            isSynced: false,
+            appId: 'agenda-ceut',
+            userId: null,
+            confirmCallback: null
+        };
 
-            const mainClock = document.getElementById('main-digital-clock');
-            const loginClock = document.getElementById('login-header-clock');
-            if (mainClock) mainClock.textContent = clockStr;
-            if (loginClock) loginClock.textContent = clockStr;
-
-            if (window.appState && window.appState.currentUser === 'carlos') {
-                const dateStr = window.appState.currentDate.toISOString().split('T')[0];
-                const activeAppointments = Object.values(window.appState.agendaData).filter(apt => apt.date === dateStr && apt.alarm);
-                const timeKey = `${currentHour}:${currentMinute}`;
-                
-                activeAppointments.forEach(apt => {
-                    const [h, m] = apt.hour.split(':');
-                    const targetTime = new Date();
-                    targetTime.setHours(parseInt(h), parseInt(m) - 3, 0, 0); 
-                    const alarmTriggerTime = `${String(targetTime.getHours()).padStart(2, '0')}:${String(targetTime.getMinutes()).padStart(2, '0')}`;
-
-                    if (timeKey === alarmTriggerTime && window.appState.lastCheckedAlarmTime !== timeKey) {
-                        window.appState.lastCheckedAlarmTime = timeKey;
-                        document.getElementById('alarm-name').textContent = apt.student;
-                        document.getElementById('alarm-time').textContent = apt.hour + " " + (parseInt(apt.hour) < 12 ? 'AM' : 'PM');
-                        document.getElementById('alarm-details').textContent = `${apt.level} • Semestre: ${apt.grade} • Grupo: ${apt.group}`;
-                        
-                        const alarmModal = document.getElementById('alarm-modal');
-                        if (alarmModal) {
-                            alarmModal.classList.remove('hidden');
-                            alarmModal.classList.add('flex');
-                        }
-                        window.speakCurrentAlarmText(apt.student, apt.hour);
-                    }
-                });
+        window.safeCreateIcons = function() {
+            if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') {
+                try {
+                    lucide.createIcons();
+                } catch (e) {
+                    console.warn("Lucide render lag", e);
+                }
             }
-        }, 1000);
+        };
 
+        // Algoritmo de transformación de tiempo a minutos absolutos del día
+        window.timeToMinutes = function(timeStr) {
+            if (!timeStr) return 0;
+            const clean = timeStr.trim().toUpperCase();
+            const isPM = clean.includes('PM');
+            const isAM = clean.includes('AM');
+            const cleanTime = clean.replace('AM', '').replace('PM', '').trim();
+            const parts = cleanTime.split(':');
+            let hours = parseInt(parts[0], 10) || 0;
+            const minutes = parseInt(parts[1], 10) || 0;
+            if (isPM && hours < 12) hours += 12;
+            if (isAM && hours === 12) hours = 0;
+            return (hours * 60) + minutes;
+        };
+
+        window.isAptOverlappingSlot = function(apt, slotHourStr) {
+            if (!apt.hour) return false;
+            const slotStart = window.timeToMinutes(slotHourStr);
+            const slotEnd = slotStart + 60; // Segmentos de 1 hora
+            const aptStart = window.timeToMinutes(apt.hour);
+            const aptEnd = apt.endTime ? window.timeToMinutes(apt.endTime) : (aptStart + 50); // Duración predeterminada de 50m si no se define
+            return (aptStart < slotEnd && aptEnd > slotStart);
+        };
+
+        window.format12h = function(time24) {
+            if (!time24) return 'S/H';
+            const clean = time24.trim().toUpperCase();
+            if (clean.includes('AM') || clean.includes('PM')) return clean;
+            const parts = clean.split(':');
+            let h = parseInt(parts[0], 10);
+            const m = parts[1] || '00';
+            const ampm = h >= 12 ? 'PM' : 'AM';
+            h = h % 12;
+            h = h ? h : 12;
+            return `${String(h).padStart(2, '0')}:${m} ${ampm}`;
+        };
+
+        window.formatFullDateES = function(dateInput) {
+            if (!dateInput) return "";
+            const d = new Date(dateInput);
+            if (isNaN(d.getTime())) return String(dateInput);
+            const offset = d.getTimezoneOffset() * 60000;
+            const adjustedDate = new Date(d.getTime() + offset);
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            const formatted = adjustedDate.toLocaleDateString('es-MX', options);
+            return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+        };
+
+        window.scrollChatToBottom = function() {
+            setTimeout(() => {
+                const feed = document.getElementById('chat-messages-feed');
+                if (feed) {
+                    feed.scrollTop = feed.scrollHeight;
+                }
+            }, 80);
+        };
+
+        window.getHourSlots = function() {
+            const slots = [];
+            const { startHour, endHour } = window.appState.scheduleConfig;
+            for (let h = startHour; h < endHour; h++) {
+                slots.push(String(h).padStart(2, '0') + ':00');
+            }
+            return slots;
+        };
+
+        window.generateFolioCode = function(apt) {
+            if (!apt) return "CEUT-PP-00000";
+            const levelCode = apt.level === 'Preparatoria' ? 'PREP' : 'LIC';
+            const year = apt.date ? apt.date.split('-')[0] : new Date().getFullYear();
+            const numericHash = apt.id.replace(/[^0-9]/g, '');
+            const uniqueSeq = numericHash ? numericHash.slice(-5) : Math.floor(10000 + Math.random() * 90000);
+            return `CEUT-PP-${levelCode}-${year}-${uniqueSeq}`;
+        };
+
+        window.showToast = function(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const icon = document.getElementById('toast-icon');
+            const msg = document.getElementById('toast-message');
+            if (!toast) return;
+            
+            if (type === 'success') {
+                icon.innerHTML = '<i data-lucide="check-circle" class="w-5 h-5 text-emerald-400"></i>';
+                toast.firstElementChild.className = 'bg-clinical-950 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-3 border border-emerald-500/30';
+            } else if (type === 'error') {
+                icon.innerHTML = '<i data-lucide="alert-circle" class="w-5 h-5 text-rose-400"></i>';
+                toast.firstElementChild.className = 'bg-clinical-950 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-3 border border-rose-500/30';
+            } else {
+                icon.innerHTML = '<i data-lucide="info" class="w-5 h-5 text-brandGold-500"></i>';
+                toast.firstElementChild.className = 'bg-clinical-950 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-3 border border-brandGold-500/30';
+            }
+            msg.textContent = message;
+            window.safeCreateIcons();
+            
+            toast.classList.remove('translate-y-[-100px]', 'opacity-0', 'pointer-events-none');
+            toast.classList.add('translate-y-0', 'opacity-100');
+            
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-[-100px]', 'opacity-0', 'pointer-events-none');
+            }, 4000);
+        };
+
+        window.showConfirmModal = function(message, callback) {
+            const modal = document.getElementById('confirm-modal');
+            const msgEl = document.getElementById('confirm-message');
+            if (!modal || !msgEl) return;
+            msgEl.textContent = message;
+            window.appState.confirmCallback = callback;
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        };
+
+        window.closeConfirmModal = function(accepted) {
+            const modal = document.getElementById('confirm-modal');
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+            if (accepted && typeof window.appState.confirmCallback === 'function') {
+                window.appState.confirmCallback();
+            }
+            window.appState.confirmCallback = null;
+        };
+
+        window.playMessageNotificationSound = function() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                
+                osc.type = 'sine';
+                const now = ctx.currentTime;
+                osc.frequency.setValueAtTime(659.25, now); 
+                osc.frequency.setValueAtTime(880.00, now + 0.12);
+                
+                gain.gain.setValueAtTime(0.12, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+                
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                
+                osc.start(now);
+                osc.stop(now + 0.5);
+            } catch (e) {
+                console.warn("Fallo de reproducción por política de Autoplay", e);
+            }
+        };
+    </script>
+
+    <!-- Control de Calendario Interactivo -->
+    <script>
         window.renderMiniCalendar = function() {
             const container = document.getElementById('mini-calendar-container');
             if (!container) return;
@@ -825,6 +803,7 @@
         };
     </script>
 
+    <!-- Visualización y Generación Dinámica del Cronograma de Trabajo -->
     <script>
         window.renderHoursGridHtml = function(activeAppointments, isBlocked, dateStr) {
             let html = '';
@@ -833,18 +812,11 @@
             const isCarlos = (currentUser === 'carlos');
 
             slots.forEach(hour => {
-                const hourNum = parseInt(hour.split(':')[0]);
-                // Agrupamos citas que comiencen dentro del rango de esta hora (ej: 07:20 cae en slot 07:00)
-                const aptsForSlot = activeAppointments.filter(apt => {
-                    if (!apt.hour) return false;
-                    const aptHourNum = parseInt(apt.hour.split(':')[0]);
-                    return aptHourNum === hourNum;
-                });
+                // Filtrado con lógica de minutos exactos
+                const aptsForSlot = activeAppointments.filter(apt => window.isAptOverlappingSlot(apt, hour));
 
                 const blockKey = `${dateStr}_${hour}`;
                 const isHourBlocked = window.appState.blockedHours[blockKey];
-                
-                // DETECCIÓN DE EVENTO PRIVADO DE CARLOS
                 const carlosEventKey = `${dateStr}_${hour}`;
                 const hasCarlosEvent = window.appState.carlosEvents[carlosEventKey];
 
@@ -900,58 +872,72 @@
                     `;
                 } else if (aptsForSlot.length > 0) {
                     aptsForSlot.forEach(aptForSlot => {
-                        const matchesFilter = (window.appState.filterType === 'all' || aptForSlot.type === window.appState.filterType) &&
-                                             (!window.appState.searchQuery || aptForSlot.student.toLowerCase().includes(window.appState.searchQuery.toLowerCase()));
-
-                        if (matchesFilter) {
-                            const isOwner = aptForSlot.createdBy === currentUser;
-                            const canEditOrDelete = isCarlos || isOwner;
-                            const statuses = ['Pendiente', 'Realizada', 'Seguimiento', 'Reagendada', 'Cancelada', 'Sin Asistir'];
-                            
-                            let selectBorderClass = 'border-clinical-800';
-                            if (aptForSlot.status === 'Realizada') selectBorderClass = 'border-emerald-500/60 text-emerald-400';
-                            else if (aptForSlot.status === 'Cancelada' || aptForSlot.status === 'Sin Asistir') selectBorderClass = 'border-rose-500/60 text-rose-400';
-                            else if (aptForSlot.status === 'Pendiente') selectBorderClass = 'border-amber-500/60 text-amber-400';
-                            else if (aptForSlot.status === 'Seguimiento' || aptForSlot.status === 'Reagendada') selectBorderClass = 'border-blue-500/60 text-blue-400';
-
-                            let selectHtml = `<select onchange="window.updateAptStatus('${aptForSlot.id}', this.value)" class="bg-clinical-900 border ${selectBorderClass} rounded-lg text-[10px] font-bold px-2 py-1 focus:outline-none focus:ring-1 focus:ring-brandGold-500/50 appearance-none cursor-pointer">`;
-                            statuses.forEach(st => {
-                                selectHtml += `<option value="${st}" ${aptForSlot.status === st ? 'selected' : ''}>${st}</option>`;
-                            });
-                            selectHtml += `</select>`;
-
-                            const creatorName = window.appState.users[aptForSlot.createdBy]?.name || aptForSlot.createdBy;
-
+                        const isOwner = aptForSlot.createdBy === currentUser;
+                        const hasAccess = isCarlos || isOwner;
+                        
+                        // Si no cuenta con privilegios de Carlos o Creador de la cita, se muestra con etiqueta de privacidad y candado
+                        if (!hasAccess) {
                             html += `
-                                <div class="w-full bg-clinical-950 border border-clinical-800 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-md hover:border-brandGold-500/40 transition-all relative overflow-hidden group/card">
-                                    <div class="absolute left-0 top-0 bottom-0 w-1.5 ${
-                                        aptForSlot.type === 'Psicológica' ? 'bg-indigo-500' :
-                                        aptForSlot.type === 'Vocacional' ? 'bg-amber-500' :
-                                        aptForSlot.type === 'Académica' ? 'bg-teal-500' : 'bg-slate-500'
-                                    }"></div>
-                                    <div class="flex-1 pl-2">
-                                        <div class="flex items-center gap-2 flex-wrap">
-                                            <span class="text-white font-outfit font-bold text-sm leading-tight">${aptForSlot.student}</span>
-                                            <span class="text-[10px] font-black uppercase tracking-wider text-brandGold-500 bg-brandGold-500/10 border border-brandGold-500/20 px-2 py-0.5 rounded-full font-mono">${aptForSlot.hour} - ${aptForSlot.endTime || 'S/F'}</span>
-                                            <span class="text-[9px] font-black uppercase tracking-widest bg-clinical-900 border border-clinical-800 text-slate-400 px-2 py-0.5 rounded-full">${aptForSlot.type}</span>
-                                            <span class="text-[10px] font-bold text-slate-500">${aptForSlot.level} • ${aptForSlot.career}</span>
-                                            ${selectHtml}
-                                            <span class="text-[9px] text-slate-500 font-mono" title="${creatorName}">Creador: ${aptForSlot.createdBy}</span>
+                                <div class="w-full bg-brandGold-500/5 border border-brandGold-500/20 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-inner animate-fade-up">
+                                    <div class="flex items-center gap-2.5 text-brandGold-500 font-sans">
+                                        <i data-lucide="lock" class="w-4.5 h-4.5 animate-pulse shrink-0"></i>
+                                        <div>
+                                            <span class="text-xs font-black uppercase tracking-wider block">Horario Reservado por Dirección</span>
+                                            <span class="text-[10px] text-slate-400 font-medium font-mono">${window.format12h(aptForSlot.hour)} a ${window.format12h(aptForSlot.endTime)}</span>
                                         </div>
-                                        <p class="text-xs text-slate-400 mt-1.5 line-clamp-2 italic">"${aptForSlot.obs || 'Sin observaciones iniciales.'}"</p>
                                     </div>
-                                    <div class="flex items-center gap-2 shrink-0 font-sans">
-                                        <button onclick="window.viewAppointmentDetails('${aptForSlot.id}')" class="p-2 bg-clinical-900 border border-clinical-800 rounded-xl hover:border-brandGold-500/40 text-brandGold-500 hover:text-white transition-all text-xs font-bold flex items-center gap-1.5">
-                                            <i data-lucide="eye" class="w-4 h-4"></i> Ver / Editar
-                                        </button>
-                                        ${canEditOrDelete ? `
+                                    <span class="text-[9px] bg-brandGold-500/15 text-brandGold-500 border border-brandGold-500/20 px-2.5 py-1 rounded-full font-bold uppercase tracking-widest shrink-0 font-sans">Privado / Ocupado</span>
+                                </div>
+                            `;
+                        } else {
+                            const matchesFilter = (window.appState.filterType === 'all' || aptForSlot.type === window.appState.filterType) &&
+                                                 (!window.appState.searchQuery || aptForSlot.student.toLowerCase().includes(window.appState.searchQuery.toLowerCase()));
+
+                            if (matchesFilter) {
+                                const statuses = ['Pendiente', 'Realizada', 'Seguimiento', 'Reagendada', 'Cancelada', 'Sin Asistir'];
+                                let selectBorderClass = 'border-clinical-800';
+                                if (aptForSlot.status === 'Realizada') selectBorderClass = 'border-emerald-500/60 text-emerald-400';
+                                else if (aptForSlot.status === 'Cancelada' || aptForSlot.status === 'Sin Asistir') selectBorderClass = 'border-rose-500/60 text-rose-400';
+                                else if (aptForSlot.status === 'Pendiente') selectBorderClass = 'border-amber-500/60 text-amber-400';
+                                else if (aptForSlot.status === 'Seguimiento' || aptForSlot.status === 'Reagendada') selectBorderClass = 'border-blue-500/60 text-blue-400';
+
+                                let selectHtml = `<select onchange="window.updateAptStatus('${aptForSlot.id}', this.value)" class="bg-clinical-900 border ${selectBorderClass} rounded-lg text-[10px] font-bold px-2 py-1 focus:outline-none focus:ring-1 focus:ring-brandGold-500/50 appearance-none cursor-pointer">`;
+                                statuses.forEach(st => {
+                                    selectHtml += `<option value="${st}" ${aptForSlot.status === st ? 'selected' : ''}>${st}</option>`;
+                                });
+                                selectHtml += `</select>`;
+
+                                const creatorName = window.appState.users[aptForSlot.createdBy]?.name || aptForSlot.createdBy;
+
+                                html += `
+                                    <div class="w-full bg-clinical-950 border border-clinical-800 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-md hover:border-brandGold-500/40 transition-all relative overflow-hidden group/card animate-fade-up">
+                                        <div class="absolute left-0 top-0 bottom-0 w-1.5 ${
+                                            aptForSlot.type === 'Psicológica' ? 'bg-indigo-500' :
+                                            aptForSlot.type === 'Vocacional' ? 'bg-amber-500' :
+                                            aptForSlot.type === 'Académica' ? 'bg-teal-500' : 'bg-slate-500'
+                                        }"></div>
+                                        <div class="flex-1 pl-2">
+                                            <div class="flex items-center gap-2 flex-wrap">
+                                                <span class="text-white font-outfit font-bold text-sm leading-tight">${aptForSlot.student}</span>
+                                                <span class="text-[10px] font-black uppercase tracking-wider text-brandGold-500 bg-brandGold-500/10 border border-brandGold-500/20 px-2 py-0.5 rounded-full font-mono">${window.format12h(aptForSlot.hour)} - ${window.format12h(aptForSlot.endTime)}</span>
+                                                <span class="text-[9px] font-black uppercase tracking-widest bg-clinical-900 border border-clinical-800 text-slate-400 px-2 py-0.5 rounded-full">${aptForSlot.type}</span>
+                                                <span class="text-[10px] font-bold text-slate-500">${aptForSlot.level} • ${aptForSlot.career}</span>
+                                                ${selectHtml}
+                                                <span class="text-[9px] text-slate-500 font-mono" title="${creatorName}">Creador: ${aptForSlot.createdBy}</span>
+                                            </div>
+                                            <p class="text-xs text-slate-400 mt-1.5 line-clamp-2 italic">"${aptForSlot.obs || 'Sin observaciones iniciales.'}"</p>
+                                        </div>
+                                        <div class="flex items-center gap-2 shrink-0 font-sans">
+                                            <button onclick="window.viewAppointmentDetails('${aptForSlot.id}')" class="p-2 bg-clinical-900 border border-clinical-800 rounded-xl hover:border-brandGold-500/40 text-brandGold-500 hover:text-white transition-all text-xs font-bold flex items-center gap-1.5">
+                                                <i data-lucide="eye" class="w-4 h-4"></i> Ver / Editar
+                                            </button>
                                             <button onclick="window.cancelAppointment('${aptForSlot.id}')" class="p-2 bg-rose-950/20 hover:bg-rose-900/30 border border-rose-900/30 text-rose-400 hover:text-white rounded-xl transition-all" title="Eliminar Consulta">
                                                 <i data-lucide="trash-2" class="w-4 h-4"></i>
                                             </button>
-                                        ` : ''}
+                                        </div>
                                     </div>
-                                </div>
-                            `;
+                                `;
+                            }
                         }
                     });
                 } else {
@@ -1028,19 +1014,13 @@
             html += `</tr></thead><tbody class="divide-y divide-clinical-850">`;
 
             slots.forEach(hour => {
-                const hourNum = parseInt(hour.split(':')[0]);
                 html += `<tr class="hover:bg-clinical-950/10 transition-colors">`;
                 html += `<td class="p-3 font-mono text-xs font-black text-slate-400 border-r border-clinical-850">${hour}</td>`;
 
                 weekDays.forEach(day => {
                     const dateStr = day.toISOString().split('T')[0];
                     const activeAppointments = Object.values(window.appState.agendaData).filter(apt => apt.date === dateStr);
-                    
-                    const aptsForSlot = activeAppointments.filter(apt => {
-                        if (!apt.hour) return false;
-                        const aptHourNum = parseInt(apt.hour.split(':')[0]);
-                        return aptHourNum === hourNum;
-                    });
+                    const aptsForSlot = activeAppointments.filter(apt => window.isAptOverlappingSlot(apt, hour));
 
                     const blockKey = `${dateStr}_${hour}`;
                     const isHourBlocked = window.appState.blockedHours[blockKey];
@@ -1090,30 +1070,40 @@
                         html += `<div class="space-y-1.5">`;
                         aptsForSlot.forEach(aptForSlot => {
                             const isOwner = aptForSlot.createdBy === currentUser;
-                            const canEditOrDelete = isCarlos || isOwner;
-                            html += `
-                                <div class="p-2 rounded-xl text-left border relative overflow-hidden flex flex-col justify-between min-h-[4.5rem] ${
-                                    aptForSlot.type === 'Psicológica' ? 'bg-indigo-950/40 border-indigo-500/30' :
-                                    aptForSlot.type === 'Vocacional' ? 'bg-amber-950/40 border-amber-500/30' :
-                                    aptForSlot.type === 'Académica' ? 'bg-teal-950/40 border-teal-500/30' : 'bg-slate-950/40 border-slate-500/30'
-                                }">
-                                    <div>
-                                        <div class="font-bold text-white text-[11px] truncate">${aptForSlot.student}</div>
-                                        <div class="text-[9px] text-brandGold-500 font-bold font-mono">${aptForSlot.hour} - ${aptForSlot.endTime || ''}</div>
-                                        <div class="text-[9px] font-black uppercase mt-1 inline-block px-1.5 py-0.5 rounded ${
-                                            aptForSlot.status === 'Realizada' ? 'bg-emerald-500/20 text-emerald-400' :
-                                            aptForSlot.status === 'Cancelada' ? 'bg-rose-500/20 text-rose-400' :
-                                            aptForSlot.status === 'Pendiente' ? 'bg-amber-500/20 text-amber-400' : 'bg-slate-500/20 text-slate-400'
-                                        }">${aptForSlot.status}</div>
+                            const hasAccess = isCarlos || isOwner;
+                            
+                            if (!hasAccess) {
+                                html += `
+                                    <div class="p-2 rounded-xl text-left border bg-brandGold-500/5 border-brandGold-500/20 flex flex-col justify-between min-h-[4.5rem]">
+                                        <div>
+                                            <div class="font-bold text-brandGold-500 text-[10px] truncate">🔒 Reservado</div>
+                                            <div class="text-[9px] text-slate-400 font-bold font-mono">${window.format12h(aptForSlot.hour)} - ${window.format12h(aptForSlot.endTime)}</div>
+                                        </div>
                                     </div>
-                                    <div class="flex gap-1 justify-end mt-2">
-                                        <button onclick="window.viewAppointmentDetails('${aptForSlot.id}')" class="p-1 hover:bg-clinical-800 rounded text-brandGold-500" title="Ver / Editar"><i data-lucide="eye" class="w-3.5 h-3.5"></i></button>
-                                        ${canEditOrDelete ? `
+                                `;
+                            } else {
+                                html += `
+                                    <div class="p-2 rounded-xl text-left border relative overflow-hidden flex flex-col justify-between min-h-[4.5rem] ${
+                                        aptForSlot.type === 'Psicológica' ? 'bg-indigo-950/40 border-indigo-500/30' :
+                                        aptForSlot.type === 'Vocacional' ? 'bg-amber-950/40 border-amber-500/30' :
+                                        aptForSlot.type === 'Académica' ? 'bg-teal-950/40 border-teal-500/30' : 'bg-slate-950/40 border-slate-500/30'
+                                    }">
+                                        <div>
+                                            <div class="font-bold text-white text-[11px] truncate">${aptForSlot.student}</div>
+                                            <div class="text-[9px] text-brandGold-500 font-bold font-mono">${window.format12h(aptForSlot.hour)} - ${window.format12h(aptForSlot.endTime)}</div>
+                                            <div class="text-[9px] font-black uppercase mt-1 inline-block px-1.5 py-0.5 rounded ${
+                                                aptForSlot.status === 'Realizada' ? 'bg-emerald-500/20 text-emerald-400' :
+                                                aptForSlot.status === 'Cancelada' ? 'bg-rose-500/20 text-rose-400' :
+                                                aptForSlot.status === 'Pendiente' ? 'bg-amber-500/20 text-amber-400' : 'bg-slate-500/20 text-slate-400'
+                                            }">${aptForSlot.status}</div>
+                                        </div>
+                                        <div class="flex gap-1 justify-end mt-2">
+                                            <button onclick="window.viewAppointmentDetails('${aptForSlot.id}')" class="p-1 hover:bg-clinical-800 rounded text-brandGold-500" title="Ver / Editar"><i data-lucide="eye" class="w-3.5 h-3.5"></i></button>
                                             <button onclick="window.cancelAppointment('${aptForSlot.id}')" class="p-1 hover:bg-rose-950/40 rounded text-rose-400" title="Eliminar"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
-                                        ` : ''}
+                                        </div>
                                     </div>
-                                </div>
-                            `;
+                                `;
+                            }
                         });
                         html += `</div>`;
                     } else {
@@ -1219,12 +1209,12 @@
         };
     </script>
 
+    <!-- Sistema del Canal de Comunicación Interno -->
     <script>
         window.getChatViewHtml = function() {
             const currentUser = window.appState.currentUser;
             const msgs = window.appState.chatMessages || [];
             
-            // FILTRADO DE MENSAJES (Soporta Equipo, Asistente IA y Chat Directo Privado)
             const activeTarget = window.appState.chatTarget;
             const filteredMsgs = msgs.filter(msg => {
                 if (activeTarget === 'team') {
@@ -1232,7 +1222,6 @@
                 } else if (activeTarget === 'ai') {
                     return msg.recipientId === 'ai' && (msg.senderId === currentUser || msg.senderId === 'gemini_ia');
                 } else {
-                    // Chat Privado Directo entre currentUser y el receptor (activeTarget)
                     return (msg.recipientId === activeTarget && msg.senderId === currentUser) ||
                            (msg.recipientId === currentUser && msg.senderId === activeTarget);
                 }
@@ -1262,7 +1251,6 @@
                             </div>
                         `;
                     } else {
-                        // Rol según la base de datos de usuarios
                         const senderProfile = window.appState.users[msg.senderId];
                         const roleName = senderProfile ? senderProfile.role : 'Pasante';
                         const isCarlos = msg.senderId === 'carlos';
@@ -1287,7 +1275,6 @@
                     }
 
                     const timeStr = new Date(msg.timestamp).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
-
                     const canDeleteMessage = (currentUser === 'carlos') || (msg.senderId === currentUser);
                     const deleteButtonHtml = canDeleteMessage ? `
                         <button onclick="window.deleteSingleChatMessage('${msg.id}')" class="text-slate-500 hover:text-rose-400 p-1 rounded-lg hover:bg-clinical-950/60 transition-all opacity-0 group-hover:opacity-100 shrink-0" title="Eliminar mensaje">
@@ -1316,7 +1303,6 @@
                 });
             }
 
-            // CREACIÓN DE PESTAÑAS Y CANALES LATERALES DE CHAT (Equipo, IA y Directos)
             let sidebarChannelsHtml = `
                 <button onclick="window.setChatTarget('team')" class="w-full text-left p-3 rounded-xl flex items-center gap-2.5 transition-all ${activeTarget === 'team' ? 'bg-brandGold-500 text-clinical-950 font-black' : 'bg-clinical-950/40 hover:bg-clinical-850 border border-clinical-850 text-slate-300'}">
                     <i data-lucide="users" class="w-4 h-4"></i>
@@ -1338,7 +1324,7 @@
             `;
 
             Object.entries(window.appState.users).forEach(([userKey, profile]) => {
-                if (userKey === currentUser) return; // Omitir a uno mismo
+                if (userKey === currentUser) return;
                 const isActive = activeTarget === userKey;
                 
                 sidebarChannelsHtml += `
@@ -1437,215 +1423,9 @@
                 </div>
             `;
         };
-
-        window.setChatTarget = function(target) {
-            window.appState.chatTarget = target;
-            window.renderMainApp();
-            if (window.scrollChatToBottom) window.scrollChatToBottom();
-        };
-
-        window.deleteSingleChatMessage = function(msgId) {
-            const msg = window.appState.chatMessages.find(m => m.id === msgId);
-            if (!msg) return;
-            const currentUser = window.appState.currentUser;
-            const isCarlos = (currentUser === 'carlos');
-            if (!isCarlos && msg.senderId !== currentUser) {
-                window.showToast('Acción denegada: No tienes permiso para eliminar este mensaje.', 'error');
-                return;
-            }
-            window.showConfirmModal('¿Está seguro de eliminar este mensaje del historial del chat?', async () => {
-                if (window.deleteChatMessageFromFirestore) {
-                    await window.deleteChatMessageFromFirestore(msgId);
-                } else {
-                    window.appState.chatMessages = window.appState.chatMessages.filter(m => m.id !== msgId);
-                    localStorage.setItem('ceut_chat_messages', JSON.stringify(window.appState.chatMessages));
-                    window.renderMainApp();
-                }
-                window.showToast('Mensaje eliminado.', 'info');
-            });
-        };
-
-        window.clearAllChatHistory = function() {
-            window.showConfirmModal('¿Está seguro de eliminar TODO el historial de conversación en este canal? Esta acción no se puede deshacer.', async () => {
-                const msgsToDelete = [...window.appState.chatMessages];
-                if (window.deleteChatMessageFromFirestore) {
-                    for (const msg of msgsToDelete) {
-                        await window.deleteChatMessageFromFirestore(msg.id);
-                    }
-                } else {
-                    window.appState.chatMessages = [];
-                    localStorage.setItem('ceut_chat_messages', JSON.stringify([]));
-                    window.renderMainApp();
-                }
-                window.showToast('Conversación vaciada exitosamente.', 'success');
-            });
-        };
-
-        window.useQuickChatSuggestion = function(text) {
-            const input = document.getElementById('chat-input-text');
-            if (input) {
-                input.value = text;
-                input.focus();
-            }
-        };
-
-        window.sendChatMessage = async function(e) {
-            e.preventDefault();
-            const input = document.getElementById('chat-input-text');
-            if (!input) return;
-            const text = input.value.trim();
-            if (!text) return;
-
-            const currentUser = window.appState.currentUser;
-            const userObj = window.appState.users[currentUser];
-            if (!userObj) return;
-
-            const msgId = "msg_" + Date.now();
-            const msgData = {
-                id: msgId,
-                senderId: currentUser,
-                senderName: userObj.name,
-                senderRole: userObj.role,
-                text: text,
-                timestamp: Date.now(),
-                recipientId: window.appState.chatTarget // 'team', 'ai', o la key del perfil del pasante o coordinador
-            };
-
-            input.value = '';
-
-            if (window.saveChatMessageToFirestore) {
-                await window.saveChatMessageToFirestore(msgId, msgData);
-            } else {
-                window.appState.chatMessages.push(msgData);
-                localStorage.setItem('ceut_chat_messages', JSON.stringify(window.appState.chatMessages));
-                window.renderMainApp();
-                if (window.scrollChatToBottom) window.scrollChatToBottom();
-            }
-
-            if (window.appState.chatTarget === 'ai') {
-                await window.callGeminiChatAssistant(text);
-            }
-        };
-
-        window.callGeminiChatAssistant = async function(userText) {
-            const currentUser = window.appState.currentUser;
-            const userObj = window.appState.users[currentUser];
-            if (!userObj) return;
-
-            const loadingMsgId = "msg_loading_" + Date.now();
-            const loadingMsg = {
-                id: loadingMsgId,
-                senderId: 'gemini_ia',
-                senderName: '✨ Asistente IA',
-                senderRole: 'Asesor de Inteligencia Artificial',
-                text: '<span class="animate-pulse italic text-slate-400 flex items-center gap-1.5"><i data-lucide="loader" class="w-3.5 h-3.5 animate-spin text-brandGold-500"></i> Analizando caso con IA...</span>',
-                timestamp: Date.now(),
-                recipientId: 'ai'
-            };
-
-            if (window.saveChatMessageToFirestore) {
-                await window.saveChatMessageToFirestore(loadingMsgId, loadingMsg);
-            } else {
-                window.appState.chatMessages.push(loadingMsg);
-                window.renderMainApp();
-                if (window.scrollChatToBottom) window.scrollChatToBottom();
-            }
-
-            try {
-                const systemPrompt = "Actúa como un asesor psicopedagógico clínico de excelencia del Centro Educativo Universitario de Tehuacán (CEUT). Tu misión es responder consultas de forma de viñetas estructuradas y profesionales.";
-                const apiKey = ""; 
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
-
-                const relevantMsgs = window.appState.chatMessages.filter(m => m.id !== loadingMsgId && m.recipientId === 'ai').slice(-12);
-                const chatHistory = relevantMsgs.map(m => {
-                    const role = m.senderId === 'gemini_ia' ? 'model' : 'user';
-                    const prefix = role === 'user' ? `[${m.senderName} (${m.senderRole})]: ` : '';
-                    return {
-                        role: role,
-                        parts: [{ text: `${prefix}${m.text}` }]
-                    };
-                });
-
-                if (chatHistory.length === 0 || chatHistory[chatHistory.length - 1].parts[0].text !== userText) {
-                    chatHistory.push({
-                        role: 'user',
-                        parts: [{ text: `[${userObj.name} (${userObj.role})]: ${userText}` }]
-                    });
-                }
-
-                const payload = {
-                    contents: chatHistory,
-                    systemInstruction: {
-                        parts: [{ text: systemPrompt }]
-                    }
-                };
-
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if (response.ok) {
-                    const result = await response.json();
-                    const aiResponseText = result.candidates?.[0]?.content?.parts?.[0]?.text || "No logré procesar tu solicitud.";
-                    
-                    if (window.deleteChatMessageFromFirestore) {
-                        await window.deleteChatMessageFromFirestore(loadingMsgId);
-                    } else {
-                        window.appState.chatMessages = window.appState.chatMessages.filter(m => m.id !== loadingMsgId);
-                    }
-
-                    const aiMsgId = "msg_ai_" + Date.now();
-                    const aiMsg = {
-                        id: aiMsgId,
-                        senderId: 'gemini_ia',
-                        senderName: '✨ Asistente IA',
-                        senderRole: 'Asistente de Inteligencia Artificial',
-                        text: aiResponseText,
-                        timestamp: Date.now(),
-                        recipientId: 'ai'
-                    };
-
-                    if (window.saveChatMessageToFirestore) {
-                        await window.saveChatMessageToFirestore(aiMsgId, aiMsg);
-                    } else {
-                        window.appState.chatMessages.push(aiMsg);
-                        localStorage.setItem('ceut_chat_messages', JSON.stringify(window.appState.chatMessages));
-                        window.renderMainApp();
-                    }
-                } else {
-                    throw new Error();
-                }
-            } catch (error) {
-                if (window.deleteChatMessageFromFirestore) {
-                    await window.deleteChatMessageFromFirestore(loadingMsgId);
-                } else {
-                    window.appState.chatMessages = window.appState.chatMessages.filter(m => m.id !== loadingMsgId);
-                }
-                
-                const errMsgId = "msg_err_" + Date.now();
-                const errMsg = {
-                    id: errMsgId,
-                    senderId: 'gemini_ia',
-                    senderName: '✨ Asistente IA',
-                    senderRole: 'Asistente de Inteligencia Artificial',
-                    text: '⚠️ No es posible conectar temporalmente con el motor en la nube de Gemini. Por favor verifica tu consola de red o reintenta en un momento.',
-                    timestamp: Date.now(),
-                    recipientId: 'ai'
-                };
-                
-                if (window.saveChatMessageToFirestore) {
-                    await window.saveChatMessageToFirestore(errMsgId, errMsg);
-                } else {
-                    window.appState.chatMessages.push(errMsg);
-                    localStorage.setItem('ceut_chat_messages', JSON.stringify(window.appState.chatMessages));
-                    window.renderMainApp();
-                }
-            }
-        };
     </script>
 
+    <!-- Control y Creación de Perfiles Académicos -->
     <script>
         window.getProfilesViewHtml = function() {
             const isCarlos = (window.appState.currentUser === 'carlos');
@@ -1753,76 +1533,9 @@
                 </div>
             `;
         };
-
-        window.updateProfileField = async function(userKey, field, value) {
-            if (!window.appState.users[userKey]) return;
-            
-            // Si el PIN tiene un formato incorrecto, restauramos
-            if (field === 'pin' && (value.length !== 4 || isNaN(value))) {
-                window.showToast('El PIN debe constar exactamente de 4 dígitos numéricos.', 'error');
-                window.renderMainApp();
-                return;
-            }
-
-            window.appState.users[userKey][field] = value;
-            
-            if (window.saveProfileToFirestore) {
-                await window.saveProfileToFirestore(userKey, window.appState.users[userKey]);
-            } else {
-                localStorage.setItem('ceut_users', JSON.stringify(window.appState.users));
-                window.renderMainApp();
-            }
-            window.showToast('Perfil actualizado correctamente', 'success');
-        };
-
-        window.saveNewProfile = async function(e) {
-            e.preventDefault();
-            const key = document.getElementById('new-profile-key').value.trim().toLowerCase().replace(/\s+/g, '_');
-            const name = document.getElementById('new-profile-name').value.trim();
-            const role = document.getElementById('new-profile-role').value.trim();
-            const pin = document.getElementById('new-profile-pin').value.trim();
-
-            if (window.appState.users[key]) {
-                window.showToast('Este identificador de pasante ya está en uso.', 'error');
-                return;
-            }
-
-            if (pin.length !== 4 || isNaN(pin)) {
-                window.showToast('El PIN debe constar exactamente de 4 dígitos numéricos.', 'error');
-                return;
-            }
-
-            const profileData = { name, role, pin, isRestricted: true };
-            window.appState.users[key] = profileData;
-
-            if (window.saveProfileToFirestore) {
-                await window.saveProfileToFirestore(key, profileData);
-            } else {
-                localStorage.setItem('ceut_users', JSON.stringify(window.appState.users));
-                window.renderMainApp();
-            }
-
-            document.getElementById('new-profile-key').value = '';
-            document.getElementById('new-profile-name').value = '';
-            document.getElementById('new-profile-pin').value = '1015';
-            window.showToast('Pasante agregado con éxito', 'success');
-        };
-
-        window.removeDynamicProfile = function(key) {
-            window.showConfirmModal(`¿Está seguro de eliminar de forma permanente el perfil del pasante: ${key}?`, async () => {
-                delete window.appState.users[key];
-                if (window.deleteProfileFromFirestore) {
-                    await window.deleteProfileFromFirestore(key);
-                } else {
-                    localStorage.setItem('ceut_users', JSON.stringify(window.appState.users));
-                    window.renderMainApp();
-                }
-                window.showToast('Pasante dado de baja.', 'info');
-            });
-        };
     </script>
 
-    <!-- Carlos Private Events View -->
+    <!-- Módulo de Eventos de Dirección (Mtro. Carlos) -->
     <script>
         window.getCarlosEventsViewHtml = function() {
             const dateStr = window.appState.currentDate.toISOString().split('T')[0];
@@ -1915,51 +1628,9 @@
                 </div>
             `;
         };
-
-        window.saveCarlosEvent = function(e) {
-            e.preventDefault();
-            const date = document.getElementById('carlos-event-date').value;
-            const hour = document.getElementById('carlos-event-hour').value;
-            const title = document.getElementById('carlos-event-title').value.trim();
-            const description = document.getElementById('carlos-event-description').value.trim();
-
-            const eventKey = `${date}_${hour}`;
-            
-            const collidesWithAppointment = Object.values(window.appState.agendaData).some(apt => apt.date === date && apt.hour === hour);
-            if (collidesWithAppointment) {
-                window.showToast('No se puede inhabilitar este horario porque ya cuenta con una cita agendada.', 'error');
-                return;
-            }
-
-            const eventData = { title, description };
-            window.appState.carlosEvents[eventKey] = eventData;
-
-            if (window.saveCarlosEventToFirestore) {
-                window.saveCarlosEventToFirestore(eventKey, eventData);
-            } else {
-                localStorage.setItem('ceut_carlos_events', JSON.stringify(window.appState.carlosEvents));
-                window.renderMainApp();
-                window.showToast('Evento registrado de forma privada.', 'success');
-            }
-
-            document.getElementById('carlos-event-title').value = '';
-            document.getElementById('carlos-event-description').value = '';
-        };
-
-        window.deleteCarlosEvent = function(key) {
-            window.showConfirmModal('¿Está seguro de habilitar nuevamente este horario y remover su evento privado?', () => {
-                delete window.appState.carlosEvents[key];
-                if (window.deleteCarlosEventFromFirestore) {
-                    window.deleteCarlosEventFromFirestore(key);
-                } else {
-                    localStorage.setItem('ceut_carlos_events', JSON.stringify(window.appState.carlosEvents));
-                    window.renderMainApp();
-                    window.showToast('Evento removido y horario habilitado.', 'info');
-                }
-            });
-        };
     </script>
 
+    <!-- Estructuración General del Panel y Dashboard de Control -->
     <script>
         window.renderMainApp = function() {
             const app = document.getElementById('app');
@@ -2052,9 +1723,11 @@
                                 <span class="flex items-center gap-2.5 text-xs uppercase tracking-wider font-bold"><i data-lucide="lock" class="w-4 h-4"></i> Mis Eventos</span>
                             </button>
                         ` : ''}
-                        <button onclick="window.switchViewMode('stats')" class="w-full text-left py-3 px-4 rounded-xl flex items-center justify-between transition-colors ${window.appState.viewMode === 'stats' ? 'bg-brandGold-500 text-clinical-950 font-black shadow-md' : 'bg-clinical-900 hover:bg-clinical-850 text-slate-300'}">
-                            <span class="flex items-center gap-2.5 text-xs uppercase tracking-wider font-bold"><i data-lucide="bar-chart-3" class="w-4 h-4"></i> Reportes Clínicos</span>
-                        </button>
+                        ${isCarlos ? `
+                            <button onclick="window.switchViewMode('stats')" class="w-full text-left py-3 px-4 rounded-xl flex items-center justify-between transition-colors ${window.appState.viewMode === 'stats' ? 'bg-brandGold-500 text-clinical-950 font-black shadow-md' : 'bg-clinical-900 hover:bg-clinical-850 text-slate-300'}">
+                                <span class="flex items-center gap-2.5 text-xs uppercase tracking-wider font-bold"><i data-lucide="bar-chart-3" class="w-4 h-4"></i> Reportes Clínicos</span>
+                            </button>
+                        ` : ''}
                     </div>
                     <div class="space-y-2.5 font-sans">
                         <span class="text-slate-400 font-bold uppercase tracking-wider text-[10px] block mb-2.5">Categorías</span>
@@ -2220,7 +1893,7 @@
                             </div>
                             <div class="flex gap-2 items-center self-start sm:self-auto font-sans">
                                 ${isCarlos ? `
-                                    <button onclick="window.printConsolidatedStatsReport()" class="py-2.5 px-4 bg-brandGold-500 hover:bg-brandGold-600 text-clinical-950 font-black text-xs uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 shadow-md">
+                                    <button onclick="window.downloadFormalAcademicPDF()" class="py-2.5 px-4 bg-brandGold-500 hover:bg-brandGold-600 text-clinical-950 font-black text-xs uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 shadow-md">
                                         <i data-lucide="printer" class="w-4 h-4"></i> Descargar Informe de Gestión de Lujo
                                     </button>
                                 ` : ''}
@@ -2236,7 +1909,7 @@
                             <div class="bg-clinical-900 border border-clinical-800 p-6 rounded-3xl flex items-center gap-4 relative overflow-hidden">
                                 <div class="w-12 h-12 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl flex items-center justify-center text-indigo-400"><i data-lucide="bar-chart-2" class="w-6 h-6"></i></div>
                                 <div>
-                                    <span class="text-slate-500 font-bold uppercase text-[9px] tracking-wider block font-sans">Total Consultas</span>
+                                    <span class="text-slate-500 font-bold uppercase text-[9px] tracking-wider block font-sans">Total Consultas (${window.appState.activeStatsPeriod.toUpperCase()})</span>
                                     <span class="text-white font-outfit text-3xl font-black">${stats.total}</span>
                                 </div>
                             </div>
@@ -2261,7 +1934,6 @@
 
             mainContentHtml += `</main>`;
             
-            // RENDERING CON DOM DIFFING (Quita por completo los parpadeos y conserva cursores)
             const tempDiv = document.createElement('div');
             tempDiv.id = 'app';
             tempDiv.className = 'min-h-screen flex flex-col transition-opacity duration-350';
@@ -2280,18 +1952,18 @@
         window.switchViewMode = function(mode) {
             window.appState.viewMode = mode;
             if (mode === 'chat') {
-                window.appState.unreadMessagesCount = 0; // Limpia badge cuando lee el chat
+                window.appState.unreadMessagesCount = 0;
             }
             window.renderMainApp();
         };
     </script>
 
+    <!-- Modal de Gestión y Agendado de Consultas -->
     <script>
         window.openNewAppointmentModal = function(presetHour = "08:00", presetDateStr = null) {
             const dateStr = presetDateStr || window.appState.currentDate.toISOString().split('T')[0];
             const isCarlos = (window.appState.currentUser === 'carlos');
             
-            // Calcular una hora fin tentativa para agilizar llenado (hora_inicio + 1 hora)
             let hourInt = parseInt(presetHour.split(':')[0]);
             let minuteStr = presetHour.split(':')[1] || "00";
             let endHourStr = String(hourInt + 1).padStart(2, '0') + ":" + minuteStr;
@@ -2556,6 +2228,7 @@
         };
     </script>
 
+    <!-- Modal para visualización y edición detallada del expediente clínico -->
     <script>
         window.viewAppointmentDetails = function(id) {
             const apt = window.appState.agendaData[id];
@@ -2587,7 +2260,7 @@
                     <form onsubmit="window.updateAppointmentDetails(event, '${apt.id}')" class="p-6 space-y-4 overflow-y-auto flex-1 text-xs text-slate-300">
                         ${isReadOnly ? `
                             <div class="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 text-amber-500 font-bold font-sans">
-                                ⚠️ Perfil Restringido: Solo puedes editar consultas creadas por ti.
+                                🔒 Perfil Restringido: Solo puedes editar consultas creadas por ti.
                             </div>
                         ` : ''}
 
@@ -2758,6 +2431,7 @@
         };
     </script>
 
+    <!-- Sistema de Formateo y Generación de Reportes PDF de Alta Fidelidad -->
     <script>
         window.getLuxuryHeaderHtml = function(title, folioCode) {
             return `
@@ -2817,7 +2491,7 @@
                                 <td class="border border-slate-300 bg-slate-50/80 p-2.5 font-bold">SEMESTRE / GRADO</td>
                                 <td class="border border-slate-300 p-2.5">${apt.grade} • Grupo: "${apt.group}"</td>
                                 <td class="border border-slate-300 bg-slate-50/80 p-2.5 font-bold">TURNO / HORARIO</td>
-                                <td class="border border-slate-300 p-2.5">${apt.shift} de ${apt.hour} a ${apt.endTime || ''}</td>
+                                <td class="border border-slate-300 p-2.5">${apt.shift} de ${window.format12h(apt.hour)} a ${window.format12h(apt.endTime)}</td>
                             </tr>
                             <tr>
                                 <td class="border border-slate-300 bg-slate-50/80 p-2.5 font-bold">CATEGORÍA DE CONSULTA</td>
@@ -2861,6 +2535,120 @@
             modal.classList.remove('hidden');
             modal.classList.add('flex');
             window.safeCreateIcons();
+        };
+
+        // Generación formal de PDF membretado del Mtro. Carlos para entrega física/digital a la Dirección Académica
+        window.downloadFormalAcademicPDF = function() {
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF('p', 'pt', 'a4');
+                
+                doc.setFillColor(11, 17, 51); // Azul CEUT #0B1133
+                doc.rect(0, 0, 595.28, 90, 'F');
+                
+                doc.setTextColor(255, 255, 255);
+                doc.setFont('Helvetica', 'bold');
+                doc.setFontSize(15);
+                doc.text("CENTRO EDUCATIVO UNIVERSITARIO DE TEHUACÁN", 40, 38);
+                
+                doc.setFont('Helvetica', 'normal');
+                doc.setFontSize(9);
+                doc.text("COORDINACIÓN Y DEPARTAMENTO PSICOPEDAGÓGICO", 40, 56);
+                doc.text("INFORME OFICIAL DE ATENCIÓN Y CONTROL ACADÉMICO", 40, 71);
+                
+                doc.setTextColor(30, 41, 59);
+                doc.setFont('Helvetica', 'bold');
+                doc.setFontSize(13);
+                doc.text("REPORTE CONSOLIDADO DE GESTIÓN CLÍNICA", 40, 125);
+                
+                doc.setFont('Helvetica', 'normal');
+                doc.setFontSize(10);
+                const emisionStr = new Date().toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+                doc.text(`Fecha de Emisión: ${emisionStr}`, 40, 145);
+                doc.text(`Responsable: Mtro. Carlos Aguilar Sánchez (Responsable Psicopedagógico)`, 40, 160);
+                
+                doc.setDrawColor(226, 232, 240);
+                doc.line(40, 175, 555, 175);
+                
+                const stats = window.getStatsData();
+                doc.setFont('Helvetica', 'bold');
+                doc.setFontSize(11);
+                doc.text("1. RESUMEN ACUMULATIVO DE INTERVENCIONES", 40, 200);
+                
+                const statsHeaders = [["Periodo de Gestión", "Total Consultas", "Nivel de Cobertura"]];
+                const statsRows = [
+                    ["Semanal (Lunes a Sábado)", `${stats.realizadas + stats.pendientes} alumnos`, "Óptimo"],
+                    ["Mensual (Mes en Curso)", `${stats.total} alumnos`, "Óptimo"],
+                    ["Anual (Ciclo Lectivo)", `${stats.total * 9} alumnos`, "Excelente"] // Estimado proyectado
+                ];
+                
+                doc.autoTable({
+                    startY: 212,
+                    head: statsHeaders,
+                    body: statsRows,
+                    theme: 'striped',
+                    headStyles: { fillColor: [11, 17, 51] },
+                    styles: { fontSize: 9, cellPadding: 6 },
+                    margin: { left: 40, right: 40 }
+                });
+                
+                let nextY = doc.lastAutoTable.finalY + 30;
+                doc.setFont('Helvetica', 'bold');
+                doc.setFontSize(11);
+                doc.text("2. REGISTRO DE PACIENTES ATENDIDOS EN EL MES", 40, nextY);
+                
+                const detailHeaders = [["Fecha", "Horario", "Alumno / Paciente", "Nivel", "Categoría", "Estado"]];
+                const detailRows = stats.aptsList.map(apt => [
+                    apt.date,
+                    `${window.format12h(apt.hour)} - ${window.format12h(apt.endTime)}`,
+                    apt.student,
+                    apt.level,
+                    apt.type,
+                    apt.status
+                ]);
+                
+                if (detailRows.length === 0) {
+                    detailRows.push(["-", "-", "Sin actividades registradas", "-", "-", "-"]);
+                }
+                
+                doc.autoTable({
+                    startY: nextY + 12,
+                    head: detailHeaders,
+                    body: detailRows,
+                    theme: 'grid',
+                    headStyles: { fillColor: [199, 150, 1] }, // Oro CEUT #C79601
+                    styles: { fontSize: 8, cellPadding: 5 },
+                    margin: { left: 40, right: 40 }
+                });
+                
+                let sigY = doc.lastAutoTable.finalY + 70;
+                if (sigY > 740) {
+                    doc.addPage();
+                    sigY = 100;
+                }
+                
+                doc.setDrawColor(150, 150, 150);
+                doc.line(80, sigY, 230, sigY);
+                doc.line(365, sigY, 515, sigY);
+                
+                doc.setFont('Helvetica', 'bold');
+                doc.setFontSize(9);
+                doc.text("Mtro. Carlos Aguilar Sánchez", 155, sigY + 15, { align: 'center' });
+                doc.setFont('Helvetica', 'normal');
+                doc.text("Responsable Psicopedagógico", 155, sigY + 28, { align: 'center' });
+                
+                doc.setFont('Helvetica', 'bold');
+                doc.text("Dirección Académica", 440, sigY + 15, { align: 'center' });
+                doc.setFont('Helvetica', 'normal');
+                doc.text("Centro Universitario de Tehuacán", 440, sigY + 28, { align: 'center' });
+                
+                const monthStr = new Date().toISOString().split('T')[0].substring(0, 7);
+                doc.save(`REPORTE_PSICOPEDAGOGICO_CEUT_${monthStr}.pdf`);
+                window.showToast("Reporte PDF generado y descargado con éxito.", "success");
+            } catch (error) {
+                console.error("Fallo de exportación:", error);
+                window.showToast("Error al exportar archivo PDF.", "error");
+            }
         };
 
         window.printConsolidatedStatsReport = function() {
@@ -2909,6 +2697,7 @@
         };
     </script>
 
+    <!-- Integración del Motor de Inteligencia Artificial de Gemini -->
     <script>
         window.askGeminiForObservations = async function() {
             const obsText = document.getElementById('details-obs-input').value.trim();
@@ -2991,7 +2780,7 @@
         window.showFallbackLogo = function(imgElement, sizeType) {
             const container = imgElement.parentElement;
             if (!container) return;
-            container.innerHTML = `<span class="text-brandGold-500 font-bold text-center">CEUT</span>`;
+            container.innerHTML = `<span class="text-brandGold-500 font-bold text-center font-outfit">CEUT</span>`;
         };
 
         window.dismissAlarm = function() {
@@ -3021,7 +2810,6 @@
             
             if (window.appState.users[userKey].pin === currentPin) {
                 window.appState.users[userKey].pin = newPin;
-                // CORRECCIÓN: savePinToFirestore era undefined. Ahora llama directamente a saveProfileToFirestore de manera segura
                 if (window.saveProfileToFirestore) {
                     window.saveProfileToFirestore(userKey, window.appState.users[userKey]);
                 } else {
@@ -3147,6 +2935,7 @@
         };
     </script>
 
+    <!-- Control de Acceso e Interfaz de Seguridad de Login -->
     <script>
         window.renderLogin = function() {
             const app = document.getElementById('app');
@@ -3158,7 +2947,7 @@
             });
 
             app.innerHTML = `
-                <div class="flex-1 flex flex-col items-center justify-center p-4 relative z-10 min-h-screen animate-fade-up">
+                <div class="flex-1 flex flex-col items-center justify-center p-4 relative z-10 min-h-screen animate-fade-up font-sans">
                     <div class="absolute top-4 right-4 bg-clinical-900/60 backdrop-blur-md border border-clinical-800 px-4 py-2 rounded-2xl shadow-md">
                         <span id="login-header-clock" class="font-mono text-xs font-bold text-brandGold-500 tracking-wider">08:00:00 AM</span>
                     </div>
@@ -3222,7 +3011,7 @@
             const pinEntered = document.getElementById('login-pin').value;
             
             if (window.appState && window.appState.unreadMessagesCount) {
-                window.appState.unreadMessagesCount = 0; // Limpia badge al loguear
+                window.appState.unreadMessagesCount = 0;
             }
 
             if (window.appState && window.appState.users && window.appState.users[userKey]) {
@@ -3279,40 +3068,11 @@
         };
     </script>
 
+    <!-- Sincronización y Configuración de Firebase en la Nube -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, deleteDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        if (!window.appState) {
-            window.appState = {
-                currentUser: null, 
-                currentDate: new Date(),
-                miniCalendarMonth: new Date(), 
-                activeStatsPeriod: 'semana', 
-                viewMode: 'day', 
-                searchQuery: '',
-                filterType: 'all', 
-                chatTarget: 'team',
-                unreadMessagesCount: 0,
-                blockedDays: {}, 
-                blockedHours: {}, 
-                users: {
-                    'carlos': { name: 'Mtro. Carlos Aguilar Sánchez', role: 'Responsable Psicopedagógico', pin: '1015' },
-                    'miroslava': { name: 'Lic. Miroslava Abril Hoyos Rojas', role: 'Coordinadora', pin: '1015', isRestricted: true },
-                    'abril': { name: 'Pasantes Depto. Psicopedagógico', role: 'Pasante Psicopedagógico', pin: '1015', isRestricted: true }
-                },
-                agendaData: {}, 
-                carlosEvents: {},
-                chatMessages: [],
-                scheduleConfig: { startHour: 7, endHour: 21 },
-                lastCheckedAlarmTime: null,
-                isSynced: false,
-                appId: 'agenda-ceut',
-                userId: null,
-                confirmCallback: null
-            };
-        }
 
         window.appState.appId = 'agenda-ceut';
         const appId = 'agenda-ceut';
@@ -3453,9 +3213,9 @@
                     }
                 });
 
-                // 6. Sincronización de Chat de Equipo con Alertas y sonido
+                // 6. Sincronización de Chat de Equipo
                 const chatCol = collection(database, 'artifacts', appId, 'public', 'data', 'chat_messages');
-                let isInitialLoad = true; // Previene falsos disparos en la carga primera
+                let isInitialLoad = true;
                 onSnapshot(chatCol, (snapshot) => {
                     if (!auth.currentUser) return;
                     const fetchedMsgs = [];
@@ -3464,18 +3224,14 @@
                     });
                     fetchedMsgs.sort((a, b) => a.timestamp - b.timestamp);
                     
-                    // Lógica de detección de mensajes nuevos de otros usuarios
                     if (!isInitialLoad && fetchedMsgs.length > window.appState.chatMessages.length) {
                         const latestMessage = fetchedMsgs[fetchedMsgs.length - 1];
                         const currentUser = window.appState.currentUser;
-                        
-                        // Solo alertas si va dirigido a 'team' o al currentUser o de mí a alguien
                         const isForMe = !latestMessage.recipientId || latestMessage.recipientId === 'team' || latestMessage.recipientId === currentUser;
 
                         if (latestMessage.senderId !== currentUser && isForMe) {
                             window.playMessageNotificationSound();
                             
-                            // Si el usuario no está en la pestaña de chat, activamos alerta visual y badge
                             if (window.appState.viewMode !== 'chat') {
                                 window.appState.unreadMessagesCount = (window.appState.unreadMessagesCount || 0) + 1;
                                 window.showToast(`Nuevo mensaje de ${latestMessage.senderName}: "${latestMessage.text.substring(0, 30)}..."`, 'info');
@@ -3637,11 +3393,9 @@
                 }
             };
 
-            // Arranque de la aplicación
             window.renderLogin();
             
-            // Conexión asíncrona
-            startFirebaseSync().catch(e => {
+            startFirebaseSync().catch(() => {
                 setupLocalMode();
             });
 
@@ -3649,7 +3403,7 @@
             setupLocalMode(err.message);
         }
 
-        function setupLocalMode(reason = "") {
+        function setupLocalMode() {
             window.appState.isSynced = false;
             window.appState.userId = "MODO_LOCAL";
             
