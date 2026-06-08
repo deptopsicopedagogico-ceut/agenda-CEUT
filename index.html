@@ -527,6 +527,7 @@
             return (hours * 60) + minutes;
         };
 
+        // Algoritmo de detección de colisiones por minutos para citas clínicas
         window.isAptOverlappingSlot = function(apt, slotHourStr) {
             if (!apt.hour) return false;
             const slotStart = window.timeToMinutes(slotHourStr);
@@ -534,6 +535,16 @@
             const aptStart = window.timeToMinutes(apt.hour);
             const aptEnd = apt.endTime ? window.timeToMinutes(apt.endTime) : (aptStart + 50); // Duración predeterminada de 50m si no se define
             return (aptStart < slotEnd && aptEnd > slotStart);
+        };
+
+        // Algoritmo de detección de colisiones por minutos para eventos privados
+        window.isEventOverlappingSlot = function(ev, slotHourStr) {
+            if (!ev || !ev.hour) return false;
+            const slotStart = window.timeToMinutes(slotHourStr);
+            const slotEnd = slotStart + 60; // Segmentos de 1 hora
+            const evStart = window.timeToMinutes(ev.hour);
+            const evEnd = ev.endTime ? window.timeToMinutes(ev.endTime) : (evStart + 60); // Duración de 1h predeterminada
+            return (evStart < slotEnd && evEnd > slotStart);
         };
 
         window.format12h = function(time24) {
@@ -812,13 +823,15 @@
             const isCarlos = (currentUser === 'carlos');
 
             slots.forEach(hour => {
-                // Filtrado con lógica de minutos exactos
+                // Filtrado de citas clínicas con lógica de minutos exactos
                 const aptsForSlot = activeAppointments.filter(apt => window.isAptOverlappingSlot(apt, hour));
 
                 const blockKey = `${dateStr}_${hour}`;
                 const isHourBlocked = window.appState.blockedHours[blockKey];
-                const carlosEventKey = `${dateStr}_${hour}`;
-                const hasCarlosEvent = window.appState.carlosEvents[carlosEventKey];
+                
+                // Mapeo dinámico de eventos privados con minutos exactos (ej: de 3:20 PM a 5:20 PM)
+                const eventsForDate = Object.values(window.appState.carlosEvents).filter(ev => ev.date === dateStr);
+                const hasCarlosEvent = eventsForDate.find(ev => window.isEventOverlappingSlot(ev, hour));
 
                 html += `<div class="flex items-stretch min-h-[5.5rem] group hover:bg-clinical-950/20 transition-colors">`;
                 html += `
@@ -837,22 +850,28 @@
                                 <div class="flex-1 pl-2 font-sans">
                                     <div class="flex items-center gap-2 flex-wrap">
                                         <span class="text-white font-outfit font-black text-sm leading-tight">${hasCarlosEvent.title}</span>
+                                        <span class="text-[10px] font-black uppercase tracking-wider text-brandGold-500 bg-brandGold-500/10 border border-brandGold-500/20 px-2.5 py-0.5 rounded-full font-mono">${window.format12h(hasCarlosEvent.hour)} - ${window.format12h(hasCarlosEvent.endTime)}</span>
                                         <span class="text-[9px] font-black uppercase tracking-widest bg-brandGold-500 text-clinical-950 px-2 py-0.5 rounded-full">Mi Evento Privado</span>
                                     </div>
                                     <p class="text-xs text-slate-400 mt-1 italic">"${hasCarlosEvent.description || 'Sin notas del director.'}"</p>
                                 </div>
-                                <button onclick="window.deleteCarlosEvent('${carlosEventKey}')" class="p-2 bg-rose-950/20 hover:bg-rose-900/30 border border-rose-900/30 text-rose-400 hover:text-white rounded-xl transition-all font-sans text-xs font-bold" title="Eliminar Evento">
+                                <button onclick="window.deleteCarlosEvent('${hasCarlosEvent.id || blockKey}')" class="p-2 bg-rose-950/20 hover:bg-rose-900/30 border border-rose-900/30 text-rose-400 hover:text-white rounded-xl transition-all font-sans text-xs font-bold" title="Eliminar Evento">
                                     Eliminar Evento
                                 </button>
                             </div>
                         `;
                     } else {
+                        // Los demás perfiles lo ven como ocupado por el Responsable del Departamento con su etiqueta correspondiente
                         html += `
-                            <div class="w-full bg-slate-900/40 border border-slate-800 rounded-2xl p-4 flex justify-between items-center shadow-sm animate-fade-up">
-                                <div class="flex items-center gap-2 text-brandGold-500 font-sans">
-                                    <i data-lucide="lock" class="w-4 h-4"></i>
-                                    <span class="text-xs font-bold uppercase tracking-wider">🔒 Inhabilitado - Evento de Dirección</span>
+                            <div class="w-full bg-brandGold-500/5 border border-brandGold-500/20 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-inner animate-fade-up">
+                                <div class="flex items-center gap-2.5 text-brandGold-500 font-sans">
+                                    <i data-lucide="lock" class="w-4.5 h-4.5 animate-pulse shrink-0"></i>
+                                    <div>
+                                        <span class="text-xs font-black uppercase tracking-wider block">Ocupado por Responsable de Depto. Psicopedagógico</span>
+                                        <span class="text-[10px] text-slate-400 font-medium font-mono">${window.format12h(hasCarlosEvent.hour)} a ${window.format12h(hasCarlosEvent.endTime)}</span>
+                                    </div>
                                 </div>
+                                <span class="text-[9px] bg-brandGold-500/15 text-brandGold-500 border border-brandGold-500/20 px-2.5 py-1 rounded-full font-bold uppercase tracking-widest shrink-0 font-sans">Privado / Inhabilitado</span>
                             </div>
                         `;
                     }
@@ -875,7 +894,6 @@
                         const isOwner = aptForSlot.createdBy === currentUser;
                         const hasAccess = isCarlos || isOwner;
                         
-                        // Si no cuenta con privilegios de Carlos o Creador de la cita, se muestra con etiqueta de privacidad y candado
                         if (!hasAccess) {
                             html += `
                                 <div class="w-full bg-brandGold-500/5 border border-brandGold-500/20 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-inner animate-fade-up">
@@ -980,7 +998,7 @@
                             <i data-lucide="calendar-days" class="w-5 h-5 text-brandGold-500"></i>
                             <span class="text-sm font-bold text-white uppercase tracking-wider">Planificador Semanal (Lunes a Sábado)</span>
                         </div>
-                        <span class="text-xs text-slate-400 font-bold uppercase font-sans">Distribución de Consultas del Terapeuta Carlos</span>
+                        <span class="text-xs text-slate-400 font-bold uppercase font-sans">Distribución de Consultas</span>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="w-full border-collapse text-left min-w-[800px] font-sans">
@@ -1026,8 +1044,9 @@
                     const isHourBlocked = window.appState.blockedHours[blockKey];
                     const isDayBlocked = window.appState.blockedDays[dateStr];
                     
-                    const carlosEventKey = `${dateStr}_${hour}`;
-                    const hasCarlosEvent = window.appState.carlosEvents[carlosEventKey];
+                    // Colisión de minutos de eventos privados en vista semanal
+                    const eventsForDate = Object.values(window.appState.carlosEvents).filter(ev => ev.date === dateStr);
+                    const hasCarlosEvent = eventsForDate.find(ev => window.isEventOverlappingSlot(ev, hour));
 
                     html += `<td class="p-2 border-r border-clinical-850 text-center relative min-h-[4rem] group font-sans">`;
 
@@ -1037,17 +1056,19 @@
                                 <div class="p-2 rounded-xl text-left border relative overflow-hidden bg-brandGold-950/40 border-brandGold-500/40 flex flex-col justify-between h-full min-h-[4.5rem]">
                                     <div>
                                         <div class="font-bold text-white text-[11px] truncate">${hasCarlosEvent.title}</div>
+                                        <div class="text-[9px] text-brandGold-500 font-bold font-mono">${window.format12h(hasCarlosEvent.hour)} - ${window.format12h(hasCarlosEvent.endTime)}</div>
                                         <div class="text-[9px] font-black uppercase mt-1 inline-block px-1.5 py-0.5 rounded bg-brandGold-500 text-clinical-950">Privado</div>
                                     </div>
                                     <div class="flex gap-1 justify-end mt-2">
-                                        <button onclick="window.deleteCarlosEvent('${carlosEventKey}')" class="p-1 hover:bg-rose-950/40 rounded text-rose-400" title="Eliminar"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                                        <button onclick="window.deleteCarlosEvent('${hasCarlosEvent.id || blockKey}')" class="p-1 hover:bg-rose-950/40 rounded text-rose-400" title="Eliminar"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
                                     </div>
                                 </div>
                             `;
                         } else {
                             html += `
-                                <div class="bg-slate-900/50 text-brandGold-500 text-[10px] p-2 rounded-xl border border-slate-800 font-bold">
-                                    🔒 Inhabilitado
+                                <div class="bg-brandGold-500/5 text-brandGold-500 text-[10px] p-2 rounded-xl border border-brandGold-500/20 font-bold leading-tight">
+                                    🔒 Ocupado: Responsable Psicopedagógico
+                                    <div class="text-[9px] text-slate-400 font-mono mt-1 font-medium">${window.format12h(hasCarlosEvent.hour)} - ${window.format12h(hasCarlosEvent.endTime)}</div>
                                 </div>
                             `;
                         }
@@ -1540,8 +1561,7 @@
         window.getCarlosEventsViewHtml = function() {
             const dateStr = window.appState.currentDate.toISOString().split('T')[0];
             const events = Object.entries(window.appState.carlosEvents).map(([key, val]) => {
-                const [date, hour] = key.split('_');
-                return { key, date, hour, title: val.title, description: val.description };
+                return { key, date: val.date, hour: val.hour, endTime: val.endTime, title: val.title, description: val.description };
             });
 
             events.sort((a, b) => {
@@ -1562,7 +1582,7 @@
                         <div class="bg-clinical-950 border border-clinical-800 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm animate-fade-up font-sans">
                             <div>
                                 <span class="bg-brandGold-500/10 text-brandGold-500 border border-brandGold-500/20 text-[9px] font-black uppercase px-2 py-0.5 rounded">
-                                    🔒 ${window.formatFullDateES(ev.date)} • ${ev.hour} Hrs
+                                    🔒 ${window.formatFullDateES(ev.date)} • ${window.format12h(ev.hour)} a ${window.format12h(ev.endTime)} Hrs
                                 </span>
                                 <h4 class="font-outfit font-black text-white text-base mt-2">${ev.title}</h4>
                                 <p class="text-slate-400 text-xs mt-1 italic">"${ev.description || 'Sin notas.'}"</p>
@@ -1585,7 +1605,7 @@
                         <div class="flex-1 text-center md:text-left">
                             <h3 class="font-outfit font-black text-xl text-white">Eventos Privados del Director</h3>
                             <p class="text-slate-400 text-xs mt-1 leading-relaxed">
-                                Registre juntas, audiencias o ausencias técnicas. Este bloque inhabilitará su horario de atención para los demás terapeutas y pasantes de forma automática y confidencial.
+                                Registre juntas, audiencias o ausencias técnicas con minutos de inicio y fin. Este bloque inhabilitará su horario de atención para los demás terapeutas y pasantes de forma automática y confidencial.
                             </p>
                         </div>
                     </div>
@@ -1598,11 +1618,15 @@
                                     <label class="block font-bold uppercase mb-1">Fecha</label>
                                     <input type="date" id="carlos-event-date" value="${dateStr}" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-3.5 text-white focus:outline-none" required>
                                 </div>
-                                <div>
-                                    <label class="block font-bold uppercase mb-1">Hora de Inhabilitación</label>
-                                    <select id="carlos-event-hour" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-3.5 text-white focus:outline-none cursor-pointer">
-                                        ${window.getHourSlots().map(hs => `<option value="${hs}">${hs}</option>`).join('')}
-                                    </select>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block font-bold uppercase mb-1">Hora Inicio</label>
+                                        <input type="time" id="carlos-event-hour" value="08:00" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-3.5 text-white focus:outline-none font-bold" required>
+                                    </div>
+                                    <div>
+                                        <label class="block font-bold uppercase mb-1">Hora Fin</label>
+                                        <input type="time" id="carlos-event-endtime" value="09:00" class="w-full bg-clinical-950 border border-clinical-800 rounded-xl py-2.5 px-3.5 text-white focus:outline-none font-bold" required>
+                                    </div>
                                 </div>
                                 <div>
                                     <label class="block font-bold uppercase mb-1">Título del Evento Privado</label>
@@ -1690,7 +1714,7 @@
 
                         <div class="mt-2 pt-2 border-t border-clinical-800/80 flex justify-between items-center font-sans">
                             <button onclick="document.getElementById('change-pin-modal').classList.remove('hidden'); document.getElementById('change-pin-modal').classList.add('flex');" class="text-[10px] font-bold text-brandGold-500/80 hover:text-brandGold-500 hover:underline flex items-center gap-1">
-                                <i data-lucide="key" class="w-3 h-3"></i> Cambiar mi PIN de Acceso
+                                <i data-lucide="key" class="w-3 h-3"></i> Cambiar PIN
                             </button>
                         </div>
                     </div>
@@ -1776,7 +1800,7 @@
                                 <div class="flex items-center gap-1.5">
                                     <span class="w-2.5 h-2.5 rounded-full ${window.appState.isSynced ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}"></span>
                                     <span class="${window.appState.isSynced ? 'text-emerald-400' : 'text-amber-400'}">
-                                        ${window.appState.isSynced ? '🟢 En Línea' : '🟡 Modo Local'}
+                                        ${window.appState.isSynced ? 'En Línea' : 'Modo Local'}
                                     </span>
                                 </div>
                                 <span class="text-[8px] text-slate-400" id="sync-status-details">Conectando...</span>
@@ -1990,10 +2014,10 @@
                     ${isCarlos ? `
                         <div class="bg-clinical-950 px-6 py-2 border-b border-clinical-850/50 flex gap-4 text-xs font-bold">
                             <button type="button" id="tab-btn-student" onclick="window.switchFormTab('student')" class="pb-2 border-b-2 border-brandGold-500 text-brandGold-500 transition-all font-sans">
-                                👥 Cita con Alumno
+                                Cita con Alumno
                             </button>
                             <button type="button" id="tab-btn-private" onclick="window.switchFormTab('private')" class="pb-2 text-slate-400 hover:text-white transition-all font-sans">
-                                🔒 Evento Privado (Confidencial)
+                                Evento Privado (Confidencial)
                             </button>
                         </div>
                     ` : ''}
@@ -2162,7 +2186,7 @@
                     window.showToast('Por favor introduce un título para el evento privado.', 'error');
                     return;
                 }
-                const eventData = { title, description };
+                const eventData = { id: blockKey, date, hour, endTime, title, description };
                 window.appState.carlosEvents[blockKey] = eventData;
 
                 if (window.saveCarlosEventToFirestore) {
@@ -2171,7 +2195,7 @@
                     localStorage.setItem('ceut_carlos_events', JSON.stringify(window.appState.carlosEvents));
                     window.renderMainApp();
                 }
-                window.showToast('Evento personal registrado de forma privada.', 'success');
+                window.showToast('Evento personal registrado de forma privada con minutos.', 'success');
             } else {
                 const studentName = document.getElementById('form-apt-student').value.trim();
                 if (!studentName) {
@@ -2650,51 +2674,6 @@
                 window.showToast("Error al exportar archivo PDF.", "error");
             }
         };
-
-        window.printConsolidatedStatsReport = function() {
-            const stats = window.getStatsData();
-            const modal = document.getElementById('report-preview-modal');
-            const container = document.getElementById('report-preview-content');
-            const printArea = document.getElementById('academic-report-print-area');
-            if (!modal || !container || !printArea) return;
-
-            const periodName = window.appState.activeStatsPeriod === 'semana' ? 'Consolidado Semanal' :
-                               window.appState.activeStatsPeriod === 'mes' ? 'Consolidado Mensual' : 'Consolidado Anual';
-            
-            const folio = `CEUT-INF-${window.appState.activeStatsPeriod.toUpperCase()}-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
-
-            const docContent = `
-                ${window.getLuxuryHeaderHtml('REPORTE DE GESTIÓN', folio)}
-                
-                <div class="relative z-10 space-y-6 text-slate-800 font-sans">
-                    <div class="text-center">
-                        <h2 class="text-sm font-outfit font-black uppercase tracking-wider text-clinical-900">Informe de Desempeño Psicopedagógico</h2>
-                        <p class="text-[10px] text-slate-500 mt-0.5 font-sans">Métricas institucionales correspondientes al período: <span class="font-bold text-slate-800">${periodName}</span></p>
-                    </div>
-
-                    <div class="grid grid-cols-3 gap-4 text-center font-sans">
-                        <div class="border border-slate-200 bg-slate-50/50 p-3 rounded-xl">
-                            <span class="text-slate-500 font-bold uppercase text-[8px] tracking-wider block">Total Atendidos</span>
-                            <span class="text-clinical-900 font-outfit text-xl font-black">${stats.total} Alumnos</span>
-                        </div>
-                        <div class="border border-slate-200 bg-slate-50/50 p-3 rounded-xl">
-                            <span class="text-slate-500 font-bold uppercase text-[8px] tracking-wider block">Consultas Realizadas</span>
-                            <span class="text-emerald-600 font-outfit text-xl font-black">${stats.realizadas} Sesiones</span>
-                        </div>
-                        <div class="border border-slate-200 bg-slate-50/50 p-3 rounded-xl">
-                            <span class="text-slate-500 font-bold uppercase text-[8px] tracking-wider block">Tasa de Inasistencia</span>
-                            <span class="text-rose-600 font-outfit text-xl font-black">${stats.canceladas} Sesiones</span>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            container.innerHTML = docContent;
-            printArea.innerHTML = docContent;
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-            window.safeCreateIcons();
-        };
     </script>
 
     <!-- Integración del Motor de Inteligencia Artificial de Gemini -->
@@ -2933,6 +2912,45 @@
             window.renderMainApp();
             window.showToast('Jornada habilitada nuevamente', 'success');
         };
+
+        window.saveCarlosEvent = function(e) {
+            e.preventDefault();
+            const date = document.getElementById('carlos-event-date').value;
+            const hour = document.getElementById('carlos-event-hour').value;
+            const endTime = document.getElementById('carlos-event-endtime')?.value || (String(parseInt(hour) + 1).padStart(2, '0') + ":00");
+            const title = document.getElementById('carlos-event-title').value.trim();
+            const description = document.getElementById('carlos-event-description').value.trim();
+
+            const blockKey = `${date}_${hour.split(':')[0]}:00`;
+            const eventData = { id: blockKey, date, hour, endTime, title, description };
+            window.appState.carlosEvents[blockKey] = eventData;
+
+            if (window.saveCarlosEventToFirestore) {
+                window.saveCarlosEventToFirestore(blockKey, eventData);
+            } else {
+                localStorage.setItem('ceut_carlos_events', JSON.stringify(window.appState.carlosEvents));
+                window.renderMainApp();
+            }
+            window.showToast('Evento personal registrado de forma privada con minutos.', 'success');
+            
+            // Limpieza del formulario
+            document.getElementById('carlos-event-title').value = '';
+            document.getElementById('carlos-event-description').value = '';
+            window.renderMainApp();
+        };
+
+        window.deleteCarlosEvent = function(key) {
+            window.showConfirmModal('¿Desea eliminar este evento privado de la agenda?', () => {
+                delete window.appState.carlosEvents[key];
+                if (window.deleteCarlosEventFromFirestore) {
+                    window.deleteCarlosEventFromFirestore(key);
+                } else {
+                    localStorage.setItem('ceut_carlos_events', JSON.stringify(window.appState.carlosEvents));
+                    window.renderMainApp();
+                }
+                window.showToast('Evento privado eliminado de la agenda.', 'info');
+            });
+        };
     </script>
 
     <!-- Control de Acceso e Interfaz de Seguridad de Login -->
@@ -2992,7 +3010,7 @@
                                             <i data-lucide="eye" class="w-5 h-5"></i>
                                         </button>
                                     </div>
-                                    <p class="text-[10px] text-brandGold-500/80 font-bold mt-1">ℹ️ PIN Predeterminado: 1015</p>
+                                    <p class="text-[10px] text-brandGold-500/80 font-bold mt-1">PIN Predeterminado: 1015</p>
                                 </div>
                                 <button type="submit" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-brandGold-500 to-brandGold-600 hover:from-brandGold-600 hover:to-brandGold-700 text-clinical-950 font-black text-sm uppercase tracking-wider transition-all shadow-md">
                                     Iniciar Sesión Segura
