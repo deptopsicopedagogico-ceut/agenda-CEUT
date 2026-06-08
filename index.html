@@ -527,6 +527,36 @@
             return (hours * 60) + minutes;
         };
 
+        // Motor Inteligente de Detección de Colisiones por Rangos de Tiempo
+        window.checkCollision = function(date, startTimeStr, endTimeStr, ignoreId = null) {
+            const newStart = window.timeToMinutes(startTimeStr);
+            const newEnd = window.timeToMinutes(endTimeStr);
+
+            // 1. Validar colisión contra citas clínicas activas
+            const hasAptCollision = Object.values(window.appState.agendaData).some(apt => {
+                if (apt.date !== date) return false;
+                if (ignoreId && apt.id === ignoreId) return false;
+                const aptStart = window.timeToMinutes(apt.hour);
+                const aptEnd = apt.endTime ? window.timeToMinutes(apt.endTime) : (aptStart + 50);
+                return (newStart < aptEnd && newEnd > aptStart);
+            });
+
+            if (hasAptCollision) return "appointment";
+
+            // 2. Validar colisión contra eventos privados del Director
+            const hasEventCollision = Object.values(window.appState.carlosEvents).some(ev => {
+                if (ev.date !== date) return false;
+                if (ignoreId && ev.id === ignoreId) return false;
+                const evStart = window.timeToMinutes(ev.hour);
+                const evEnd = ev.endTime ? window.timeToMinutes(ev.endTime) : (evStart + 60);
+                return (newStart < evEnd && newEnd > evStart);
+            });
+
+            if (hasEventCollision) return "event";
+
+            return null;
+        };
+
         // Algoritmo de detección de colisiones por minutos para citas clínicas
         window.isAptOverlappingSlot = function(apt, slotHourStr) {
             if (!apt.hour) return false;
@@ -908,6 +938,7 @@
                                 </div>
                             `;
                         } else {
+                            // Validar contra filtros activos
                             const matchesFilter = (window.appState.filterType === 'all' || aptForSlot.type === window.appState.filterType) &&
                                                  (!window.appState.searchQuery || aptForSlot.student.toLowerCase().includes(window.appState.searchQuery.toLowerCase()));
 
@@ -953,6 +984,18 @@
                                                 <i data-lucide="trash-2" class="w-4 h-4"></i>
                                             </button>
                                         </div>
+                                    </div>
+                                `;
+                            } else {
+                                // CORRECCIÓN CLAVE: Si la cita no cumple con el filtro de búsqueda/tipo activo, se muestra este indicador 
+                                // para evitar que el horario parezca libre o que cause errores invisibles al agendar.
+                                html += `
+                                    <div class="w-full bg-clinical-950/40 border border-clinical-850/50 rounded-2xl p-4 flex items-center justify-between opacity-50 animate-fade-up">
+                                        <div class="flex items-center gap-2 text-slate-500">
+                                            <i data-lucide="info" class="w-4.5 h-4.5"></i>
+                                            <span class="text-xs font-semibold">Horario Ocupado (${aptForSlot.type} - Oculto por filtros activos)</span>
+                                        </div>
+                                        <span class="text-[10px] text-slate-400 font-bold font-mono">${window.format12h(aptForSlot.hour)} - ${window.format12h(aptForSlot.endTime)}</span>
                                     </div>
                                 `;
                             }
@@ -2169,11 +2212,11 @@
                 return;
             }
 
-            const collides = Object.values(window.appState.agendaData).some(apt => apt.date === date && apt.hour === hour);
-            const collidesPrivate = window.appState.carlosEvents[blockKey];
-
-            if (collides || collidesPrivate) {
-                window.showToast('Ya existe una consulta u hora inhabilitada exactamente a las ' + hour, 'error');
+            // CORRECCIÓN CLAVE: Validación contra el motor inteligente de colisiones por minutos absolutos
+            const collisionResult = window.checkCollision(date, hour, endTime);
+            if (collisionResult) {
+                const textCollision = collisionResult === 'event' ? 'un evento privado' : 'una consulta clínica';
+                window.showToast(`Conflicto de horario: Ya existe ${textCollision} agendada en el rango seleccionado (${window.format12h(hour)} a ${window.format12h(endTime)}).`, 'error');
                 return;
             }
 
@@ -2429,9 +2472,11 @@
                 return;
             }
 
-            const collides = Object.values(window.appState.agendaData).some(other => other.id !== id && other.date === date && other.hour === hour);
-            if (collides) {
-                window.showToast('El terapeuta ya cuenta con otra cita agendada en ese horario.', 'error');
+            // CORRECCIÓN CLAVE: Validación contra el motor inteligente de colisiones por minutos absolutos
+            const collisionResult = window.checkCollision(date, hour, endTime, id);
+            if (collisionResult) {
+                const textCollision = collisionResult === 'event' ? 'un evento privado' : 'una consulta clínica';
+                window.showToast(`El terapeuta ya cuenta con ${textCollision} en el rango seleccionado (${window.format12h(hour)} a ${window.format12h(endTime)}).`, 'error');
                 return;
             }
 
