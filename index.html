@@ -1,6 +1,123 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script>
+// RESTAURACIÓN INMEDIATA ANTES DE QUE REACT CARGUE - NO BORRA DATOS
+(function(){
+  try {
+    const KEY = "ceut_citas_v2_3101";
+    const BACKUP = "ceut_backup_v2_3101";
+    const BACKUP2 = "ceut_citas_cloud_backup";
+    const BACKUP3 = "ceut_backup_v2_3101";
+    
+    // Si citas está vacío pero backup tiene datos, restaurar INMEDIATAMENTE
+    const citas = localStorage.getItem(KEY);
+    const backup = localStorage.getItem(BACKUP) || localStorage.getItem(BACKUP2) || localStorage.getItem(BACKUP3);
+    
+    if((!citas || citas === "[]" || citas === "") && backup && backup !== "[]" && backup !== "") {
+      localStorage.setItem(KEY, backup);
+      console.log("✅ RESTAURADO DESDE BACKUP ANTES DE REACT:", JSON.parse(backup).length);
+    }
+  } catch(e){}
+})();
+</script>
+<script type="module">
+// FIREBASE NUBE - CARGA ANTES DE REACT
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+const firebaseConfig = {
+  apiKey: "AIzaSyAgBfvz5S4u2qCACCzUBz4TLxNO4E9lZOc",
+  authDomain: "agenda-ceut.firebaseapp.com",
+  projectId: "agenda-ceut",
+  storageBucket: "agenda-ceut.firebasestorage.app",
+  messagingSenderId: "640007933110",
+  appId: "1:640007933110:web:4d1dd511761bb4ac5d6a17"
+};
+try {
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const citasCol = collection(db, "citas_definitivo_final");
+  
+  // Bandera global para que React no borre
+  window._isSyncingFromCloud = false;
+  window._isInitialLoad = true;
+  window._cloudCitas = [];
+  window._db = db;
+  window._citasCol = citasCol;
+  
+  // Cargar local inicial
+  let localInicial = [];
+  try { const l=localStorage.getItem("ceut_citas_v2_3101"); if(l && l!=="[]") localInicial=JSON.parse(l); }catch(e){}
+  
+  onSnapshot(citasCol, (snap)=>{
+    const arr=[]; snap.forEach(d=>arr.push(d.data())); 
+    window._cloudCitas=arr;
+    console.log("☁️ NUBE:", arr.length, "citas");
+    
+    if(window._isInitialLoad) {
+      if(arr.length>0) {
+        // NUBE tiene datos - usar esos
+        window._isSyncingFromCloud=true;
+        localStorage.setItem("ceut_citas_v2_3101", JSON.stringify(arr));
+        localStorage.setItem("ceut_backup_v2_3101", JSON.stringify(arr));
+        localStorage.setItem("ceut_citas_cloud_backup", JSON.stringify(arr));
+        window._isSyncingFromCloud=false;
+        console.log("✅ NUBE -> LOCAL", arr.length);
+      } else if(localInicial.length>0) {
+        // NUBE vacía, subir local
+        console.log("📤 LOCAL -> NUBE", localInicial.length);
+        localInicial.forEach(c=> setDoc(doc(db, "citas_definitivo_final", c.id), c));
+      }
+      window._isInitialLoad=false;
+    } else {
+      if(arr.length>0) {
+        window._isSyncingFromCloud=true;
+        localStorage.setItem("ceut_citas_v2_3101", JSON.stringify(arr));
+        localStorage.setItem("ceut_backup_v2_3101", JSON.stringify(arr));
+        window._isSyncingFromCloud=false;
+      }
+    }
+  });
+  
+  // Interceptar localStorage para guardar en nube - con protección contra []
+  const origSet = localStorage.setItem.bind(localStorage);
+  localStorage.setItem = function(k,v){
+    origSet(k,v);
+    if(window._isSyncingFromCloud || window._isInitialLoad) return;
+    if(k==="ceut_citas_v2_3101"){
+      try{
+        if(v==="[]" || v==="" || v==="null") {
+          console.log("⚠️ Bloqueado intento de guardar [] vacío - NO borra nube");
+          return;
+        }
+        const citas=JSON.parse(v);
+        if(!citas || citas.length===0) return;
+        // Guardar en backup también
+        origSet("ceut_backup_v2_3101", v);
+        origSet("ceut_citas_cloud_backup", v);
+        console.log("☁️ Guardando en NUBE", citas.length);
+        citas.forEach(c=> setDoc(doc(db, "citas_definitivo_final", c.id), c, {merge:true}));
+        if(window._cloudCitas.length>0 && citas.length < window._cloudCitas.length){
+          const ids=new Set(citas.map(x=>x.id));
+          window._cloudCitas.forEach(fc=>{ if(!ids.has(fc.id)) { console.log("🗑️ Borrando de nube", fc.id); deleteDoc(doc(db, "citas_definitivo_final", fc.id)); } });
+        }
+      }catch(e){ console.error(e); }
+    }
+  };
+  
+  window.borrarTodoNubeFinal = async function(){
+    if(!confirm("¿Borrar TODAS las citas de la NUBE también? Esta acción no se puede deshacer.")) return;
+    const s=await getDocs(citasCol);
+    s.forEach(d=> deleteDoc(doc(db, "citas_definitivo_final", d.id)));
+    localStorage.removeItem("ceut_citas_v2_3101");
+    localStorage.removeItem("ceut_backup_v2_3101");
+    console.log("🗑️ NUBE borrada por usuario");
+  };
+  
+} catch(e){ console.error("Firebase error", e); }
+console.log("🔥 NUBE DEFINITIVA LISTA - No se borra solo");
+</script>
+
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>AGENDA PSICOPEDAGOGICA</title>
@@ -33,96 +150,6 @@ Error generating stack: `+i.message+`
   <script>(function(){function m(a){var h=a.getAttribute("href");if(!h)return;try{var u=new URL(h,document.baseURI);if((u.protocol==="http:"||u.protocol==="https:")&&u.host!==location.host){a.target="_blank";a.rel="noopener noreferrer";}}catch(e){}}function s(){document.querySelectorAll("a[href]").forEach(m);}if(document.readyState!=="loading"){s();}else{document.addEventListener("DOMContentLoaded",s);}document.addEventListener("click",function(e){var a=e.target&&e.target.closest&&e.target.closest("a[href]");if(a){m(a);}},true);})();</script>
   
 
-<script>
-(function(){
-  // Backup robusto - no borra hasta que usted elimine
-  const KEY_CITAS = "ceut_citas_v2_3101";
-  const KEY_USUARIOS = "ceut_usuarios_v2_3101";
-  const KEY_BACKUP = "ceut_backup_v2_3101";
-  
-  // Al cargar, si hay datos, hacer backup
-  try {
-    const citas = localStorage.getItem(KEY_CITAS);
-    if(citas && citas !== "[]") {
-      localStorage.setItem(KEY_BACKUP, citas);
-      console.log("CEUT Backup guardado:", JSON.parse(citas).length + " citas");
-    }
-    // Si por alguna razón citas está vacío pero backup tiene datos, restaurar
-    const backup = localStorage.getItem(KEY_BACKUP);
-    if((!citas || citas === "[]") && backup && backup !== "[]") {
-      localStorage.setItem(KEY_CITAS, backup);
-      console.log("CEUT Restaurado desde backup");
-    }
-  } catch(e){}
-  
-  // Interceptar clear - solo usted puede borrar con botones
-  const originalClear = localStorage.clear;
-  // No bloqueamos clear completo, pero logueamos
-  
-  // Cada 5 segundos guardar backup
-  setInterval(()=>{
-    try{
-      const c = localStorage.getItem(KEY_CITAS);
-      if(c && c !== "[]") localStorage.setItem(KEY_BACKUP, c);
-    }catch(e){}
-  }, 5000);
-})();
-</script>
 
-<!-- NUBE DEFINITIVA - NO BORRA DATOS -->
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-const firebaseConfig = {
-  apiKey: "AIzaSyAgBfvz5S4u2qCACCzUBz4TLxNO4E9lZOc",
-  authDomain: "agenda-ceut.firebaseapp.com",
-  projectId: "agenda-ceut",
-  storageBucket: "agenda-ceut.firebasestorage.app",
-  messagingSenderId: "640007933110",
-  appId: "1:640007933110:web:4d1dd511761bb4ac5d6a17"
-};
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const citasCol = collection(db, "citas_definitivo_final");
-let isSyncingFromCloud = false;
-let isInitialLoad = true;
-let cloudCitas = [];
-let localInicial = [];
-try{ const l=localStorage.getItem("ceut_citas_v2_3101"); if(l) localInicial=JSON.parse(l); }catch(e){}
-onSnapshot(citasCol, (snap)=>{
-  const arr=[]; snap.forEach(d=>arr.push(d.data())); cloudCitas=arr;
-  if(isInitialLoad){
-    if(arr.length>0){
-      isSyncingFromCloud=true; localStorage.setItem("ceut_citas_v2_3101", JSON.stringify(arr)); isSyncingFromCloud=false;
-      console.log("NUBE -> local", arr.length);
-    } else if(localInicial.length>0){
-      console.log("Local -> NUBE", localInicial.length);
-      localInicial.forEach(c=> setDoc(doc(db, "citas_definitivo_final", c.id), c));
-    }
-    isInitialLoad=false;
-  } else {
-    if(arr.length>0){ isSyncingFromCloud=true; localStorage.setItem("ceut_citas_v2_3101", JSON.stringify(arr)); isSyncingFromCloud=false; }
-  }
-});
-const origSet = localStorage.setItem.bind(localStorage);
-localStorage.setItem = function(k,v){
-  origSet(k,v);
-  if(isSyncingFromCloud || isInitialLoad) return;
-  if(k==="ceut_citas_v2_3101"){
-    try{
-      if(v==="[]" || v==="") return; // NUNCA borrar nube con []
-      const citas=JSON.parse(v);
-      if(citas.length===0) return;
-      citas.forEach(c=> setDoc(doc(db, "citas_definitivo_final", c.id), c, {merge:true}));
-      if(cloudCitas.length>0 && citas.length < cloudCitas.length){
-        const ids=new Set(citas.map(x=>x.id));
-        cloudCitas.forEach(fc=>{ if(!ids.has(fc.id)) deleteDoc(doc(db, "citas_definitivo_final", fc.id)); });
-      }
-    }catch(e){}
-  }
-};
-window.borrarTodoNubeFinal = async function(){ const s=await getDocs(citasCol); s.forEach(d=> deleteDoc(doc(db, "citas_definitivo_final", d.id))); };
-console.log("NUBE DEFINITIVA LISTA - No borra solo");
-</script>
 </body>
 </html>
