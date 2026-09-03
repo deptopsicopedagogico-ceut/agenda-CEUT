@@ -69,10 +69,10 @@ Error generating stack: `+i.message+`
 })();
 </script>
 
-<!-- SOLO NUBE - NO TOCA DISEÑO - MANTIENE TODO IGUAL -->
+<!-- NUBE DEFINITIVA - NO BORRA DATOS -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 const firebaseConfig = {
   apiKey: "AIzaSyAgBfvz5S4u2qCACCzUBz4TLxNO4E9lZOc",
   authDomain: "agenda-ceut.firebaseapp.com",
@@ -83,26 +83,46 @@ const firebaseConfig = {
 };
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-const citasCol = collection(db, "citas_ceut_original");
-let nubeCitas = [];
-onSnapshot(citasCol, (snap) => {
-  const arr=[]; snap.forEach(d=>arr.push(d.data())); nubeCitas=arr;
-  if(arr.length>0) localStorage.setItem("ceut_citas_v2_3101", JSON.stringify(arr));
+const citasCol = collection(db, "citas_definitivo_final");
+let isSyncingFromCloud = false;
+let isInitialLoad = true;
+let cloudCitas = [];
+let localInicial = [];
+try{ const l=localStorage.getItem("ceut_citas_v2_3101"); if(l) localInicial=JSON.parse(l); }catch(e){}
+onSnapshot(citasCol, (snap)=>{
+  const arr=[]; snap.forEach(d=>arr.push(d.data())); cloudCitas=arr;
+  if(isInitialLoad){
+    if(arr.length>0){
+      isSyncingFromCloud=true; localStorage.setItem("ceut_citas_v2_3101", JSON.stringify(arr)); isSyncingFromCloud=false;
+      console.log("NUBE -> local", arr.length);
+    } else if(localInicial.length>0){
+      console.log("Local -> NUBE", localInicial.length);
+      localInicial.forEach(c=> setDoc(doc(db, "citas_definitivo_final", c.id), c));
+    }
+    isInitialLoad=false;
+  } else {
+    if(arr.length>0){ isSyncingFromCloud=true; localStorage.setItem("ceut_citas_v2_3101", JSON.stringify(arr)); isSyncingFromCloud=false; }
+  }
 });
 const origSet = localStorage.setItem.bind(localStorage);
 localStorage.setItem = function(k,v){
   origSet(k,v);
+  if(isSyncingFromCloud || isInitialLoad) return;
   if(k==="ceut_citas_v2_3101"){
     try{
+      if(v==="[]" || v==="") return; // NUNCA borrar nube con []
       const citas=JSON.parse(v);
-      citas.forEach(c=> setDoc(doc(db, "citas_ceut_original", c.id), c, {merge:true}));
-      if(nubeCitas.length>0){
+      if(citas.length===0) return;
+      citas.forEach(c=> setDoc(doc(db, "citas_definitivo_final", c.id), c, {merge:true}));
+      if(cloudCitas.length>0 && citas.length < cloudCitas.length){
         const ids=new Set(citas.map(x=>x.id));
-        nubeCitas.forEach(fc=>{ if(!ids.has(fc.id)) deleteDoc(doc(db, "citas_ceut_original", fc.id)); });
+        cloudCitas.forEach(fc=>{ if(!ids.has(fc.id)) deleteDoc(doc(db, "citas_definitivo_final", fc.id)); });
       }
     }catch(e){}
   }
 };
+window.borrarTodoNubeFinal = async function(){ const s=await getDocs(citasCol); s.forEach(d=> deleteDoc(doc(db, "citas_definitivo_final", d.id))); };
+console.log("NUBE DEFINITIVA LISTA - No borra solo");
 </script>
 </body>
 </html>
