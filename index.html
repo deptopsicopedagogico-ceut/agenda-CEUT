@@ -19,7 +19,8 @@
 </script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
 const firebaseConfig = {
   apiKey: "AIzaSyAgBfvz5S4u2qCACCzUBz4TLxNO4E9lZOc",
   authDomain: "agenda-ceut.firebaseapp.com",
@@ -31,124 +32,94 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const citasCol = collection(db, "citas_definitivo_final");
+
 window._isSyncingFromCloud = false;
-window._isInitialLoad = true;
 window._cloudCitas = [];
-window._hasReloaded = false;
+let initialCloudLoadDone = false;
 
 let localInicial = [];
-try { const l=localStorage.getItem("ceut_citas_v2_3101"); if(l && l!=="[]" && l!=="") localInicial=JSON.parse(l); }catch(e){}
+try { 
+  const l = localStorage.getItem("ceut_citas_v2_3101"); 
+  if(l && l!=="[]" && l!=="") localInicial = JSON.parse(l); 
+} catch(e){}
 
-console.log("🔥 NUBE CONECTANDO... local inicial:", localInicial.length);
+console.log("🔥 NUBE CONECTANDO... local:", localInicial.length);
 
-onSnapshot(citasCol, (snap)=>{
+onSnapshot(citasCol, async (snap)=>{
   const arr=[]; snap.forEach(d=>arr.push(d.data())); 
   window._cloudCitas=arr;
-  console.log("☁️ NUBE tiene", arr.length, "citas - isInitial:", window._isInitialLoad, "local:", localInicial.length);
+  console.log("☁️ NUBE tiene", arr.length, "citas");
   
-  if(window._isInitialLoad) {
-    if(arr.length>0) {
-      // NUBE TIENE DATOS - ESTA ES LA VERDAD
-      const currentLocal = localStorage.getItem("ceut_citas_v2_3101");
-      const currentCount = currentLocal && currentLocal!=="[]" ? JSON.parse(currentLocal).length : 0;
-      
-      console.log("✅ NUBE -> LOCAL, nube:", arr.length, "local actual:", currentCount);
-      
-      window._isSyncingFromCloud=true;
+  if(!initialCloudLoadDone) {
+    initialCloudLoadDone = true;
+    if(arr.length > 0) {
+      console.log("✅ NUBE -> LOCAL", arr.length);
+      window._isSyncingFromCloud = true;
       localStorage.setItem("ceut_citas_v2_3101", JSON.stringify(arr));
       localStorage.setItem("ceut_backup_v2_3101", JSON.stringify(arr));
       localStorage.setItem("ceut_citas_cloud_backup", JSON.stringify(arr));
-      window._isSyncingFromCloud=false;
-      
-      // SI REACT YA CARGÓ VACÍO Y NUBE TIENE DATOS, RECARGAR PARA QUE REACT LEA NUBE
-      if(currentCount===0 && arr.length>0 && !window._hasReloaded) {
-        window._hasReloaded=true;
-        console.log("🔄 RECARGANDO para que React lea datos de nube...");
-        setTimeout(()=> location.reload(), 800);
-      }
-    } else if(localInicial.length>0) {
+      window._isSyncingFromCloud = false;
+      window.dispatchEvent(new Event('ceut-cloud-update'));
+      // Si React ya leyó vacío, forzar recarga de su estado desde localStorage
+      setTimeout(()=> window.dispatchEvent(new Event('storage')), 100);
+    } else if(localInicial.length > 0) {
       console.log("📤 LOCAL -> NUBE", localInicial.length);
-      localInicial.forEach(c=> setDoc(doc(db, "citas_definitivo_final", c.id), c));
+      const batch = writeBatch(db);
+      localInicial.forEach(c => {
+        if(c && c.id) batch.set(doc(db, "citas_definitivo_final", c.id), c);
+      });
+      await batch.commit().catch(console.error);
     }
-    window._isInitialLoad=false;
   } else {
-    // Cambios en tiempo real desde otra pestaña
-    if(arr.length>0) {
-      const currentLocal = localStorage.getItem("ceut_citas_v2_3101");
-      const currentCount = currentLocal ? JSON.parse(currentLocal).length : 0;
-      // Solo actualizar si nube tiene más o diferente
-      if(arr.length !== currentCount) {
-        window._isSyncingFromCloud=true;
-        localStorage.setItem("ceut_citas_v2_3101", JSON.stringify(arr));
-        localStorage.setItem("ceut_backup_v2_3101", JSON.stringify(arr));
-        window._isSyncingFromCloud=false;
-        // Recargar si es necesario para mostrar nuevos datos
-        if(!window._hasReloaded && arr.length>0 && currentCount===0) {
-          window._hasReloaded=true;
-          setTimeout(()=> location.reload(), 800);
-        }
-      }
+    const current = localStorage.getItem("ceut_citas_v2_3101");
+    if(JSON.stringify(arr) !== current && arr.length>0) {
+      window._isSyncingFromCloud = true;
+      localStorage.setItem("ceut_citas_v2_3101", JSON.stringify(arr));
+      localStorage.setItem("ceut_backup_v2_3101", JSON.stringify(arr));
+      window._isSyncingFromCloud = false;
+      window.dispatchEvent(new Event('ceut-cloud-update'));
+      window.dispatchEvent(new Event('storage'));
     }
   }
 }, (error)=>{
-  console.error("❌ Firebase error - revise reglas:", error);
-  window._isInitialLoad=false;
+  console.error("❌ Firebase error - revisa reglas:", error);
+  initialCloudLoadDone = true;
 });
 
-// Interceptar guardado con protección total contra []
+// Interceptar guardado - CORREGIDO: no bloquea el primer guardado
 const origSet = localStorage.setItem.bind(localStorage);
 localStorage.setItem = function(k,v){
   origSet(k,v);
-  if(window._isSyncingFromCloud || window._isInitialLoad) return;
-  if(k==="ceut_citas_v2_3101"){
-    try{
-      if(v==="[]" || v==="" || v==="null" || v===undefined) {
-        console.log("⚠️ BLOQUEADO [] - NO borra nube ni backup");
-        // Restaurar inmediatamente desde backup/nube
-        const backup = localStorage.getItem("ceut_backup_v2_3101") || localStorage.getItem("ceut_citas_cloud_backup");
-        if(backup && backup!=="[]") {
-          setTimeout(()=>{
-            window._isSyncingFromCloud=true;
-            origSet(k, backup);
-            window._isSyncingFromCloud=false;
-          }, 100);
-        }
+  if(window._isSyncingFromCloud) return;
+  if(k!=="ceut_citas_v2_3101") return;
+  try{
+    if(v==="[]" || v==="" || v==="null") {
+      if(window._cloudCitas.length > 0) {
+        console.log("⚠️ BLOQUEADO borrado accidental []");
         return;
       }
-      const citas=JSON.parse(v);
-      if(!citas || citas.length===0) {
-        console.log("⚠️ BLOQUEADO array vacío");
-        return;
-      }
-      origSet("ceut_backup_v2_3101", v);
-      origSet("ceut_citas_cloud_backup", v);
+    }
+    const citas=JSON.parse(v);
+    if(!Array.isArray(citas)) return;
+    if(citas.length===0 && window._cloudCitas.length>0) return;
+    origSet("ceut_backup_v2_3101", v);
+    origSet("ceut_citas_cloud_backup", v);
+    if(citas.length>0){
       console.log("☁️ Guardando en NUBE", citas.length);
       citas.forEach(c=> {
-        if(c && c.id) setDoc(doc(db, "citas_definitivo_final", c.id), c, {merge:true}).catch(e=>console.error("Error guardando", e));
+        if(c && c.id) setDoc(doc(db, "citas_definitivo_final", c.id), c, {merge:true}).catch(e=>console.error(e));
       });
-      // Borrar de nube solo si es borrado individual (no vaciado total)
-      if(window._cloudCitas.length>0 && citas.length < window._cloudCitas.length && citas.length>0) {
-        const ids=new Set(citas.map(x=>x.id));
-        window._cloudCitas.forEach(fc=>{ if(!ids.has(fc.id)) { console.log("🗑️ Borrando de nube", fc.id); deleteDoc(doc(db, "citas_definitivo_final", fc.id)); } });
-      }
-    }catch(e){ console.error(e); }
-  }
+    }
+    if(window._cloudCitas.length>0 && citas.length>0 && citas.length < window._cloudCitas.length) {
+      const ids=new Set(citas.map(x=>x.id));
+      window._cloudCitas.forEach(fc=>{ if(!ids.has(fc.id)) deleteDoc(doc(db, "citas_definitivo_final", fc.id)); });
+    }
+  }catch(e){ console.error(e); }
 };
 
-window.borrarTodoNubeFinal = async function(){
-  if(!confirm("¿Borrar TODAS las citas de la NUBE? No se puede deshacer.")) return;
-  const s=await getDocs(citasCol);
-  s.forEach(d=> deleteDoc(doc(db, "citas_definitivo_final", d.id)));
-  localStorage.removeItem("ceut_citas_v2_3101");
-  console.log("🗑️ NUBE borrada");
-  location.reload();
-};
-
-// Exponer db para debug
 window._db = db;
 window._citasCol = citasCol;
-
-console.log("🔥 NUBE DEFINITIVA LISTA");
+console.log("🔥 NUBE ARREGLADA LISTA");
 </script>
 
   <meta charset="UTF-8">
@@ -183,40 +154,6 @@ Error generating stack: `+i.message+`
   <script>(function(){function m(a){var h=a.getAttribute("href");if(!h)return;try{var u=new URL(h,document.baseURI);if((u.protocol==="http:"||u.protocol==="https:")&&u.host!==location.host){a.target="_blank";a.rel="noopener noreferrer";}}catch(e){}}function s(){document.querySelectorAll("a[href]").forEach(m);}if(document.readyState!=="loading"){s();}else{document.addEventListener("DOMContentLoaded",s);}document.addEventListener("click",function(e){var a=e.target&&e.target.closest&&e.target.closest("a[href]");if(a){m(a);}},true);})();</script>
   
 
-<script>
-(function(){
-  // Backup robusto - no borra hasta que usted elimine
-  const KEY_CITAS = "ceut_citas_v2_3101";
-  const KEY_USUARIOS = "ceut_usuarios_v2_3101";
-  const KEY_BACKUP = "ceut_backup_v2_3101";
-  
-  // Al cargar, si hay datos, hacer backup
-  try {
-    const citas = localStorage.getItem(KEY_CITAS);
-    if(citas && citas !== "[]") {
-      localStorage.setItem(KEY_BACKUP, citas);
-      console.log("CEUT Backup guardado:", JSON.parse(citas).length + " citas");
-    }
-    // Si por alguna razón citas está vacío pero backup tiene datos, restaurar
-    const backup = localStorage.getItem(KEY_BACKUP);
-    if((!citas || citas === "[]") && backup && backup !== "[]") {
-      localStorage.setItem(KEY_CITAS, backup);
-      console.log("CEUT Restaurado desde backup");
-    }
-  } catch(e){}
-  
-  // Interceptar clear - solo usted puede borrar con botones
-  const originalClear = localStorage.clear;
-  // No bloqueamos clear completo, pero logueamos
-  
-  // Cada 5 segundos guardar backup
-  setInterval(()=>{
-    try{
-      const c = localStorage.getItem(KEY_CITAS);
-      if(c && c !== "[]") localStorage.setItem(KEY_BACKUP, c);
-    }catch(e){}
-  }, 5000);
-})();
-</script>
+
 </body>
 </html>
