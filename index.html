@@ -19,7 +19,7 @@
 </script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, writeBatch, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAgBfvz5S4u2qCACCzUBz4TLxNO4E9lZOc",
@@ -33,93 +33,193 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const citasCol = collection(db, "citas_definitivo_final");
 
+// --- ESTADO GLOBAL ---
 window._isSyncingFromCloud = false;
 window._cloudCitas = [];
+window._lastLocalValid = null;
 let initialCloudLoadDone = false;
+let saveTimeout = null;
 
-let localInicial = [];
-try { 
-  const l = localStorage.getItem("ceut_citas_v2_3101"); 
-  if(l && l!=="[]" && l!=="") localInicial = JSON.parse(l); 
-} catch(e){}
+function getLocalCitas(){
+  try{
+    const raw = localStorage.getItem("ceut_citas_v2_3101");
+    if(!raw || raw==="[]" || raw==="" || raw==="null") return null;
+    const arr = JSON.parse(raw);
+    if(!Array.isArray(arr) || arr.length===0) return null;
+    return arr;
+  }catch(e){ return null; }
+}
 
-console.log("🔥 NUBE CONECTANDO... local:", localInicial.length);
+let localInicial = getLocalCitas() || [];
+try{
+  const backup = localStorage.getItem("ceut_backup_v2_3101") || localStorage.getItem("ceut_citas_cloud_backup");
+  if(localInicial.length===0 && backup && backup!=="[]"){
+    const b = JSON.parse(backup);
+    if(b.length>0) localInicial = b;
+  }
+}catch(e){}
 
+console.log("🔥 NUBE INICIANDO - local valido:", localInicial.length);
+
+// --- ESCUCHA NUBE ---
 onSnapshot(citasCol, async (snap)=>{
-  const arr=[]; snap.forEach(d=>arr.push(d.data())); 
-  window._cloudCitas=arr;
-  console.log("☁️ NUBE tiene", arr.length, "citas");
-  
-  if(!initialCloudLoadDone) {
+  const arr=[]; snap.forEach(d=>arr.push(d.data()));
+  window._cloudCitas = arr;
+  console.log("☁️ NUBE snapshot:", arr.length, "initialDone:", initialCloudLoadDone);
+
+  if(!initialCloudLoadDone){
     initialCloudLoadDone = true;
-    if(arr.length > 0) {
-      console.log("✅ NUBE -> LOCAL", arr.length);
+    if(arr.length>0){
+      // NUBE TIENE DATOS = VERDAD ABSOLUTA
+      console.log("✅ NUBE -> LOCAL (primera carga)", arr.length);
       window._isSyncingFromCloud = true;
       localStorage.setItem("ceut_citas_v2_3101", JSON.stringify(arr));
       localStorage.setItem("ceut_backup_v2_3101", JSON.stringify(arr));
       localStorage.setItem("ceut_citas_cloud_backup", JSON.stringify(arr));
+      window._lastLocalValid = arr;
       window._isSyncingFromCloud = false;
-      window.dispatchEvent(new Event('ceut-cloud-update'));
-      // Si React ya leyó vacío, forzar recarga de su estado desde localStorage
-      setTimeout(()=> window.dispatchEvent(new Event('storage')), 100);
-    } else if(localInicial.length > 0) {
-      console.log("📤 LOCAL -> NUBE", localInicial.length);
-      const batch = writeBatch(db);
-      localInicial.forEach(c => {
-        if(c && c.id) batch.set(doc(db, "citas_definitivo_final", c.id), c);
-      });
-      await batch.commit().catch(console.error);
+      // Avisar a React que recargue desde localStorage
+      setTimeout(()=>{
+        window.dispatchEvent(new Event('ceut-cloud-update'));
+        window.dispatchEvent(new Event('storage'));
+        // Forzar recarga de la app sin location.reload si es necesario
+        if(typeof window._reactForceUpdate === 'function') window._reactForceUpdate();
+      }, 300);
+    } else if(localInicial.length>0){
+      console.log("📤 LOCAL -> NUBE (nube vacía, subiendo)", localInicial.length);
+      try{
+        const batch = writeBatch(db);
+        localInicial.forEach(c=>{
+          if(c && c.id) batch.set(doc(db, "citas_definitivo_final", c.id), c, {merge:true});
+        });
+        await batch.commit();
+        console.log("✅ Subido a nube correctamente");
+      }catch(err){
+        console.error("❌ Error subiendo a nube - REGLAS FIRESTORE?", err);
+        alert("Error Firebase: revisa Reglas de Firestore. Deben permitir write.
+" + err.message);
+      }
+    } else {
+      console.log("ℹ️ Nube y local vacíos");
     }
   } else {
-    const current = localStorage.getItem("ceut_citas_v2_3101");
-    if(JSON.stringify(arr) !== current && arr.length>0) {
-      window._isSyncingFromCloud = true;
-      localStorage.setItem("ceut_citas_v2_3101", JSON.stringify(arr));
-      localStorage.setItem("ceut_backup_v2_3101", JSON.stringify(arr));
-      window._isSyncingFromCloud = false;
-      window.dispatchEvent(new Event('ceut-cloud-update'));
-      window.dispatchEvent(new Event('storage'));
+    // Cambios en tiempo real
+    if(arr.length>0){
+      const local = getLocalCitas();
+      if(!local || JSON.stringify(local)!==JSON.stringify(arr)){
+        // Solo si nube tiene datos y es diferente, actualizar local
+        if(arr.length>= (local?.length||0) || (local && local.length>0 && arr.length>0)){
+          console.log("🔄 Actualizando local desde nube", arr.length);
+          window._isSyncingFromCloud = true;
+          localStorage.setItem("ceut_citas_v2_3101", JSON.stringify(arr));
+          localStorage.setItem("ceut_backup_v2_3101", JSON.stringify(arr));
+          window._isSyncingFromCloud = false;
+          window.dispatchEvent(new Event('ceut-cloud-update'));
+          window.dispatchEvent(new Event('storage'));
+        }
+      }
     }
   }
 }, (error)=>{
-  console.error("❌ Firebase error - revisa reglas:", error);
+  console.error("❌ Firebase onSnapshot error - revisa reglas:", error);
   initialCloudLoadDone = true;
 });
 
-// Interceptar guardado - CORREGIDO: no bloquea el primer guardado
+// --- INTERCEPTOR A PRUEBA DE BORRADO ---
 const origSet = localStorage.setItem.bind(localStorage);
 localStorage.setItem = function(k,v){
+  // Guardar siempre físicamente primero
   origSet(k,v);
-  if(window._isSyncingFromCloud) return;
+
   if(k!=="ceut_citas_v2_3101") return;
+  if(window._isSyncingFromCloud) return;
+
   try{
-    if(v==="[]" || v==="" || v==="null") {
-      if(window._cloudCitas.length > 0) {
-        console.log("⚠️ BLOQUEADO borrado accidental []");
-        return;
+    // Si intenta guardar vacío, BLOQUEAR PROPAGACIÓN A NUBE y restaurar si teníamos algo válido
+    if(!v || v==="[]" || v==="" || v==="null" || v==="undefined"){
+      console.warn("⚠️ Intento de guardar [] bloqueado - no se sube a nube");
+      // Si teníamos datos válidos antes, restaurarlos inmediatamente en local
+      if(window._lastLocalValid && window._lastLocalValid.length>0){
+        console.log("♻️ Restaurando último válido", window._lastLocalValid.length);
+        window._isSyncingFromCloud = true;
+        origSet(k, JSON.stringify(window._lastLocalValid));
+        window._isSyncingFromCloud = false;
+      } else {
+        const backup = localStorage.getItem("ceut_backup_v2_3101");
+        if(backup && backup!=="[]"){
+          window._isSyncingFromCloud = true;
+          origSet(k, backup);
+          window._isSyncingFromCloud = false;
+        }
       }
+      return;
     }
-    const citas=JSON.parse(v);
+
+    const citas = JSON.parse(v);
     if(!Array.isArray(citas)) return;
-    if(citas.length===0 && window._cloudCitas.length>0) return;
+    if(citas.length===0){
+      console.warn("⚠️ Array vacío bloqueado");
+      return;
+    }
+
+    // Guardar como último válido
+    window._lastLocalValid = citas;
     origSet("ceut_backup_v2_3101", v);
     origSet("ceut_citas_cloud_backup", v);
-    if(citas.length>0){
-      console.log("☁️ Guardando en NUBE", citas.length);
-      citas.forEach(c=> {
-        if(c && c.id) setDoc(doc(db, "citas_definitivo_final", c.id), c, {merge:true}).catch(e=>console.error(e));
-      });
-    }
-    if(window._cloudCitas.length>0 && citas.length>0 && citas.length < window._cloudCitas.length) {
-      const ids=new Set(citas.map(x=>x.id));
-      window._cloudCitas.forEach(fc=>{ if(!ids.has(fc.id)) deleteDoc(doc(db, "citas_definitivo_final", fc.id)); });
-    }
+
+    // Debounce guardado a nube para no saturar
+    clearTimeout(saveTimeout);
+    saveTimeout = setTimeout(async ()=>{
+      if(!initialCloudLoadDone) return;
+      console.log("☁️ Guardando", citas.length, "citas en nube...");
+      try{
+        for(const c of citas){
+          if(c && c.id) await setDoc(doc(db, "citas_definitivo_final", c.id), c, {merge:true});
+        }
+        console.log("✅ Guardado en nube OK");
+
+        // Solo borrar de nube si estamos seguros: local tiene datos y es menor que nube y diferencia es 1 (borrado individual)
+        if(window._cloudCitas.length>0 && citas.length>0 && citas.length < window._cloudCitas.length){
+          const diff = window._cloudCitas.length - citas.length;
+          if(diff<=3){ // solo si borró pocos, no vaciado masivo
+            const ids = new Set(citas.map(x=>x.id));
+            for(const fc of window._cloudCitas){
+              if(!ids.has(fc.id)){
+                console.log("🗑️ Borrando de nube", fc.id);
+                await deleteDoc(doc(db, "citas_definitivo_final", fc.id));
+              }
+            }
+          }
+        }
+      }catch(e){
+        console.error("❌ Error guardando en nube:", e);
+      }
+    }, 600);
+
   }catch(e){ console.error(e); }
 };
 
+// --- FUNCIONES DE EMERGENCIA ---
+window.forzarSubidaNube = async function(){
+  const local = getLocalCitas();
+  const backupRaw = localStorage.getItem("ceut_backup_v2_3101");
+  const backup = backupRaw ? JSON.parse(backupRaw) : [];
+  const data = (local && local.length>0) ? local : backup;
+  if(!data || data.length===0){ alert("No hay datos locales para subir"); return; }
+  console.log("🚀 Forzando subida", data.length);
+  const batch = writeBatch(db);
+  data.forEach(c=> batch.set(doc(db, "citas_definitivo_final", c.id), c, {merge:true}));
+  await batch.commit();
+  alert("✅ " + data.length + " citas subidas a la nube");
+};
+
+window.verEstadoNube = function(){
+  console.log("Local:", getLocalCitas()?.length||0, "Nube:", window._cloudCitas.length, "Backup:", JSON.parse(localStorage.getItem("ceut_backup_v2_3101")||"[]").length);
+  return {local: getLocalCitas()?.length||0, nube: window._cloudCitas.length};
+};
+
 window._db = db;
-window._citasCol = citasCol;
-console.log("🔥 NUBE ARREGLADA LISTA");
+console.log("🔥 NUBE A PRUEBA DE BORRADO LISTA - usa forzarSubidaNube() si necesitas");
 </script>
 
   <meta charset="UTF-8">
