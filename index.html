@@ -6,19 +6,36 @@
   const KC="ceut_citas_v2_3101"; const KU="ceut_usuarios_v2_3101";
   const BC="ceut_backup_v2_3101"; const BU="ceut_backup_usuarios";
   try{
+    // Solo restaurar backup si NO es un borrado intencional reciente
+    const esBorrado = Date.now() - (window._ultimoBorrado||0) < 10000;
+    const esBorradoUser = Date.now() - (window._ultimoBorradoUser||0) < 10000;
     const c=localStorage.getItem(KC); const bc=localStorage.getItem(BC);
-    if((!c||c==="[]"||c==="")&&bc&&bc!=="[]"&&bc!=="") localStorage.setItem(KC,bc);
+    if(!esBorrado && (!c||c==="[]"||c==="")&&bc&&bc!=="[]"&&bc!=="") localStorage.setItem(KC,bc);
     const u=localStorage.getItem(KU); const bu=localStorage.getItem(BU);
-    if((!u||u==="[]"||u==="")&&bu&&bu!=="[]"&&bu!=="") localStorage.setItem(KU,bu);
+    if(!esBorradoUser && (!u||u==="[]"||u==="")&&bu&&bu!=="[]"&&bu!=="") localStorage.setItem(KU,bu);
   }catch(e){}
   const P=Storage.prototype; const rs=P.setItem;
   P.setItem=function(k,v){
     if(k===KC||k===KU){
       try{
         const cur=localStorage.getItem(k);
-        if(cur&&cur!=="[]"&&cur!==""){
-          if(k===KC) rs.call(this,BC,cur);
-          else rs.call(this,BU,cur);
+        const esBorrado = Date.now() - (window._ultimoBorrado||0) < 10000;
+        const esBorradoUser = Date.now() - (window._ultimoBorradoUser||0) < 10000;
+        // Si es borrado intencional, NO guardar backup viejo, actualizar backup con vacio tambien
+        if((k===KC && esBorrado) || (k===KU && esBorradoUser)){
+          if(k===KC) rs.call(this,BC,v);
+          else rs.call(this,BU,v);
+        } else {
+          // Guardar backup solo si cur tiene datos y v es vacio accidental
+          if(cur&&cur!=="[]"&&cur!==""){
+            if(k===KC && (!v||v==="[]"||v==="")) {
+              // No sobrescribir con vacio accidental, mantener backup
+            } else if(k===KU && (!v||v==="[]"||v==="")) {
+            } else {
+              if(k===KC) rs.call(this,BC,cur);
+              else rs.call(this,BU,cur);
+            }
+          }
         }
       }catch{}
     }
