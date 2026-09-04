@@ -1,29 +1,28 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<style>#firebase-status{position:fixed; bottom:10px; left:10px; right:10px; z-index:9999; padding:12px; border-radius:10px; font-family:sans-serif; font-size:13px; font-weight:bold; text-align:center;}</style>
 <script>
-// BLINDAJE - PROTEGE DE BORRADO
+// PROTECCION ANTI-BORRADO
 (function(){
   const KEY="ceut_citas_v2_3101"; const B1="ceut_backup_v2_3101";
-  try{
-    const cur=localStorage.getItem(KEY); const b1=localStorage.getItem(B1);
-    if((!cur || cur==="[]" || cur==="") && b1 && b1!=="[]" && b1!==""){ localStorage.setItem(KEY,b1); }
-  }catch(e){}
-  const Proto=Storage.prototype; const realSet=Proto.setItem; const realRemove=Proto.removeItem; const realClear=Proto.clear;
-  Proto.setItem=function(k,v){
-    if(k===KEY){
-      if(!v || v==="[]" || v==="" || v==="null"){ console.warn("🚫 BLOQUEO []"); return; }
-      try{ const arr=JSON.parse(v); if(!Array.isArray(arr) || arr.length===0){ return; } realSet.call(this,B1,v); }catch{ if(v==="[]") return; }
-    }
-    return realSet.call(this,k,v);
-  };
-  Proto.removeItem=function(k){ if(k===KEY||k===B1){ console.warn("🚫 removeItem bloqueado"); return; } return realRemove.call(this,k); };
-  Proto.clear=function(){ const keep=[KEY,B1,"ceut_usuarios_v2_3101"]; const toKeep={}; keep.forEach(k=>{ const v=localStorage.getItem(k); if(v) toKeep[k]=v; }); realClear.call(this); Object.keys(toKeep).forEach(k=> realSet.call(this,k,toKeep[k])); };
+  try{ const cur=localStorage.getItem(KEY); const b1=localStorage.getItem(B1); if((!cur||cur==="[]"||cur==="")&&b1&&b1!=="[]"&&b1!==""){ localStorage.setItem(KEY,b1); } }catch(e){}
+  const P=Storage.prototype; const rs=P.setItem; const rr=P.removeItem; const rc=P.clear;
+  P.setItem=function(k,v){ if(k===KEY){ if(!v||v==="[]"||v===""||v==="null"){ return; } try{ const a=JSON.parse(v); if(!Array.isArray(a)||a.length===0) return; rs.call(this,B1,v); }catch{ if(v==="[]") return; } } return rs.call(this,k,v); };
+  P.removeItem=function(k){ if(k===KEY||k===B1) return; return rr.call(this,k); };
+  P.clear=function(){ const keep=[KEY,B1,"ceut_usuarios_v2_3101"]; const toKeep={}; keep.forEach(k=>{ const v=localStorage.getItem(k); if(v) toKeep[k]=v; }); rc.call(this); Object.keys(toKeep).forEach(k=> rs.call(this,k,toKeep[k])); };
 })();
+function mostrarEstadoFirebase(msg, tipo){
+  let el=document.getElementById('firebase-status');
+  if(!el){ el=document.createElement('div'); el.id='firebase-status'; document.body.appendChild(el); }
+  el.textContent=msg;
+  el.style.background = tipo==='ok' ? '#10B981' : tipo==='warn' ? '#F59E0B' : '#EF4444';
+  el.style.color='white';
+}
 </script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, collection, doc, setDoc, onSnapshot, writeBatch, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, collection, doc, setDoc, onSnapshot, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 const firebaseConfig = {
   apiKey: "AIzaSyAgBfvz5S4u2qCACCzUBz4TLxNO4E9lZOc",
   authDomain: "agenda-ceut.firebaseapp.com",
@@ -32,16 +31,69 @@ const firebaseConfig = {
   messagingSenderId: "640007933110",
   appId: "1:640007933110:web:4d1dd511761bb4ac5d6a17"
 };
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-try{ enableIndexedDbPersistence(db).catch(()=>{}); }catch{}
-const col = collection(db, "citas_definitivo_final");
-let nube=[]; let ultimoSubido="";
+let db; let col;
+try{
+  const app = initializeApp(firebaseConfig);
+  db = getFirestore(app);
+  col = collection(db, "citas_definitivo_final");
+  mostrarEstadoFirebase("☁️ Conectando a nube...", "warn");
+}catch(e){
+  mostrarEstadoFirebase("❌ Error Firebase: " + e.message, "error");
+}
+let ultimoSubido="";
 function getLocal(){ try{ const r=localStorage.getItem("ceut_citas_v2_3101"); if(!r||r==="[]") return []; const a=JSON.parse(r); return Array.isArray(a)?a:[]; }catch{return []} }
-async function subir(arr){ if(!arr||arr.length===0) return; const j=JSON.stringify(arr); if(j===ultimoSubido) return; try{ const b=writeBatch(db); arr.forEach(c=>{ if(c&&c.id) b.set(doc(db,"citas_definitivo_final",c.id),c,{merge:true}); }); await b.commit(); ultimoSubido=j; console.log("✅ NUBE GUARDADA",arr.length); }catch(e){ console.error("❌ ERROR FIREBASE - REGLAS BLOQUEADAS:",e); alert("Firebase bloquea escritura. Ve a Firestore > Rules y pon: allow read, write: if true;\nError: "+e.message); } }
-onSnapshot(col,(snap)=>{ const arr=[]; snap.forEach(d=>arr.push(d.data())); nube=arr; const local=getLocal(); console.log("☁️ NUBE",arr.length,"LOCAL",local.length); if(arr.length>0){ if(local.length===0 || JSON.stringify(local)!==JSON.stringify(arr)){ if(arr.length>=local.length){ localStorage.setItem("ceut_citas_v2_3101",JSON.stringify(arr)); ultimoSubido=JSON.stringify(arr); window.dispatchEvent(new Event('ceut-cloud-update')); location.reload(); } } } else if(arr.length===0 && local.length>0){ subir(local); } });
-setInterval(()=>{ const local=getLocal(); if(local.length===0) return; subir(local); },2000);
-window.forzarNube=()=>subir(getLocal());
+async function subir(arr){
+  if(!arr||arr.length===0) return;
+  const j=JSON.stringify(arr);
+  if(j===ultimoSubido) return;
+  try{
+    const b=writeBatch(db);
+    arr.forEach(c=>{ if(c&&c.id) b.set(doc(db,"citas_definitivo_final",c.id),c,{merge:true}); });
+    await b.commit();
+    ultimoSubido=j;
+    mostrarEstadoFirebase("✅ NUBE GUARDADA - " + arr.length + " citas en la nube", "ok");
+    console.log("✅ NUBE",arr.length);
+  }catch(e){
+    console.error(e);
+    if(e.code==="permission-denied"){
+      mostrarEstadoFirebase("❌ FIRESTORE BLOQUEADO: Ve a Firebase Console > Firestore > Rules > pon allow read, write: if true; | Error: " + e.message, "error");
+    } else if(e.message.includes("not-found") || e.code==="not-found"){
+      mostrarEstadoFirebase("❌ BASE DE DATOS NO EXISTE: Ve a Firebase Console > Firestore Database > Crear base de datos > Modo prueba", "error");
+    } else {
+      mostrarEstadoFirebase("❌ ERROR NUBE: " + e.message, "error");
+    }
+  }
+}
+if(col){
+  onSnapshot(col,(snap)=>{
+    const arr=[]; snap.forEach(d=>arr.push(d.data()));
+    const local=getLocal();
+    console.log("☁️ NUBE",arr.length,"LOCAL",local.length);
+    if(arr.length>0){
+      if(local.length===0 || JSON.stringify(local)!==JSON.stringify(arr)){
+        if(arr.length>=local.length){
+          localStorage.setItem("ceut_citas_v2_3101",JSON.stringify(arr));
+          ultimoSubido=JSON.stringify(arr);
+          mostrarEstadoFirebase("✅ NUBE CARGADA - " + arr.length + " citas", "ok");
+          if(local.length===0) setTimeout(()=>location.reload(),800);
+        }
+      } else {
+        mostrarEstadoFirebase("✅ NUBE SINCRONIZADA - " + arr.length + " citas", "ok");
+      }
+    } else if(arr.length===0 && local.length>0){
+      mostrarEstadoFirebase("⬆️ Subiendo " + local.length + " citas a la nube...", "warn");
+      subir(local);
+    } else {
+      mostrarEstadoFirebase("☁️ Nube vacía - agrega una cita", "warn");
+    }
+  },(e)=>{
+    console.error(e);
+    mostrarEstadoFirebase("❌ ERROR LEYENDO NUBE: " + e.message + " - Revisa si creaste Firestore", "error");
+  });
+
+  setInterval(()=>{ const local=getLocal(); if(local.length===0) return; subir(local); },3000);
+}
+window.forzarNube=()=>{ const l=getLocal(); if(l.length===0){ alert("No hay datos locales"); return; } ultimoSubido=""; subir(l); };
 </script>
 <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
