@@ -1,60 +1,49 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-
 <script>
-// RESTAURACION ANTES DE REACT - BLOQUEA [] DESDE EL INICIO
+// === BLINDAJE AGRESIVO ANTI-BORRADO - IMPOSIBLE BORRAR ===
 (function(){
   const KEY = "ceut_citas_v2_3101";
   const B1 = "ceut_backup_v2_3101";
   const B2 = "ceut_citas_cloud_backup";
+  const B3 = "ceut_backup_indestructible";
   try{
     const cur = localStorage.getItem(KEY);
-    const backup = localStorage.getItem(B1) || localStorage.getItem(B2);
-    // Si cur es vacío y hay backup, restaurar AHORA
-    if((!cur || cur==="[]" || cur==="" || cur==="null") && backup && backup!=="[]" && backup!==""){
-      localStorage.setItem(KEY, backup);
-      console.log("♻️ Restaurado al iniciar:", JSON.parse(backup).length);
-    }
-    // Guardar el último válido en memoria
-    const valid = localStorage.getItem(KEY);
-    if(valid && valid!=="[]") window.__ULTIMO_VALIDO__ = valid;
+    const b1 = localStorage.getItem(B1);
+    const b2 = localStorage.getItem(B2);
+    const b3 = localStorage.getItem(B3);
+    let mejor = null;
+    [b1,b2,b3].forEach(b=>{ if(b && b!=="[]" && b!==""){ try{ const a=JSON.parse(b); if(a.length>0 && (!mejor || a.length>JSON.parse(mejor).length)) mejor=b; }catch{} } });
+    if((!cur || cur==="[]" || cur==="") && mejor){ localStorage.setItem(KEY, mejor); console.log("🛡️ RESTAURADO", JSON.parse(mejor).length); }
+    const fv = localStorage.getItem(KEY);
+    if(fv && fv!=="[]"){ window.__ULTIMO_VALIDO__=fv; localStorage.setItem(B1,fv); localStorage.setItem(B2,fv); localStorage.setItem(B3,fv); }
   }catch(e){}
-
-  // INTERCEPTOR DEFINITIVO - BLOQUEA ANTES DE GUARDAR
-  const realSet = Storage.prototype.setItem;
-  Storage.prototype.setItem = function(k,v){
-    if(k==="ceut_citas_v2_3101"){
-      // Si intenta guardar vacío
-      if(!v || v==="[]" || v==="" || v==="null" || v==="undefined"){
-        console.warn("🚫 BLOQUEADO intento de guardar []");
-        // No guardar, y restaurar último válido si existe
-        if(window.__ULTIMO_VALIDO__ && window.__ULTIMO_VALIDO__!=="[]"){
-          realSet.call(this, k, window.__ULTIMO_VALIDO__);
-          console.log("♻️ Restaurado último válido en lugar de []");
-        }
-        return;
-      }
-      try{
-        const arr = JSON.parse(v);
-        if(!Array.isArray(arr) || arr.length===0){
-          console.warn("🚫 BLOQUEADO array vacío");
-          return;
-        }
-        // Es válido, guardarlo como último válido
-        window.__ULTIMO_VALIDO__ = v;
-        realSet.call(this, "ceut_backup_v2_3101", v);
-        realSet.call(this, "ceut_citas_cloud_backup", v);
-      }catch{}
+  const Proto = Storage.prototype;
+  const realSet = Proto.setItem;
+  const realGet = Proto.getItem;
+  const realRemove = Proto.removeItem;
+  const realClear = Proto.clear;
+  Proto.setItem = function(k,v){
+    if(k===KEY || k===B1 || k===B2 || k===B3){
+      if(!v || v==="[]" || v==="" || v==="null" || v==="undefined"){ console.warn("🚫 BLOQUEO []",k); return; }
+      try{ const arr=JSON.parse(v); if(!Array.isArray(arr) || arr.length===0){ console.warn("🚫 BLOQUEO vacío"); return; } if(k===KEY){ window.__ULTIMO_VALIDO__=v; realSet.call(this,B1,v); realSet.call(this,B2,v); realSet.call(this,B3,v); } }catch{ if(v==="[]") return; }
     }
-    return realSet.call(this, k, v);
+    return realSet.call(this,k,v);
   };
+  Proto.getItem = function(k){
+    const val = realGet.call(this,k);
+    if(k===KEY){ if(!val || val==="[]" || val==="" || val==="null"){ if(window.__ULTIMO_VALIDO__ && window.__ULTIMO_VALIDO__!=="[]") return window.__ULTIMO_VALIDO__; const b=realGet.call(this,B1)||realGet.call(this,B2)||realGet.call(this,B3); if(b && b!=="[]") return b; } }
+    return val;
+  };
+  Proto.removeItem = function(k){ if(k===KEY||k===B1||k===B2||k===B3){ console.warn("🚫 removeItem bloqueado",k); return; } return realRemove.call(this,k); };
+  Proto.clear = function(){ console.warn("🚫 clear parcial"); const keep=[KEY,B1,B2,B3,"ceut_usuarios_v2_3101"]; const toKeep={}; keep.forEach(k=>{ const v=realGet.call(this,k); if(v) toKeep[k]=v; }); realClear.call(this); Object.keys(toKeep).forEach(k=> realSet.call(this,k,toKeep[k])); };
+  console.log("🛡️ BLINDAJE ACTIVO");
 })();
 </script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getFirestore, collection, doc, setDoc, onSnapshot, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
 const firebaseConfig = {
   apiKey: "AIzaSyAgBfvz5S4u2qCACCzUBz4TLxNO4E9lZOc",
   authDomain: "agenda-ceut.firebaseapp.com",
@@ -66,71 +55,16 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const col = collection(db, "citas_definitivo_final");
-
-let nube = [];
-let nubeLista = false;
-let ultimoSubido = "";
-
-function getLocalArr(){
-  try{
-    const r = localStorage.getItem("ceut_citas_v2_3101");
-    if(!r || r==="[]") return [];
-    const a = JSON.parse(r);
-    return Array.isArray(a) ? a : [];
-  }catch{return []}
-}
-
-async function subir(arr){
-  if(!arr || arr.length===0) return;
-  const j = JSON.stringify(arr);
-  if(j===ultimoSubido) return;
-  try{
-    const b = writeBatch(db);
-    arr.forEach(c=>{ if(c && c.id) b.set(doc(db, "citas_definitivo_final", c.id), c, {merge:true}); });
-    await b.commit();
-    ultimoSubido = j;
-    console.log("✅ NUBE GUARDADA", arr.length);
-  }catch(e){
-    console.error("❌ Firebase reglas?", e);
-  }
-}
-
-onSnapshot(col, (snap)=>{
-  const arr=[]; snap.forEach(d=>arr.push(d.data()));
-  nube = arr;
-  nubeLista = true;
-  console.log("☁️ NUBE", arr.length);
-  const local = getLocalArr();
-  if(arr.length>0 && (local.length===0 || JSON.stringify(local)!==JSON.stringify(arr))){
-    console.log("⬇️ Bajando de nube");
-    // Usar el prototype real para evitar loop
-    Storage.prototype.setItem.call(localStorage, "ceut_citas_v2_3101", JSON.stringify(arr));
-    Storage.prototype.setItem.call(localStorage, "ceut_backup_v2_3101", JSON.stringify(arr));
-    window.__ULTIMO_VALIDO__ = JSON.stringify(arr);
-    ultimoSubido = JSON.stringify(arr);
-    window.dispatchEvent(new Event('ceut-cloud-update'));
-    window.dispatchEvent(new Event('storage'));
-    // Forzar que React lea de nuevo
-    setTimeout(()=> window.location.reload(), 500);
-  } else if(arr.length===0 && local.length>0){
-    console.log("⬆️ Subiendo local a nube");
-    subir(local);
-  }
-}, (e)=>{ console.error(e); nubeLista=true; });
-
-setInterval(()=>{
-  if(!nubeLista) return;
-  const local = getLocalArr();
-  if(local.length===0) return;
-  subir(local);
-}, 2000);
-
-window.forzarNube = ()=> subir(getLocalArr());
-console.log("🔥 NUBE ANTI-BORRADO ACTIVA");
+let nube=[]; let nubeLista=false; let ultimoSubido="";
+function getLocal(){ try{ const r=localStorage.getItem("ceut_citas_v2_3101"); if(!r||r==="[]") return []; const a=JSON.parse(r); return Array.isArray(a)?a:[]; }catch{return []} }
+async function subir(arr){ if(!arr||arr.length===0) return; const j=JSON.stringify(arr); if(j===ultimoSubido) return; try{ const b=writeBatch(db); arr.forEach(c=>{ if(c&&c.id) b.set(doc(db,"citas_definitivo_final",c.id),c,{merge:true}); }); await b.commit(); ultimoSubido=j; console.log("✅ NUBE",arr.length); }catch(e){ console.error("❌ Reglas Firestore:",e); } }
+onSnapshot(col,(snap)=>{ const arr=[]; snap.forEach(d=>arr.push(d.data())); nube=arr; nubeLista=true; const local=getLocal(); console.log("☁️ NUBE",arr.length,"LOCAL",local.length); if(arr.length>0 && (local.length===0 || JSON.stringify(local)!==JSON.stringify(arr))){ if(arr.length>=local.length){ Storage.prototype.setItem.call(localStorage,"ceut_citas_v2_3101",JSON.stringify(arr)); window.__ULTIMO_VALIDO__=JSON.stringify(arr); ultimoSubido=JSON.stringify(arr); window.dispatchEvent(new Event('storage')); } } else if(arr.length===0 && local.length>0){ subir(local); } },(e)=>{nubeLista=true; console.error(e);});
+setInterval(()=>{ if(!nubeLista) return; const local=getLocal(); if(local.length===0) return; subir(local); },2000);
+window.forzarNube=()=>subir(getLocal());
+window.verEstado=()=>({local:getLocal().length, nube:nube.length});
+console.log("🔥 NUBE BLINDADA");
 </script>
-
-
-  <meta charset="UTF-8">
+<meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>AGENDA PSICOPEDAGOGICA</title>
   <style>*,:after,:before{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgba(59,130,246,.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }::backdrop{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgba(59,130,246,.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }/*! tailwindcss v3.4.18 | MIT License | https://tailwindcss.com*/*,:after,:before{box-sizing:border-box;border:0 solid #e5e7eb}:after,:before{--tw-content:""}:host,html{line-height:1.5;-webkit-text-size-adjust:100%;-moz-tab-size:4;-o-tab-size:4;tab-size:4;font-family:ui-sans-serif,system-ui,sans-serif,Apple Color Emoji,Segoe UI Emoji,Segoe UI Symbol,Noto Color Emoji;font-feature-settings:normal;font-variation-settings:normal;-webkit-tap-highlight-color:transparent}body{line-height:inherit}hr{height:0;color:inherit;border-top-width:1px}abbr:where([title]){-webkit-text-decoration:underline dotted;text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{color:inherit;text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,pre,samp{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,Liberation Mono,Courier New,monospace;font-feature-settings:normal;font-variation-settings:normal;font-size:1em}small{font-size:80%}sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}sub{bottom:-.25em}sup{top:-.5em}table{text-indent:0;border-color:inherit;border-collapse:collapse}button,input,optgroup,select,textarea{font-family:inherit;font-feature-settings:inherit;font-variation-settings:inherit;font-size:100%;font-weight:inherit;line-height:inherit;letter-spacing:inherit;color:inherit;margin:0;padding:0}button,select{text-transform:none}button,input:where([type=button]),input:where([type=reset]),input:where([type=submit]){-webkit-appearance:button;background-color:transparent;background-image:none}:-moz-focusring{outline:auto}:-moz-ui-invalid{box-shadow:none}progress{vertical-align:baseline}::-webkit-inner-spin-button,::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}summary{display:list-item}blockquote,dd,dl,figure,h1,h2,h3,h4,h5,h6,hr,p,pre{margin:0}fieldset{margin:0}fieldset,legend{padding:0}menu,ol,ul{list-style:none;margin:0;padding:0}dialog{padding:0}textarea{resize:vertical}input::-moz-placeholder,textarea::-moz-placeholder{opacity:1;color:#9ca3af}input::placeholder,textarea::placeholder{opacity:1;color:#9ca3af}[role=button],button{cursor:pointer}:disabled{cursor:default}audio,canvas,embed,iframe,img,object,svg,video{display:block;vertical-align:middle}img,video{max-width:100%;height:auto}[hidden]:where(:not([hidden=until-found])){display:none}.container{width:100%}@media (min-width:640px){.container{max-width:640px}}@media (min-width:768px){.container{max-width:768px}}@media (min-width:1024px){.container{max-width:1024px}}@media (min-width:1280px){.container{max-width:1280px}}@media (min-width:1536px){.container{max-width:1536px}}.visible{visibility:visible}.fixed{position:fixed}.absolute{position:absolute}.relative{position:relative}.sticky{position:sticky}.inset-0{inset:0}.left-0{left:0}.left-2{left:.5rem}.right-2{right:.5rem}.top-0{top:0}.z-20{z-index:20}.z-30{z-index:30}.z-50{z-index:50}.mx-auto{margin-left:auto;margin-right:auto}.mb-2{margin-bottom:.5rem}.mb-3{margin-bottom:.75rem}.mb-4{margin-bottom:1rem}.mb-6{margin-bottom:1.5rem}.mb-8{margin-bottom:2rem}.ml-1{margin-left:.25rem}.ml-2{margin-left:.5rem}.mt-1{margin-top:.25rem}.mt-10{margin-top:2.5rem}.mt-2{margin-top:.5rem}.mt-3{margin-top:.75rem}.mt-4{margin-top:1rem}.mt-5{margin-top:1.25rem}.mt-6{margin-top:1.5rem}.flex{display:flex}.inline-flex{display:inline-flex}.grid{display:grid}.hidden{display:none}.aspect-square{aspect-ratio:1/1}.h-10{height:2.5rem}.h-11{height:2.75rem}.h-12{height:3rem}.h-2{height:.5rem}.h-3{height:.75rem}.h-6{height:1.5rem}.h-7{height:1.75rem}.h-8{height:2rem}.h-9{height:2.25rem}.h-\[145px\]{height:145px}.h-\[44px\]{height:44px}.h-\[48px\]{height:48px}.h-\[4px\]{height:4px}.h-\[52px\]{height:52px}.h-\[54px\]{height:54px}.h-\[60px\]{height:60px}.h-auto{height:auto}.h-px{height:1px}.max-h-\[220px\]{max-height:220px}.min-h-\[28px\]{min-height:28px}.min-h-\[32px\]{min-height:32px}.min-h-\[72px\]{min-height:72px}.min-h-screen{min-height:100vh}.w-12{width:3rem}.w-2{width:.5rem}.w-3{width:.75rem}.w-6{width:1.5rem}.w-7{width:1.75rem}.w-8{width:2rem}.w-9{width:2.25rem}.w-\[130px\]{width:130px}.w-\[48px\]{width:48px}.w-\[54px\]{width:54px}.w-\[90px\]{width:90px}.w-fit{width:-moz-fit-content;width:fit-content}.w-full{width:100%}.max-w-\[1160px\]{max-width:1160px}.max-w-\[1280px\]{max-width:1280px}.max-w-\[150px\]{max-width:150px}.max-w-\[180px\]{max-width:180px}.max-w-\[380px\]{max-width:380px}.max-w-\[420px\]{max-width:420px}.max-w-\[560px\]{max-width:560px}.flex-1{flex:1 1 0%}@keyframes pulse{50%{opacity:.5}}.animate-pulse{animation:pulse 2s cubic-bezier(.4,0,.6,1) infinite}.cursor-not-allowed{cursor:not-allowed}.grid-cols-1{grid-template-columns:repeat(1,minmax(0,1fr))}.grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.grid-cols-7{grid-template-columns:repeat(7,minmax(0,1fr))}.grid-cols-\[56px_1fr\]{grid-template-columns:56px 1fr}.flex-col{flex-direction:column}.flex-wrap{flex-wrap:wrap}.place-items-center{place-items:center}.items-start{align-items:flex-start}.items-end{align-items:flex-end}.items-center{align-items:center}.justify-center{justify-content:center}.justify-between{justify-content:space-between}.gap-1{gap:.25rem}.gap-1\.5{gap:.375rem}.gap-2{gap:.5rem}.gap-3{gap:.75rem}.gap-4{gap:1rem}.gap-5{gap:1.25rem}.gap-\[6px\]{gap:6px}.space-y-1>:not([hidden])~:not([hidden]){--tw-space-y-reverse:0;margin-top:calc(.25rem*(1 - var(--tw-space-y-reverse)));margin-bottom:calc(.25rem*var(--tw-space-y-reverse))}.space-y-1\.5>:not([hidden])~:not([hidden]){--tw-space-y-reverse:0;margin-top:calc(.375rem*(1 - var(--tw-space-y-reverse)));margin-bottom:calc(.375rem*var(--tw-space-y-reverse))}.space-y-2>:not([hidden])~:not([hidden]){--tw-space-y-reverse:0;margin-top:calc(.5rem*(1 - var(--tw-space-y-reverse)));margin-bottom:calc(.5rem*var(--tw-space-y-reverse))}.space-y-3>:not([hidden])~:not([hidden]){--tw-space-y-reverse:0;margin-top:calc(.75rem*(1 - var(--tw-space-y-reverse)));margin-bottom:calc(.75rem*var(--tw-space-y-reverse))}.space-y-4>:not([hidden])~:not([hidden]){--tw-space-y-reverse:0;margin-top:calc(1rem*(1 - var(--tw-space-y-reverse)));margin-bottom:calc(1rem*var(--tw-space-y-reverse))}.overflow-auto{overflow:auto}.overflow-hidden,.truncate{overflow:hidden}.truncate{text-overflow:ellipsis;white-space:nowrap}.rounded{border-radius:.25rem}.rounded-\[10px\]{border-radius:10px}.rounded-\[12px\]{border-radius:12px}.rounded-\[14px\]{border-radius:14px}.rounded-\[16px\]{border-radius:16px}.rounded-\[18px\]{border-radius:18px}.rounded-\[20px\]{border-radius:20px}.rounded-\[22px\]{border-radius:22px}.rounded-\[24px\]{border-radius:24px}.rounded-\[8px\]{border-radius:8px}.rounded-full{border-radius:9999px}.border{border-width:1px}.border-2{border-width:2px}.border-b{border-bottom-width:1px}.border-r{border-right-width:1px}.border-\[\#12183D\]{--tw-border-opacity:1;border-color:rgb(18 24 61/var(--tw-border-opacity,1))}.border-\[\#D4A72C\]{--tw-border-opacity:1;border-color:rgb(212 167 44/var(--tw-border-opacity,1))}.border-\[\#D4A72C\]\/30{border-color:rgba(212,167,44,.3)}.border-\[\#D4A72C\]\/40{border-color:rgba(212,167,44,.4)}.border-black\/10{border-color:rgba(0,0,0,.1)}.border-black\/15{border-color:rgba(0,0,0,.15)}.border-black\/\[0\.06\]{border-color:rgba(0,0,0,.06)}.border-white\/10{border-color:hsla(0,0%,100%,.1)}.bg-\[\#12183D\]{--tw-bg-opacity:1;background-color:rgb(18 24 61/var(--tw-bg-opacity,1))}.bg-\[\#12183D\]\/70{background-color:rgba(18,24,61,.7)}.bg-\[\#D4A72C\]{--tw-bg-opacity:1;background-color:rgb(212 167 44/var(--tw-bg-opacity,1))}.bg-\[\#E8E6E1\]{--tw-bg-opacity:1;background-color:rgb(232 230 225/var(--tw-bg-opacity,1))}.bg-\[\#F7F5EF\]{--tw-bg-opacity:1;background-color:rgb(247 245 239/var(--tw-bg-opacity,1))}.bg-\[\#F7F5EF\]\/60{background-color:hsla(45,33%,95%,.6)}.bg-\[\#FFF9E6\]{--tw-bg-opacity:1;background-color:rgb(255 249 230/var(--tw-bg-opacity,1))}.bg-black\/10{background-color:rgba(0,0,0,.1)}.bg-black\/20{background-color:rgba(0,0,0,.2)}.bg-black\/5{background-color:rgba(0,0,0,.05)}.bg-black\/\[0\.04\]{background-color:rgba(0,0,0,.04)}.bg-emerald-400{--tw-bg-opacity:1;background-color:rgb(52 211 153/var(--tw-bg-opacity,1))}.bg-red-600{--tw-bg-opacity:1;background-color:rgb(220 38 38/var(--tw-bg-opacity,1))}.bg-white{--tw-bg-opacity:1;background-color:rgb(255 255 255/var(--tw-bg-opacity,1))}.bg-white\/10{background-color:hsla(0,0%,100%,.1)}.bg-white\/5{background-color:hsla(0,0%,100%,.05)}.bg-white\/90{background-color:hsla(0,0%,100%,.9)}.object-contain{-o-object-fit:contain;object-fit:contain}.p-1{padding:.25rem}.p-2{padding:.5rem}.p-3{padding:.75rem}.p-4{padding:1rem}.p-5{padding:1.25rem}.p-6{padding:1.5rem}.p-7{padding:1.75rem}.px-1{padding-left:.25rem;padding-right:.25rem}.px-1\.5{padding-left:.375rem;padding-right:.375rem}.px-2{padding-left:.5rem;padding-right:.5rem}.px-2\.5{padding-left:.625rem;padding-right:.625rem}.px-3{padding-left:.75rem;padding-right:.75rem}.px-4{padding-left:1rem;padding-right:1rem}.px-5{padding-left:1.25rem;padding-right:1.25rem}.px-6{padding-left:1.5rem;padding-right:1.5rem}.py-0\.5{padding-top:.125rem;padding-bottom:.125rem}.py-1{padding-top:.25rem;padding-bottom:.25rem}.py-1\.5{padding-top:.375rem;padding-bottom:.375rem}.py-2{padding-top:.5rem;padding-bottom:.5rem}.py-3{padding-top:.75rem;padding-bottom:.75rem}.py-4{padding-top:1rem;padding-bottom:1rem}.py-6{padding-top:1.5rem;padding-bottom:1.5rem}.py-8{padding-top:2rem}.pb-8,.py-8{padding-bottom:2rem}.pr-1{padding-right:.25rem}.pt-1{padding-top:.25rem}.pt-4{padding-top:1rem}.text-left{text-align:left}.text-center{text-align:center}.font-\[Inter\2c system-ui\2c sans-serif\]{font-family:Inter,system-ui,sans-serif}.text-\[10px\]{font-size:10px}.text-\[11px\]{font-size:11px}.text-\[12px\]{font-size:12px}.text-\[13px\]{font-size:13px}.text-\[14px\]{font-size:14px}.text-\[16px\]{font-size:16px}.text-\[18px\]{font-size:18px}.text-\[22px\]{font-size:22px}.text-\[24px\]{font-size:24px}.text-\[28px\]{font-size:28px}.text-\[8px\]{font-size:8px}.text-\[9px\]{font-size:9px}.font-black{font-weight:900}.font-bold{font-weight:700}.font-medium{font-weight:500}.font-semibold{font-weight:600}.uppercase{text-transform:uppercase}.leading-\[0\.95\]{line-height:.95}.leading-\[1\.35\]{line-height:1.35}.leading-none{line-height:1}.leading-relaxed{line-height:1.625}.leading-tight{line-height:1.25}.tracking-\[0\.18em\]{letter-spacing:.18em}.tracking-\[0\.6em\]{letter-spacing:.6em}.tracking-tight{letter-spacing:-.025em}.tracking-widest{letter-spacing:.1em}.text-\[\#12183D\]{--tw-text-opacity:1;color:rgb(18 24 61/var(--tw-text-opacity,1))}.text-\[\#D4A72C\]{--tw-text-opacity:1;color:rgb(212 167 44/var(--tw-text-opacity,1))}.text-black\/30{color:rgba(0,0,0,.3)}.text-black\/40{color:rgba(0,0,0,.4)}.text-black\/50{color:rgba(0,0,0,.5)}.text-black\/60{color:rgba(0,0,0,.6)}.text-black\/70{color:rgba(0,0,0,.7)}.text-red-600{--tw-text-opacity:1;color:rgb(220 38 38/var(--tw-text-opacity,1))}.text-white{--tw-text-opacity:1;color:rgb(255 255 255/var(--tw-text-opacity,1))}.text-white\/60{color:hsla(0,0%,100%,.6)}.text-white\/70{color:hsla(0,0%,100%,.7)}.opacity-30{opacity:.3}.opacity-60{opacity:.6}.opacity-70{opacity:.7}.shadow{--tw-shadow:0 1px 3px 0 rgba(0,0,0,.1),0 1px 2px -1px rgba(0,0,0,.1);--tw-shadow-colored:0 1px 3px 0 var(--tw-shadow-color),0 1px 2px -1px var(--tw-shadow-color)}.shadow,.shadow-\[0_0_8px_rgba\(16\2c 185\2c 129\2c 0\.8\)\]{box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow)}.shadow-\[0_0_8px_rgba\(16\2c 185\2c 129\2c 0\.8\)\]{--tw-shadow:0 0 8px rgba(16,185,129,.8);--tw-shadow-colored:0 0 8px var(--tw-shadow-color)}.shadow-\[0_12px_40px_rgba\(18\2c 24\2c 61\2c 0\.14\)\]{--tw-shadow:0 12px 40px rgba(18,24,61,.14);--tw-shadow-colored:0 12px 40px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow)}.shadow-\[0_20px_60px_rgba\(0\2c 0\2c 0\2c 0\.35\)\]{--tw-shadow:0 20px 60px rgba(0,0,0,.35);--tw-shadow-colored:0 20px 60px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow)}.shadow-\[0_8px_30px_rgba\(18\2c 24\2c 61\2c 0\.08\)\]{--tw-shadow:0 8px 30px rgba(18,24,61,.08);--tw-shadow-colored:0 8px 30px var(--tw-shadow-color)}.shadow-\[0_8px_30px_rgba\(18\2c 24\2c 61\2c 0\.08\)\],.shadow-inner{box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow)}.shadow-inner{--tw-shadow:inset 0 2px 4px 0 rgba(0,0,0,.05);--tw-shadow-colored:inset 0 2px 4px 0 var(--tw-shadow-color)}.shadow-lg{--tw-shadow:0 10px 15px -3px rgba(0,0,0,.1),0 4px 6px -4px rgba(0,0,0,.1);--tw-shadow-colored:0 10px 15px -3px var(--tw-shadow-color),0 4px 6px -4px var(--tw-shadow-color)}.shadow-lg,.shadow-sm{box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow)}.shadow-sm{--tw-shadow:0 1px 2px 0 rgba(0,0,0,.05);--tw-shadow-colored:0 1px 2px 0 var(--tw-shadow-color)}.ring-2{--tw-ring-offset-shadow:var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);--tw-ring-shadow:var(--tw-ring-inset) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color);box-shadow:var(--tw-ring-offset-shadow),var(--tw-ring-shadow),var(--tw-shadow,0 0 #0000)}.ring-\[\#D4A72C\]\/50{--tw-ring-color:rgba(212,167,44,.5)}.drop-shadow{--tw-drop-shadow:drop-shadow(0 1px 2px rgba(0,0,0,.1)) drop-shadow(0 1px 1px rgba(0,0,0,.06))}.drop-shadow,.drop-shadow-\[0_2px_12px_rgba\(212\2c 167\2c 44\2c 0\.9\)\]{filter:var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow)}.drop-shadow-\[0_2px_12px_rgba\(212\2c 167\2c 44\2c 0\.9\)\]{--tw-drop-shadow:drop-shadow(0 2px 12px rgba(212,167,44,.9))}.filter{filter:var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow)}.backdrop-blur-\[6px\]{--tw-backdrop-blur:blur(6px);backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia)}.transition{transition-property:color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter;transition-timing-function:cubic-bezier(.4,0,.2,1);transition-duration:.15s}.transition-all{transition-property:all;transition-timing-function:cubic-bezier(.4,0,.2,1);transition-duration:.15s}.transition-opacity{transition-property:opacity;transition-timing-function:cubic-bezier(.4,0,.2,1);transition-duration:.15s}#root,body,html{min-height:100%}body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}[role=button]:not([aria-disabled=true]),button:not(:disabled),label[for],select:not(:disabled),summary{cursor:pointer}.hover\:-translate-y-\[1px\]:hover{--tw-translate-y:-1px;transform:translate(var(--tw-translate-x),var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.hover\:border-\[\#D4A72C\]\/50:hover{border-color:rgba(212,167,44,.5)}.hover\:opacity-100:hover{opacity:1}.hover\:shadow-\[0_12px_40px_rgba\(18\2c 24\2c 61\2c 0\.14\)\]:hover{--tw-shadow:0 12px 40px rgba(18,24,61,.14);--tw-shadow-colored:0 12px 40px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow)}.focus\:border-\[\#D4A72C\]:focus{--tw-border-opacity:1;border-color:rgb(212 167 44/var(--tw-border-opacity,1))}.focus\:outline-none:focus{outline:2px solid transparent;outline-offset:2px}@media (min-width:768px){.md\:block{display:block}.md\:inline-flex{display:inline-flex}.md\:hidden{display:none}.md\:w-\[130px\]{width:130px}.md\:grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.md\:gap-5{gap:1.25rem}.md\:gap-6{gap:1.5rem}.md\:p-4{padding:1rem}.md\:px-10{padding-left:2.5rem;padding-right:2.5rem}.md\:px-6{padding-left:1.5rem;padding-right:1.5rem}.md\:px-8{padding-left:2rem;padding-right:2rem}.md\:py-6{padding-top:1.5rem;padding-bottom:1.5rem}.md\:text-\[11px\]{font-size:11px}.md\:text-\[12px\]{font-size:12px}.md\:text-\[22px\]{font-size:22px}.md\:text-\[26px\]{font-size:26px}.md\:text-\[30px\]{font-size:30px}.md\:text-\[34px\]{font-size:34px}}@media (min-width:1024px){.lg\:grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}.lg\:grid-cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}.lg\:grid-cols-\[1\.2fr_0\.8fr\]{grid-template-columns:1.2fr .8fr}}</style>
