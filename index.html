@@ -15,10 +15,10 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-const COL_CITAS = "citas_ceut_V22";
-const COL_USERS = "usuarios_ceut_V22";
-const COL_BORRADOS_CITAS = "borrados_citas_V22";
-const COL_BORRADOS_USERS = "borrados_users_V22";
+const COL_CITAS = "citas_ceut_V24_NUBE";
+const COL_USERS = "usuarios_ceut_V24_NUBE";
+const COL_BORRADOS_CITAS = "borrados_citas_V24";
+const COL_BORRADOS_USERS = "borrados_users_V24";
 
 const colCitas = collection(db, COL_CITAS);
 const colUsers = collection(db, COL_USERS);
