@@ -42,15 +42,34 @@ onSnapshot(colBorradosUsers,(snap)=>{
 });
 
 window.eliminarCitaNube=async(id)=>{
+  bloqueoSubidaHasta = Date.now() + 5000;
+  // BORRADO INMEDIATO LOCAL PARA QUE NO SE RESUBA
   try{
-    // 1. Marcar como borrado en nube (para que todas las pestañas lo sepan)
+    borradosCitasNube.add(id);
+    const lc = JSON.parse(localStorage.getItem("ceut_citas_v3_LIMPIO")||"[]");
+    const filtrado = lc.filter(c=>c.id!==id);
+    localStorage.setItem("ceut_citas_v3_LIMPIO", JSON.stringify(filtrado));
+  }catch{}
+
+  try{
+    console.log("Intentando borrar cita",id);
     await setDoc(doc(db, COL_BORRADOS_CITAS, id), {id, borrado: Date.now()});
-    // 2. Borrar la cita
+    console.log("Marcado como borrado OK");
+    // Intentar borrar por 2 metodos
+    try{ await setDoc(doc(db, COL_CITAS, id), {borrado:true, id, deletedAt: Date.now()}, {merge:true}); console.log("Marcado borrado en doc principal"); }catch(e2){ console.error("No se pudo marcar borrado",e2); }
     await deleteDoc(doc(db, COL_CITAS, id));
     console.log("🗑️ Cita borrada definitivo",id);
+    // Verificar que se borro
+    setTimeout(async()=>{
+      try{
+        const {getDoc} = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
+        const d = await getDoc(doc(db, COL_CITAS, id));
+        if(d.exists()){ console.warn("DOC AUN EXISTE EN NUBE DESPUES DE BORRAR - REGLAS BLOQUEAN DELETE", d.data()); alert("⚠️ Firebase NO dejó borrar. Ve a Rules y pon allow read, write: if true y Publica"); }
+      }catch{}
+    },1000);
   }catch(e){
     console.error("Error borrando cita",e);
-    alert("Error borrando. Revisa reglas Firebase:\nallow read, write: if true");
+    alert("Error borrando cita en nube: "+e.message+"\nVe a Firebase > Firestore > Rules y pon: allow read, write: if true");
   }
 };
 
@@ -63,8 +82,12 @@ window.eliminarUserNube=async(id)=>{
 };
 
 async function subirCitas(arr){
+  if(Date.now() < bloqueoSubidaHasta) { console.log("Bloqueo subida activo"); return; }
   try{
-    const filtrado = arr.filter(c=>!borradosCitasNube.has(c.id));
+    if(!arr || arr.length===0) return;
+    const filtrado = arr.filter(c=>c && c.id && !borradosCitasNube.has(c.id) && !c.borrado);
+    if(filtrado.length!==arr.length){ console.log("Filtrando borrados, no se suben", arr.length-filtrado.length); }
+
     if(filtrado.length===0) return;
     const b=writeBatch(db);
     filtrado.forEach(c=>{ if(c&&c.id) b.set(doc(db, COL_CITAS, c.id), c, {merge:true}); });
@@ -83,13 +106,14 @@ async function subirUsers(arr){
 }
 
 let primeraCarga=true;
+let bloqueoSubidaHasta=0;
 onSnapshot(colCitas,(snap)=>{
   const arr=[]; snap.forEach(d=>arr.push(d.data()));
   // Filtrar borrados de nube
-  const filtrado = arr.filter(c=>!borradosCitasNube.has(c.id));
+  const filtrado = arr.filter(c=>!borradosCitasNube.has(c.id) && !c.borrado && !c.deleted);
   // Si nube trae algo borrado, re-borrarlo
   arr.forEach(c=>{
-    if(borradosCitasNube.has(c.id)){
+    if(borradosCitasNube.has(c.id) || c.borrado){
       deleteDoc(doc(db, COL_CITAS, c.id));
     }
   });
