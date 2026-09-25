@@ -87,25 +87,42 @@ window.migrarTodoALaNube = async()=>{
   }catch(e){ console.error("Error migración", e); updateStatus('❌ Error migración',' #dc2626'); }
 };
 
-// CONEXION TIEMPO REAL - TODOS CONECTADOS
+// CONEXION TIEMPO REAL - TODOS CONECTADOS - VISIBILIDAD PARA TODOS LOS PERFILES
+let nubeEverHadData = localStorage.getItem("ceut_nube_ever_had_data")==="1";
 onSnapshot(collection(db, COL_CITAS), (snap)=>{
   nubeCitasLength=snap.size;
   const arr=[];
   snap.forEach(d=>arr.push(d.data()));
+  if(arr.length>0){
+    localStorage.setItem("ceut_nube_ever_had_data","1");
+    nubeEverHadData=true;
+  }
   if(primerCarga && arr.length===0){
-    // Nube vacia, migrar local automaticamente
-    setTimeout(()=>{ window.migrarTodoALaNube(); }, 1000);
+    if(nubeEverHadData){
+      // La nube está vacía porque se borró todo permanentemente - NO migrar, respetar borrado
+      console.log("📥 Nube vacía - borrado permanente respetado");
+      localStorage.setItem("ceut_citas_V35_NUBE", JSON.stringify([]));
+      localStorage.setItem("ceut_citas_V30", JSON.stringify([]));
+      localStorage.setItem("ceut_citas_FINAL_V27", JSON.stringify([]));
+      window.dispatchEvent(new CustomEvent('ceut-nube-citas', {detail:[]}));
+      updateStatus('✅ Nube sincronizada - 0 citas (borrado permanente)','#16a34a');
+    } else {
+      // Nube vacía primera vez - migrar local automáticamente para que todos vean
+      console.log("📥 Nube vacía primera vez - migrando local para todos los perfiles");
+      setTimeout(()=>{ window.migrarTodoALaNube(); }, 1000);
+    }
   } else {
-    // Nube tiene datos, usarla como verdad
+    // Nube tiene datos - es la verdad para TODOS los perfiles (incluido Maestro Carlos)
     localStorage.setItem("ceut_citas_V35_NUBE", JSON.stringify(arr));
     localStorage.setItem("ceut_citas_V30", JSON.stringify(arr));
     localStorage.setItem("ceut_citas_FINAL_V27", JSON.stringify(arr));
     window.dispatchEvent(new CustomEvent('ceut-nube-citas', {detail:arr}));
-    if(!primerCarga) updateStatus(`✅ Nube sincronizada - ${arr.length} citas - todos conectados`,'#16a34a');
+    if(!primerCarga) updateStatus(`✅ Nube sincronizada - ${arr.length} citas - visible para todos`,'#16a34a');
+    else updateStatus(`✅ ${arr.length} citas cargadas - visible para todos los perfiles`,'#16a34a');
   }
   primerCarga=false;
-  console.log("📥 Nube citas:", arr.length);
-}, (err)=>{ console.error(err); updateStatus('❌ Sin conexión nube',' #dc2626'); });
+  console.log("📥 Nube citas:", arr.length, " - visible para todos los perfiles, Carlos tiene control total");
+}, (err)=>{ console.error(err); updateStatus('❌ Sin conexión nube - revisa internet',' #dc2626'); });
 
 onSnapshot(collection(db, COL_USERS), (snap)=>{
   nubeUsersLength=snap.size;
